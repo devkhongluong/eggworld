@@ -1,0 +1,23 @@
+extends Node2D
+
+# Màn chơi thử nghiệm test_arena:
+# - Nền tối (DEN_THAN)
+# - Tường bao hầm ngục (NAU_HAM)
+# - Player với Camera2D smoothed pixel-snap
+# - Kẻ thù thử nghiệm (DummyEnemy)
+# - HUD hiển thị máu, thể lực và thông báo chết/hồi sinh
+
+@onready var player: CharacterBody2D = $Player
+@onready var hud: CanvasLayer = $HUD
+
+func _ready() -> void:
+	if player != null and hud != null:
+		player.hp_changed.connect(hud.update_hp)
+		player.stamina_changed.connect(hud.update_stamina)
+		player.player_died.connect(func(): hud.show_death_screen(true))
+		player.player_respawned.connect(func(): hud.show_death_screen(false))
+		# Khởi tạo giá trị ban đầu cho HUD
+		hud.update_hp(player.current_hp, player.max_hp)
+		hud.update_stamina(player.current_stamina, player.max_stamina)
+	
+	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD/Mũi tên), Lăn né (Space/K).")
