@@ -1,0 +1,32 @@
+{
+  "_huong_dan": "Dữ liệu cân bằng cho Trứng và hệ thống chiến đấu ban đầu. Bạn có thể tự do điều chỉnh các chỉ số dưới đây mà không cần sửa code.",
+  "base_stats": {
+    "VIT": 10,
+    "STR": 10,
+    "DEX": 10,
+    "INT": 10,
+    "FAI": 10,
+    "LUK": 10
+  },
+  "player": {
+    "max_hp": 100,
+    "max_stamina": 100.0,
+    "move_speed": 95.0,
+    "dodge_speed_multiplier": 1.85,
+    "dodge_duration": 0.25,
+    "dodge_cooldown": 0.2,
+    "dodge_stamina_cost": 20.0,
+    "stamina_recovery_rate": 30.0,
+    "stamina_recovery_delay": 0.35
+  },
+  "dummy_enemy": {
+    "max_hp": 50,
+    "damage": 20,
+    "telegraph_duration": 0.3,
+    "attack_interval": 2.2,
+    "attack_radius": 28.0
+  },
+  "debug": {
+    "show_dodge_debug": false
+  }
+}
