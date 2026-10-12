@@ -89,6 +89,8 @@ func _ready() -> void:
 	if animated_sprite != null:
 		animated_sprite.frame_changed.connect(_on_sprite_frame_changed)
 		animated_sprite.animation_finished.connect(_on_sprite_animation_finished)
+	
+	update_animations()
 
 func load_stats_from_data() -> void:
 	max_hp = int(GameData.get_stat("player", "max_hp", 100))
@@ -164,6 +166,7 @@ func setup_animations() -> void:
 				sprite_frames.add_frame(anim_name, placeholder_tex)
 	
 	animated_sprite.sprite_frames = sprite_frames
+	animated_sprite.offset = Vector2(0, -16)
 
 func _physics_process(delta: float) -> void:
 	if is_dead:
@@ -174,9 +177,42 @@ func _physics_process(delta: float) -> void:
 	process_input_and_movement(delta)
 	process_stamina(delta)
 	process_visual_effects(delta)
+	update_animations()
 	
 	if is_attacking and is_in_hit_frame:
 		check_melee_overlaps()
+
+func update_animations() -> void:
+	if is_dead:
+		return
+	if is_attacking:
+		animated_sprite.visible = true
+		if visual_node != null and "show_placeholder_body" in visual_node:
+			visual_node.show_placeholder_body = false
+		return
+	if is_dodging:
+		# Giữ hình khối tạm khi lăn né cho tới khi vẽ sprite roll
+		animated_sprite.visible = false
+		if visual_node != null and "show_placeholder_body" in visual_node:
+			visual_node.show_placeholder_body = true
+		return
+	
+	var dir_suffix := get_direction_suffix(facing_direction)
+	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
+	animated_sprite.flip_h = flip_left
+	
+	if velocity == Vector2.ZERO:
+		var anim_name := "idle_" + dir_suffix
+		if animated_sprite.animation != anim_name or not animated_sprite.is_playing():
+			animated_sprite.play(anim_name)
+		animated_sprite.visible = true
+		if visual_node != null and "show_placeholder_body" in visual_node:
+			visual_node.show_placeholder_body = false
+	else:
+		# Đang chạy: giữ hình khối tạm cho tới khi vẽ sprite run
+		animated_sprite.visible = false
+		if visual_node != null and "show_placeholder_body" in visual_node:
+			visual_node.show_placeholder_body = true
 
 func process_cooldowns(delta: float) -> void:
 	if dodge_cooldown_timer > 0.0:
