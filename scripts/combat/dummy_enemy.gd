@@ -12,6 +12,8 @@ enum State { IDLE, TELEGRAPH, ATTACK, RECOVERY }
 @onready var visual_node: Node2D = $EnemyVisual
 @onready var attack_area: Area2D = $AttackArea
 
+var max_hp: int = 50
+var current_hp: int = 50
 var damage: int = 20
 var telegraph_duration: float = 0.3
 var attack_interval: float = 2.2
@@ -20,6 +22,7 @@ var attack_radius: float = 28.0
 var current_state: State = State.IDLE
 var state_timer: float = 0.0
 var flash_timer: float = 0.0
+var hurt_flash_timer: float = 0.0
 var is_flashing_red: bool = false
 
 # Đảm bảo mỗi lượt vung đòn chỉ tương tác với người chơi đúng 1 lần (Quy tắc điều chỉnh #3)
@@ -28,10 +31,12 @@ var attack_active_duration: float = 0.15
 
 func _ready() -> void:
 	load_stats()
+	current_hp = max_hp
 	state_timer = attack_interval - telegraph_duration
 	current_state = State.IDLE
 
 func load_stats() -> void:
+	max_hp = int(GameData.get_stat("dummy_enemy", "max_hp", 50))
 	damage = int(GameData.get_stat("dummy_enemy", "damage", 20))
 	telegraph_duration = float(GameData.get_stat("dummy_enemy", "telegraph_duration", 0.3))
 	attack_interval = float(GameData.get_stat("dummy_enemy", "attack_interval", 2.2))
@@ -39,6 +44,11 @@ func load_stats() -> void:
 
 func _physics_process(delta: float) -> void:
 	state_timer -= delta
+	
+	if hurt_flash_timer > 0.0:
+		hurt_flash_timer -= delta
+		if hurt_flash_timer <= 0.0:
+			modulate = Color.WHITE
 	
 	match current_state:
 		State.IDLE:
@@ -109,3 +119,13 @@ func start_idle() -> void:
 	state_timer = maxf(0.5, attack_interval - telegraph_duration - 0.3)
 	is_flashing_red = false
 	visual_node.queue_redraw()
+
+func receive_hit(amount: int, _attack_source: Node) -> Dictionary:
+	current_hp = maxi(0, current_hp - amount)
+	print("[ENEMY] Nhận %d sát thương từ Player! HP còn: %d/%d" % [amount, current_hp, max_hp])
+	modulate = Palette.KEM
+	hurt_flash_timer = 0.15
+	if current_hp <= 0:
+		print("[ENEMY] Kẻ thù bị tiêu diệt! Tự động hồi phục sau 1.5 giây.")
+		current_hp = max_hp
+	return {"hit": true, "damage": amount}

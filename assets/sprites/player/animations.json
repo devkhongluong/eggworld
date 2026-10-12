@@ -1,0 +1,22 @@
+{
+  "player_egg": {
+    "frame_size": [32, 32],
+    "anchor": [16, 31],
+    "animations": {
+      "idle_down": { "file": "player_egg_idle_down.png", "frames": 4, "fps": 8, "loop": true, "hit_frames": [] },
+      "idle_up": { "file": "player_egg_idle_up.png", "frames": 4, "fps": 8, "loop": true, "hit_frames": [] },
+      "idle_side": { "file": "player_egg_idle_side.png", "frames": 4, "fps": 8, "loop": true, "hit_frames": [] },
+      "run_down": { "file": "player_egg_run_down.png", "frames": 6, "fps": 12, "loop": true, "hit_frames": [] },
+      "run_up": { "file": "player_egg_run_up.png", "frames": 6, "fps": 12, "loop": true, "hit_frames": [] },
+      "run_side": { "file": "player_egg_run_side.png", "frames": 6, "fps": 12, "loop": true, "hit_frames": [] },
+      "roll_down": { "file": "player_egg_roll_down.png", "frames": 6, "fps": 12, "loop": false, "hit_frames": [] },
+      "roll_up": { "file": "player_egg_roll_up.png", "frames": 6, "fps": 12, "loop": false, "hit_frames": [] },
+      "roll_side": { "file": "player_egg_roll_side.png", "frames": 6, "fps": 12, "loop": false, "hit_frames": [] },
+      "attack_down": { "file": "player_egg_attack_down.png", "frames": 5, "fps": 12, "loop": false, "hit_frames": [2] },
+      "attack_up": { "file": "player_egg_attack_up.png", "frames": 5, "fps": 12, "loop": false, "hit_frames": [2] },
+      "attack_side": { "file": "player_egg_attack_side.png", "frames": 5, "fps": 12, "loop": false, "hit_frames": [2] },
+      "hurt_side": { "file": "player_egg_hurt_side.png", "frames": 2, "fps": 12, "loop": false, "hit_frames": [] },
+      "death_side": { "file": "player_egg_death_side.png", "frames": 6, "fps": 10, "loop": false, "hit_frames": [] }
+    }
+  }
+}
