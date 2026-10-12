@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://btestarena001"]
+[gd_scene format=3 uid="uid://btestarena001"]
 
 [ext_resource type="Script" path="res://scenes/levels/test_arena.gd" id="1_arena"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]

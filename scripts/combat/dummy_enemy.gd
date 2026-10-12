@@ -90,11 +90,13 @@ func check_attack_hitbox() -> void:
 	
 	var overlapping_areas := attack_area.get_overlapping_areas()
 	for area in overlapping_areas:
-		var parent: Node = area.get_parent()
-		if parent != null and parent.has_method("receive_hit"):
-			has_resolved_player_this_attack = true
-			parent.receive_hit(damage, self)
-			break
+		# Chỉ kiểm tra va chạm với Hurtbox, không tương tác với thân vật lý
+		if area.name == "Hurtbox":
+			var parent: Node = area.get_parent()
+			if parent != null and parent.has_method("receive_hit"):
+				has_resolved_player_this_attack = true
+				parent.receive_hit(damage, self)
+				break
 
 func end_attack() -> void:
 	current_state = State.RECOVERY

@@ -64,6 +64,26 @@ func load_stats_from_data() -> void:
 	dodge_stamina_cost = float(GameData.get_stat("player", "dodge_stamina_cost", 20.0))
 	stamina_recovery_rate = float(GameData.get_stat("player", "stamina_recovery_rate", 30.0))
 	stamina_recovery_delay = float(GameData.get_stat("player", "stamina_recovery_delay", 0.35))
+	
+	# Nạp kích thước và vị trí Collision (10x6 sát chân) & Hurtbox (10x14 giữa thân) từ stats.json
+	var col_size: Array = GameData.get_stat("player", "collision_size", [10.0, 6.0])
+	var col_offset: Array = GameData.get_stat("player", "collision_offset", [0.0, -3.0])
+	var hurt_size: Array = GameData.get_stat("player", "hurtbox_size", [10.0, 14.0])
+	var hurt_offset: Array = GameData.get_stat("player", "hurtbox_offset", [0.0, -10.0])
+	
+	if collision_shape != null:
+		var col_rect := RectangleShape2D.new()
+		col_rect.size = Vector2(col_size[0], col_size[1])
+		collision_shape.shape = col_rect
+		collision_shape.position = Vector2(col_offset[0], col_offset[1])
+	
+	if hurtbox != null:
+		var hurt_col: CollisionShape2D = hurtbox.get_node_or_null("CollisionShape2D")
+		if hurt_col != null:
+			var hurt_rect := RectangleShape2D.new()
+			hurt_rect.size = Vector2(hurt_size[0], hurt_size[1])
+			hurt_col.shape = hurt_rect
+			hurt_col.position = Vector2(hurt_offset[0], hurt_offset[1])
 
 func _physics_process(delta: float) -> void:
 	if is_dead:
