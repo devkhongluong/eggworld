@@ -1,0 +1,93 @@
+[gd_scene load_steps=2 format=3 uid="uid://bvyhud001"]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+offset_left = 6.0
+offset_top = 6.0
+offset_right = 120.0
+offset_bottom = 50.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HPBar" type="Control" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(64, 6)
+layout_mode = 2
+
+[node name="Background" type="ColorRect" parent="MarginContainer/VBoxContainer/HPBar"]
+layout_mode = 0
+offset_right = 64.0
+offset_bottom = 6.0
+color = Color(0.168627, 0.121569, 0.101961, 1)
+
+[node name="Fill" type="ColorRect" parent="MarginContainer/VBoxContainer/HPBar"]
+layout_mode = 0
+offset_right = 64.0
+offset_bottom = 6.0
+color = Color(0.658824, 0.203922, 0.168627, 1)
+
+[node name="StaminaBar" type="Control" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(52, 4)
+layout_mode = 2
+
+[node name="Background" type="ColorRect" parent="MarginContainer/VBoxContainer/StaminaBar"]
+layout_mode = 0
+offset_right = 52.0
+offset_bottom = 4.0
+color = Color(0.168627, 0.121569, 0.101961, 1)
+
+[node name="Fill" type="ColorRect" parent="MarginContainer/VBoxContainer/StaminaBar"]
+layout_mode = 0
+offset_right = 52.0
+offset_bottom = 4.0
+color = Color(0.419608, 0.498039, 0.227451, 1)
+
+[node name="DebugDodgeLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "[DEBUG F3] DODGE: 0"
+
+[node name="DeathOverlay" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CenterContainer" type="CenterContainer" parent="DeathOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="DeathOverlay/CenterContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="PanelBg" type="ColorRect" parent="DeathOverlay/CenterContainer/VBoxContainer"]
+visible = false
+custom_minimum_size = Vector2(160, 40)
+layout_mode = 2
+color = Color(0.168627, 0.121569, 0.101961, 0.9)
+
+[node name="DeathLabel" type="Label" parent="DeathOverlay/CenterContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "VỎ ĐÃ VỠ..."
+horizontal_alignment = 1
+
+[node name="SubLabel" type="Label" parent="DeathOverlay/CenterContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "Đang hồi sinh..."
+horizontal_alignment = 1
