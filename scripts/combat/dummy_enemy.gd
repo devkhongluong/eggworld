@@ -126,6 +126,22 @@ func receive_hit(amount: int, _attack_source: Node) -> Dictionary:
 	modulate = Palette.KEM
 	hurt_flash_timer = 0.15
 	if current_hp <= 0:
-		print("[ENEMY] Kẻ thù bị tiêu diệt! Tự động hồi phục sau 1.5 giây.")
+		print("[ENEMY] Kẻ thù bị tiêu diệt! Rơi 30 Mảnh Vỏ Vụn & tự động hồi phục.")
+		spawn_exp_drop()
 		current_hp = max_hp
 	return {"hit": true, "damage": amount}
+
+func spawn_exp_drop() -> void:
+	var pickup := Area2D.new()
+	pickup.set_script(load("res://scripts/combat/shell_shard_pickup.gd"))
+	pickup.set("shard_amount", 30)
+	pickup.global_position = global_position + Vector2(randf_range(-6.0, 6.0), randf_range(-6.0, 6.0))
+	
+	var col := CollisionShape2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = 8.0
+	col.shape = circle
+	pickup.add_child(col)
+	
+	get_parent().call_deferred("add_child", pickup)
+

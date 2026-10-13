@@ -24,6 +24,7 @@ const STAT_DESCRIPTIONS: Dictionary = {
 @onready var preview_vbox: VBoxContainer = $RootControl/Margin/VBox/MainHBox/PreviewVBox
 @onready var btn_confirm: Button = $RootControl/Margin/VBox/MainHBox/PreviewVBox/ButtonsHBox/BtnConfirm
 @onready var btn_cancel: Button = $RootControl/Margin/VBox/MainHBox/PreviewVBox/ButtonsHBox/BtnCancel
+@onready var feedback_label: Label = $RootControl/Margin/VBox/FeedbackLabel
 @onready var guide_label: Label = $RootControl/Margin/VBox/GuideLabel
 
 var player_ref: Player = null
@@ -36,6 +37,14 @@ var stat_row_nodes: Array[Dictionary] = []
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	apply_palette()
+	
+	if btn_confirm != null:
+		btn_confirm.pressed.connect(_on_confirm_pressed)
+		btn_confirm.mouse_entered.connect(func(): selected_index = 6; _highlight_selection())
+	if btn_cancel != null:
+		btn_cancel.pressed.connect(_on_cancel_pressed)
+		btn_cancel.mouse_entered.connect(func(): selected_index = 7; _highlight_selection())
+	
 	_build_stat_rows()
 	_update_display()
 	_highlight_selection()
@@ -47,6 +56,8 @@ func apply_palette() -> void:
 		header_label.add_theme_color_override("font_color", Palette.VANG_CO)
 	if shards_label != null:
 		shards_label.add_theme_color_override("font_color", Palette.KEM)
+	if feedback_label != null:
+		feedback_label.add_theme_color_override("font_color", Palette.KEM)
 	if guide_label != null:
 		guide_label.add_theme_color_override("font_color", Palette.XAM_SAT)
 	if btn_confirm != null:
@@ -60,12 +71,18 @@ func open(p_player: Player) -> void:
 		pending_adds[s] = 0
 	selected_index = 0
 	get_tree().paused = true
+	_set_feedback("Nhấn '+' hoặc phím [D] để cộng điểm, [Enter] để xác nhận.", Palette.KEM)
 	_update_display()
 	_highlight_selection()
 
 func close_screen() -> void:
 	get_tree().paused = false
 	queue_free()
+
+func _set_feedback(msg: String, color: Color) -> void:
+	if feedback_label != null:
+		feedback_label.text = msg
+		feedback_label.add_theme_color_override("font_color", color)
 
 func _build_stat_rows() -> void:
 	if stats_container == null:
@@ -75,10 +92,12 @@ func _build_stat_rows() -> void:
 		child.queue_free()
 	stat_row_nodes.clear()
 	
-	for s in STAT_NAMES:
+	for i in range(STAT_NAMES.size()):
+		var s := STAT_NAMES[i]
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_theme_constant_override("separation", 4)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		
 		# Nhãn tên chỉ số (VIT, STR, ...)
 		var name_lbl := Label.new()
@@ -103,6 +122,8 @@ func _build_stat_rows() -> void:
 		btn_sub.add_theme_font_size_override("font_size", 8)
 		btn_sub.focus_mode = Control.FOCUS_NONE
 		btn_sub.pressed.connect(func(): _modify_stat(s, -1))
+		var s_idx := i
+		btn_sub.mouse_entered.connect(func(): selected_index = s_idx; _highlight_selection())
 		row.add_child(btn_sub)
 		
 		# Nút cộng (+)
@@ -112,6 +133,7 @@ func _build_stat_rows() -> void:
 		btn_add.add_theme_font_size_override("font_size", 8)
 		btn_add.focus_mode = Control.FOCUS_NONE
 		btn_add.pressed.connect(func(): _modify_stat(s, +1))
+		btn_add.mouse_entered.connect(func(): selected_index = s_idx; _highlight_selection())
 		row.add_child(btn_add)
 		
 		stats_container.add_child(row)
@@ -124,21 +146,21 @@ func _build_stat_rows() -> void:
 			"btn_add": btn_add
 		})
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	if not visible:
 		return
 	
-	if event.is_action_pressed("pause") or (event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE):
+	if event.is_action_pressed("pause") or (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE):
 		_on_cancel_pressed()
 		get_viewport().set_input_as_handled()
 		return
 	
 	# Điều hướng Lên / Xuống
-	if event.is_action_pressed("move_up") or (event is InputEventKey and event.pressed and (event.keycode == KEY_UP or event.keycode == KEY_W)):
+	if event.is_action_pressed("move_up") or (event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_UP or event.keycode == KEY_W)):
 		_nav_vertical(-1)
 		get_viewport().set_input_as_handled()
 		return
-	elif event.is_action_pressed("move_down") or (event is InputEventKey and event.pressed and (event.keycode == KEY_DOWN or event.keycode == KEY_S)):
+	elif event.is_action_pressed("move_down") or (event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_DOWN or event.keycode == KEY_S)):
 		_nav_vertical(1)
 		get_viewport().set_input_as_handled()
 		return
@@ -146,29 +168,29 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Điều hướng Trái / Phải hoặc +/-
 	if selected_index < STAT_NAMES.size():
 		var cur_stat := STAT_NAMES[selected_index]
-		if event.is_action_pressed("move_left") or (event is InputEventKey and event.pressed and (event.keycode == KEY_LEFT or event.keycode == KEY_A or event.keycode == KEY_MINUS)):
+		if event.is_action_pressed("move_left") or (event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_LEFT or event.keycode == KEY_A or event.keycode == KEY_MINUS)):
 			_modify_stat(cur_stat, -1)
 			get_viewport().set_input_as_handled()
 			return
-		elif event.is_action_pressed("move_right") or (event is InputEventKey and event.pressed and (event.keycode == KEY_RIGHT or event.keycode == KEY_D or event.keycode == KEY_EQUAL or event.keycode == KEY_PLUS)):
+		elif event.is_action_pressed("move_right") or (event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_RIGHT or event.keycode == KEY_D or event.keycode == KEY_EQUAL or event.keycode == KEY_PLUS)):
 			_modify_stat(cur_stat, +1)
 			get_viewport().set_input_as_handled()
 			return
 	else:
 		# Ở hàng nút Confirm / Cancel
-		if event.is_action_pressed("move_left") or (event is InputEventKey and event.pressed and (event.keycode == KEY_LEFT or event.keycode == KEY_A)):
+		if event.is_action_pressed("move_left") or (event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_LEFT or event.keycode == KEY_A)):
 			selected_index = 6
 			_highlight_selection()
 			get_viewport().set_input_as_handled()
 			return
-		elif event.is_action_pressed("move_right") or (event is InputEventKey and event.pressed and (event.keycode == KEY_RIGHT or event.keycode == KEY_D)):
+		elif event.is_action_pressed("move_right") or (event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_RIGHT or event.keycode == KEY_D)):
 			selected_index = 7
 			_highlight_selection()
 			get_viewport().set_input_as_handled()
 			return
 	
 	# Phím Enter / Space / E (Interact)
-	if event.is_action_pressed("interact") or (event is InputEventKey and event.pressed and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER or event.keycode == KEY_SPACE)):
+	if event.is_action_pressed("interact") or (event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER or event.keycode == KEY_SPACE)):
 		if selected_index == 6:
 			_on_confirm_pressed()
 		elif selected_index == 7:
@@ -230,11 +252,17 @@ func _modify_stat(stat_name: String, delta: int) -> void:
 		var rem_shards: int = PlayerInventory.shell_shards - _get_total_pending_cost()
 		if rem_shards >= next_cost:
 			pending_adds[stat_name] = pending_adds.get(stat_name, 0) + 1
+			var total_pending := _get_total_pending_points()
+			_set_feedback("✓ Đã cộng 1 điểm vào %s! (Chờ: %d điểm). Nhấn [Xác nhận] để lưu." % [stat_name, total_pending], Palette.VANG_CO)
 		else:
+			_set_feedback("⚠️ Thiếu Mảnh Vỏ! Cần %d, còn %d. Nhấn F4 nhận thêm!" % [next_cost, rem_shards], Palette.DO_GACH)
 			print("[UI] Không đủ Mảnh Vỏ Vụn để cộng thêm điểm! (Cần %d, còn %d)" % [next_cost, rem_shards])
 	elif delta < 0:
 		if pending_adds.get(stat_name, 0) > 0:
 			pending_adds[stat_name] -= 1
+			_set_feedback("Đã bớt 1 điểm chờ của %s." % stat_name, Palette.KEM)
+		else:
+			_set_feedback("Chỉ số %s chưa có điểm cộng tạm thời nào." % stat_name, Palette.XAM_SAT)
 	
 	_update_display()
 
@@ -258,8 +286,6 @@ func _update_display() -> void:
 		else:
 			shards_label.text = "MẢNH VỎ VỤN: %d" % [PlayerInventory.shell_shards]
 	
-	var base_stats: Dictionary = PlayerInventory.base_stats
-	var added_stats: Dictionary = PlayerInventory.added_points
 	var effective_stats: Dictionary = PlayerInventory.get_effective_stats()
 	var preview_stats: Dictionary = {}
 	for s in STAT_NAMES:
@@ -281,7 +307,11 @@ func _update_display() -> void:
 		var btn_sub: Button = info["btn_sub"]
 		btn_sub.disabled = (add <= 0)
 		var btn_add: Button = info["btn_add"]
-		btn_add.disabled = (rem_shards < next_cost)
+		# Giữ nút bấm được để khi bấm thiếu shards sẽ báo lỗi trên feedback_label rõ ràng
+		if rem_shards < next_cost:
+			btn_add.modulate = Color(0.7, 0.7, 0.7, 0.85)
+		else:
+			btn_add.modulate = Color.WHITE
 	
 	# Cập nhật phần xem trước bên phải
 	_update_preview_section(effective_stats, preview_stats)
@@ -301,10 +331,8 @@ func _update_preview_section(cur_stats: Dictionary, new_stats: Dictionary) -> vo
 	
 	# Tính sát thương vũ khí hiện tại
 	var w_data: Dictionary = {}
-	var cur_w_name := "Gậy Gỗ"
 	if player_ref != null and not player_ref.current_weapon_data.is_empty():
 		w_data = player_ref.current_weapon_data
-		cur_w_name = str(w_data.get("name", "Vũ khí"))
 	else:
 		w_data = WeaponDB.get_weapon("staff_wood")
 	
@@ -341,6 +369,7 @@ func _on_confirm_pressed() -> void:
 			if player_ref != null and is_instance_valid(player_ref) and player_ref.has_method("apply_leveled_stats"):
 				player_ref.apply_leveled_stats()
 			SaveManager.save_game()
+			print("[UI] Đã xác nhận tăng cấp thành công! Cấp mới: %d" % PlayerInventory.level)
 	close_screen()
 
 func _on_cancel_pressed() -> void:

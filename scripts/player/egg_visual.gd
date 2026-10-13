@@ -28,9 +28,23 @@ var guard_dir: Vector2 = Vector2.DOWN
 var is_dead_visual: bool = false
 var equipped_weapon_id: String = "staff_wood"
 var facing_dir: Vector2 = Vector2.DOWN
+var weapon_textures: Dictionary = {}
 
 func _ready() -> void:
 	set_process(true)
+	_load_weapon_textures()
+
+func _load_weapon_textures() -> void:
+	var staff_tex = load("res://assets/sprites/weapons/weapon_staff_wood.png")
+	if staff_tex != null:
+		weapon_textures["staff_wood"] = staff_tex
+		weapon_textures["staff"] = staff_tex
+	var dagger_tex = load("res://assets/sprites/weapons/weapon_dagger.png")
+	if dagger_tex != null:
+		weapon_textures["dagger"] = dagger_tex
+	var sling_tex = load("res://assets/sprites/weapons/weapon_sling.png")
+	if sling_tex != null:
+		weapon_textures["sling"] = sling_tex
 
 func set_guarding(guarding: bool, dir: Vector2) -> void:
 	if is_guarding != guarding or guard_dir != dir:
@@ -191,10 +205,6 @@ func _draw_dynamic_weapon() -> void:
 				var end_ang: float = base_angle - PI * 0.52 if reverse_swing else base_angle + PI * 0.52
 				var cur_ang: float = lerp_angle(start_ang, end_ang, progress)
 				
-				var staff_dir := Vector2(cos(cur_ang), sin(cur_ang))
-				var staff_base := pivot + staff_dir * 3.0
-				var staff_tip := pivot + staff_dir * 24.0
-				
 				# Vệt chém hình vòng cung vàng rực bám theo sau mũi gậy
 				var arc_rad: float = 23.0 if attack_slash_step == 2 else 19.0
 				var a1 := minf(start_ang, cur_ang)
@@ -202,10 +212,14 @@ func _draw_dynamic_weapon() -> void:
 				draw_arc(pivot, arc_rad, a1, a2, 14, Palette.KEM, 3.0)
 				draw_arc(pivot, arc_rad - 2.0, a1, a2, 14, Palette.VANG_CO, 2.0)
 				
-				# Thân gậy vung
-				draw_line(staff_base, staff_tip, Palette.NAU_DA, 3.0)
-				draw_circle(staff_tip, 2.5, Palette.KEM)
-				draw_circle(staff_base, 1.5, Palette.NAU_HAM)
+				# Vẽ sprite gậy gỗ xoay theo góc chém
+				var staff_tex: Texture2D = weapon_textures.get("staff_wood", null)
+				if staff_tex != null:
+					_draw_weapon_sprite(staff_tex, pivot, cur_ang + PI * 0.5, Vector2(16.0, 24.0))
+				else:
+					var staff_dir := Vector2(cos(cur_ang), sin(cur_ang))
+					draw_line(pivot + staff_dir * 3.0, pivot + staff_dir * 24.0, Palette.NAU_DA, 3.0)
+					draw_circle(pivot + staff_dir * 24.0, 2.5, Palette.KEM)
 			
 			"dagger":
 				# Dao găm đâm thẳng vọt tới trước cực nhanh
@@ -213,41 +227,45 @@ func _draw_dynamic_weapon() -> void:
 				if progress < 0.20:
 					thrust_dist = lerpf(4.0, 0.0, progress / 0.20)
 				elif progress < 0.60:
-					thrust_dist = lerpf(0.0, 22.0, (progress - 0.20) / 0.40)
+					thrust_dist = lerpf(0.0, 20.0, (progress - 0.20) / 0.40)
 				else:
-					thrust_dist = lerpf(22.0, 4.0, (progress - 0.60) / 0.40)
+					thrust_dist = lerpf(20.0, 4.0, (progress - 0.60) / 0.40)
 				
-				var hilt := pivot + aim * thrust_dist
-				var tip := pivot + aim * (thrust_dist + 14.0)
+				var dagger_pos := pivot + aim * thrust_dist
+				var tip := dagger_pos + aim * 14.0
 				
 				# Vệt đâm nhọn ánh sáng lướt theo dao
-				draw_line(pivot + aim * 2.0, tip + aim * 5.0, Palette.KEM, 2.5)
-				draw_line(pivot + aim * 2.0 + Vector2(-aim.y, aim.x) * 2.5, tip, Palette.XAM_SAT, 1.5)
-				draw_line(pivot + aim * 2.0 + Vector2(aim.y, -aim.x) * 2.5, tip, Palette.XAM_SAT, 1.5)
+				draw_line(pivot + aim * 2.0, tip + aim * 4.0, Palette.KEM, 2.5)
+				draw_line(pivot + aim * 2.0 + Vector2(-aim.y, aim.x) * 2.0, tip, Palette.XAM_SAT, 1.5)
+				draw_line(pivot + aim * 2.0 + Vector2(aim.y, -aim.x) * 2.0, tip, Palette.XAM_SAT, 1.5)
 				
-				# Lưỡi dao
-				draw_line(hilt, tip, Palette.KEM, 2.5)
-				draw_line(hilt, tip, Palette.XAM_SAT, 1.5)
-				# Chuôi dao
-				draw_circle(hilt, 2.0, Palette.NAU_HAM)
-				draw_line(hilt + Vector2(-aim.y, aim.x) * 3.0, hilt + Vector2(aim.y, -aim.x) * 3.0, Palette.VANG_CO, 2.0)
+				# Vẽ sprite dao găm
+				var dagger_tex: Texture2D = weapon_textures.get("dagger", null)
+				if dagger_tex != null:
+					_draw_weapon_sprite(dagger_tex, dagger_pos, aim.angle() + PI * 0.5, Vector2(16.0, 23.0))
+				else:
+					draw_line(dagger_pos, tip, Palette.KEM, 2.5)
+					draw_circle(dagger_pos, 2.0, Palette.NAU_HAM)
 			
 			"sling":
 				# Ná giương chạc và bung dây thun
-				var fork_pos := pivot + aim * 9.0
-				var fork_l := fork_pos + Vector2(-aim.y, aim.x) * 4.5 + aim * 3.0
-				var fork_r := fork_pos + Vector2(aim.y, -aim.x) * 4.5 + aim * 3.0
-				var pull_pos := pivot - aim * 3.0 if progress < 0.45 else fork_pos + aim * 2.0
+				var sling_pos := pivot + aim * 8.0
+				var pull_pos := pivot - aim * 4.0 if progress < 0.45 else sling_pos + aim * 5.0
 				
-				# Cán ná gỗ
-				draw_line(pivot, fork_pos, Palette.CAT, 2.5)
-				draw_line(fork_pos, fork_l, Palette.CAT, 2.0)
-				draw_line(fork_pos, fork_r, Palette.CAT, 2.0)
-				# Dây thun
+				# Vẽ sprite ná bắn đá
+				var sling_tex: Texture2D = weapon_textures.get("sling", null)
+				if sling_tex != null:
+					_draw_weapon_sprite(sling_tex, sling_pos, aim.angle() + PI * 0.5, Vector2(16.0, 21.0))
+				
+				# Dây thun và viên đạn đá
+				var fork_l := sling_pos + Vector2(-aim.y, aim.x) * 4.0 + aim * 4.0
+				var fork_r := sling_pos + Vector2(aim.y, -aim.x) * 4.0 + aim * 4.0
 				draw_line(fork_l, pull_pos, Palette.GIAY_DA, 1.5)
 				draw_line(fork_r, pull_pos, Palette.GIAY_DA, 1.5)
 				if progress < 0.45:
-					draw_circle(pull_pos, 2.0, Palette.XAM_SAT)
+					draw_circle(pull_pos, 2.5, Palette.XAM_SAT)
+				else:
+					draw_circle(pull_pos + aim * 6.0, 2.0, Palette.CAT)
 			
 			"unarmed", _:
 				var p_dist: float = lerpf(2.0, 14.0, sin(progress * PI))
@@ -256,21 +274,35 @@ func _draw_dynamic_weapon() -> void:
 		# --- TRẠNG THÁI NGHỈ: VŨ KHÍ NẰM GỌN BÊN HÔNG / TAY ---
 		var hand_pos: Vector2 = Vector2(7.0 * flip_sign, -8.0)
 		if abs(facing_dir.y) > abs(facing_dir.x):
-			hand_pos = Vector2(7.0, -8.0 if facing_dir.y > 0 else -10.0)
+			hand_pos = Vector2(7.0 * flip_sign, -8.0 if facing_dir.y > 0 else -10.0)
 		
 		match equipped_weapon_id:
 			"staff_wood", "staff":
-				draw_line(hand_pos + Vector2(0, 5), hand_pos + Vector2(3 * flip_sign, -13), Palette.NAU_DA, 2.5)
-				draw_circle(hand_pos + Vector2(3 * flip_sign, -13), 1.5, Palette.KEM)
-				draw_circle(hand_pos + Vector2(0, 5), 1.5, Palette.NAU_HAM)
+				var staff_tex: Texture2D = weapon_textures.get("staff_wood", null)
+				if staff_tex != null:
+					_draw_weapon_sprite(staff_tex, hand_pos + Vector2(0, 2), 0.30 * flip_sign, Vector2(16.0, 24.0), Vector2(0.85, 0.85))
+				else:
+					draw_line(hand_pos + Vector2(0, 5), hand_pos + Vector2(3 * flip_sign, -13), Palette.NAU_DA, 2.5)
 			"dagger":
-				var d_aim := aim * 8.0
-				draw_line(hand_pos, hand_pos + d_aim, Palette.XAM_SAT, 2.0)
-				draw_line(hand_pos, hand_pos + d_aim * 0.7, Palette.KEM, 1.0)
-				draw_circle(hand_pos, 2.0, Palette.NAU_HAM)
+				var dagger_tex: Texture2D = weapon_textures.get("dagger", null)
+				if dagger_tex != null:
+					_draw_weapon_sprite(dagger_tex, hand_pos + Vector2(0, 1), 0.65 * flip_sign, Vector2(16.0, 23.0), Vector2(0.85, 0.85))
+				else:
+					var d_aim := aim * 8.0
+					draw_line(hand_pos, hand_pos + d_aim, Palette.XAM_SAT, 2.0)
 			"sling":
-				draw_line(hand_pos, hand_pos + Vector2(0, -5), Palette.CAT, 2.0)
-				draw_line(hand_pos + Vector2(0, -5), hand_pos + Vector2(3 * flip_sign, -8), Palette.CAT, 1.5)
-				draw_line(hand_pos + Vector2(0, -5), hand_pos + Vector2(-3 * flip_sign, -8), Palette.CAT, 1.5)
+				var sling_tex: Texture2D = weapon_textures.get("sling", null)
+				if sling_tex != null:
+					_draw_weapon_sprite(sling_tex, hand_pos, 0.15 * flip_sign, Vector2(16.0, 21.0), Vector2(0.85, 0.85))
+				else:
+					draw_line(hand_pos, hand_pos + Vector2(0, -5), Palette.CAT, 2.0)
 			"fist", _:
 				pass
+
+func _draw_weapon_sprite(tex: Texture2D, pos: Vector2, rot: float, pivot: Vector2, p_scale: Vector2 = Vector2.ONE) -> void:
+	if tex == null:
+		return
+	draw_set_transform(pos, rot, p_scale)
+	draw_texture(tex, -pivot)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+

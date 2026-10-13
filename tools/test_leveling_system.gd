@@ -125,8 +125,43 @@ func _ready() -> void:
 	add_child(level_up_ui) # Trigger _ready() and _build_stat_rows()
 	level_up_ui.open(null)
 	assert(level_up_ui.stat_row_nodes.size() == 6, "Phai tao du 6 hang chi so!")
-	level_up_ui.close_screen()
-	print("[PASS] 9. Khoi tao & chay vong doi scenes StrawBed va LevelUpScreen thanh cong.")
+	
+	# Test 10: Test nút bấm thao tác trên giao diện LevelUpScreen (+/- va Confirm)
+	PlayerInventory.shell_shards = 100
+	var vit_row = level_up_ui.stat_row_nodes[0]
+	var btn_add: Button = vit_row["btn_add"]
+	btn_add.emit_signal("pressed")
+	assert(level_up_ui.pending_adds["VIT"] == 1, "Bam '+' phai tang diem cho pending_adds[VIT]!")
+	assert(level_up_ui.feedback_label.text.contains("VIT"), "Feedback label phai thong bao diem duoc cong!")
+	
+	# Test nut Confirm
+	level_up_ui._on_confirm_pressed()
+	assert(PlayerInventory.level >= 2, "Sau khi confirm, PlayerInventory.level phai tang len >= 2!")
+	assert(PlayerInventory.added_points["VIT"] >= 1, "added_points[VIT] phai tang!")
+	print("[PASS] 10. Thao tac nut bam (+/- va Confirm) tren giao dien LevelUpScreen hoat dong chinh xac!")
+	
+	# Test 11: Kiem tra nap sprite vu khi tren EggVisual va HUD
+	var egg_vis_script = load("res://scripts/player/egg_visual.gd")
+	var egg_vis = egg_vis_script.new()
+	add_child(egg_vis)
+	assert(egg_vis.weapon_textures.has("staff_wood"), "EggVisual phai nap weapon_staff_wood.png!")
+	assert(egg_vis.weapon_textures.has("dagger"), "EggVisual phai nap weapon_dagger.png!")
+	assert(egg_vis.weapon_textures.has("sling"), "EggVisual phai nap weapon_sling.png!")
+	egg_vis.queue_free()
+	print("[PASS] 11. EggVisual nap thanh cong ca 3 sprite vu khi chuan pixel art.")
+	
+	# Test 12: Kiem tra HUD cap nhat cap do, vu khi va do dai thanh mau
+	var hud_scene = load("res://scenes/ui/hud.tscn")
+	var hud_node = hud_scene.instantiate()
+	add_child(hud_node)
+	hud_node.update_weapon(0, "staff_wood", "Gậy Gỗ")
+	assert(hud_node.weapon_icon.texture != null, "HUD WeaponIcon phai hien thi sprite vu khi!")
+	hud_node.update_hp(120, 120)
+	assert(hud_node.hp_bar_bg.size.x > 64.0, "Thanh mau phai tu dong keo dai khi max_hp tang!")
+	hud_node.update_level_and_shards()
+	assert(hud_node.shard_label.text.begins_with("Cấp"), "HUD phai hien thi Cap do ro rang!")
+	hud_node.queue_free()
+	print("[PASS] 12. HUD hien thi day du Cap do, icon vu khi va co che keo dai thanh mau khi tang VIT.")
 	
 	# Don dep
 	inv.queue_free()
@@ -134,3 +169,4 @@ func _ready() -> void:
 	
 	print("--- TAT CA CAC TEST CUA LEVELING SYSTEM DA VUOT QUA THANH CONG! ---")
 	get_tree().quit(0)
+

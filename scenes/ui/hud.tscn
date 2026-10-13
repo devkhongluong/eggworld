@@ -8,8 +8,8 @@ script = ExtResource("1_hud")
 [node name="MarginContainer" type="MarginContainer" parent="."]
 offset_left = 6.0
 offset_top = 6.0
-offset_right = 120.0
-offset_bottom = 50.0
+offset_right = 140.0
+offset_bottom = 60.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
@@ -47,20 +47,30 @@ offset_right = 52.0
 offset_bottom = 4.0
 color = Color(0.419608, 0.498039, 0.227451, 1)
 
-[node name="WeaponLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="WeaponHBox" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 8
+theme_override_constants/separation = 3
+
+[node name="WeaponIcon" type="TextureRect" parent="MarginContainer/VBoxContainer/WeaponHBox"]
+custom_minimum_size = Vector2(12, 12)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="WeaponLabel" type="Label" parent="MarginContainer/VBoxContainer/WeaponHBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
 text = "[Q] Gậy Gỗ"
 
 [node name="ShardLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 8
-text = "Mảnh Vỏ: 0"
+theme_override_font_sizes/font_size = 7
+text = "Cấp 1 | Mảnh Vỏ: 0"
 
 [node name="DebugDodgeLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 visible = false
 layout_mode = 2
-theme_override_font_sizes/font_size = 8
+theme_override_font_sizes/font_size = 7
 text = "[DEBUG F3] DODGE: 0"
 
 [node name="DeathOverlay" type="Control" parent="."]
@@ -99,5 +109,5 @@ horizontal_alignment = 1
 [node name="SubLabel" type="Label" parent="DeathOverlay/CenterContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 8
-text = "Đang hồi sinh..."
+text = "Nhấn [R] hoặc chờ hồi sinh"
 horizontal_alignment = 1
