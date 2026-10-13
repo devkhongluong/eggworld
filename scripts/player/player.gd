@@ -14,7 +14,7 @@ signal stamina_changed(new_stamina: float, max_stamina: float)
 signal player_died()
 signal player_respawned()
 signal combo_stepped(current_step: int)
-signal weapon_swapped(weapon_id: String, weapon_name: String)
+signal weapon_swapped(active_slot: int, weapon_id: String, weapon_name: String)
 
 @onready var visual_node: Node2D = $EggVisual
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -61,12 +61,13 @@ var is_attacking: bool = false
 var can_attack: bool = true
 var combo_step: int = 0 # 0, 1, 2 tương ứng các đòn trong chuỗi
 
-# Hệ thống vũ khí (Giai đoạn A)
-var inventory_weapons: Array[String] = ["staff_wood", "dagger", "sling"]
-var equipped_weapon_index: int = 0
+# Hệ thống vũ khí (Giai đoạn A: 2 ô vũ khí trang bị)
+var weapon_slots: Array[String] = ["staff_wood", "dagger"]
+var active_slot_idx: int = 0
 var current_weapon_id: String = "staff_wood"
 var current_weapon_data: Dictionary = {}
 var player_stats: Dictionary = {}
+var debug_combat_log: bool = true
 
 const LOGIC_FRAME_TIME: float = 1.0 / 60.0
 var attack_frame_accumulator: float = 0.0
@@ -113,9 +114,13 @@ func _ready() -> void:
 		animated_sprite.frame_changed.connect(_on_sprite_frame_changed)
 		animated_sprite.animation_finished.connect(_on_sprite_animation_finished)
 	
+	if visual_node != null and visual_node.has_method("set_equipped_weapon"):
+		visual_node.set_equipped_weapon(current_weapon_id, facing_direction)
+	
 	update_animations()
 
 func load_stats_from_data() -> void:
+	debug_combat_log = bool(GameData.get_stat("debug", "show_combat_log", true))
 	var vit: int = int(GameData.get_stat("base_stats", "VIT", 10))
 	var hp_base: int = int(GameData.get_stat("formulas", "hp_base", 60))
 	var hp_per_vit: int = int(GameData.get_stat("formulas", "hp_per_vit", 4))
@@ -318,6 +323,8 @@ func process_input_and_movement(delta: float) -> void:
 	var input_vector: Vector2 = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if input_vector != Vector2.ZERO:
 		facing_direction = input_vector.normalized()
+		if visual_node != null and visual_node.has_method("set_equipped_weapon"):
+			visual_node.set_equipped_weapon(current_weapon_id, facing_direction)
 		var speed: float = move_speed
 		if is_guarding:
 			speed *= guard_speed_multiplier
@@ -329,6 +336,21 @@ func process_input_and_movement(delta: float) -> void:
 	if not is_guarding and not is_dodging:
 		if Input.is_action_just_pressed("swap_weapon"):
 			swap_weapon()
+		
+		# Hỗ trợ phím số 1, 2, 3, 4 để người chơi thử nghiệm đủ 3 vũ khí + tay không vào ô đang chọn
+		if Input.is_key_pressed(KEY_1):
+			equip_weapon_to_active_slot("staff_wood")
+		elif Input.is_key_pressed(KEY_2):
+			equip_weapon_to_active_slot("dagger")
+		elif Input.is_key_pressed(KEY_3):
+			equip_weapon_to_active_slot("sling")
+		elif Input.is_key_pressed(KEY_4):
+			equip_weapon_to_active_slot("fist")
+		elif Input.is_action_just_pressed("cycle_item"):
+			var all_keys := ["staff_wood", "dagger", "sling", "fist"]
+			var cur_i := all_keys.find(current_weapon_id)
+			var nxt_i := (cur_i + 1) % all_keys.size() if cur_i != -1 else 0
+			equip_weapon_to_active_slot(all_keys[nxt_i])
 	
 	if not is_guarding:
 		if Input.is_action_just_pressed("attack"):
@@ -344,19 +366,42 @@ func process_input_and_movement(delta: float) -> void:
 func swap_weapon() -> void:
 	if is_attacking or is_dodging or is_dead or is_stunned:
 		return
-	if inventory_weapons.is_empty():
-		return
 	
-	equipped_weapon_index = (equipped_weapon_index + 1) % inventory_weapons.size()
-	current_weapon_id = inventory_weapons[equipped_weapon_index]
+	# Đổi qua lại giữa 2 ô vũ khí trang bị
+	active_slot_idx = 1 - active_slot_idx
+	current_weapon_id = weapon_slots[active_slot_idx]
 	current_weapon_data = WeaponDB.get_weapon(current_weapon_id)
 	
 	combat_state.reset_combo()
 	combo_step = 0
 	
+	if visual_node != null and visual_node.has_method("set_equipped_weapon"):
+		visual_node.set_equipped_weapon(current_weapon_id, facing_direction)
+	
 	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
-	print("[PLAYER] Đã đổi sang vũ khí: %s (%s)" % [w_name, current_weapon_id])
-	weapon_swapped.emit(current_weapon_id, w_name)
+	if debug_combat_log:
+		print("[PLAYER] Đổi ô vũ khí: Ô %d -> %s (%s)" % [active_slot_idx + 1, w_name, current_weapon_id])
+	weapon_swapped.emit(active_slot_idx, current_weapon_id, w_name)
+
+func equip_weapon_to_active_slot(weapon_id: String) -> void:
+	if is_attacking or is_dodging or is_dead or is_stunned:
+		return
+	if current_weapon_id == weapon_id:
+		return
+	var w_data := WeaponDB.get_weapon(weapon_id)
+	if w_data.is_empty():
+		return
+	weapon_slots[active_slot_idx] = weapon_id
+	current_weapon_id = weapon_id
+	current_weapon_data = w_data
+	combat_state.reset_combo()
+	combo_step = 0
+	if visual_node != null and visual_node.has_method("set_equipped_weapon"):
+		visual_node.set_equipped_weapon(current_weapon_id, facing_direction)
+	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
+	if debug_combat_log:
+		print("[PLAYER] Trang bị vào Ô %d: %s (%s)" % [active_slot_idx + 1, w_name, current_weapon_id])
+	weapon_swapped.emit(active_slot_idx, current_weapon_id, w_name)
 
 # --- Chuỗi đòn nhẹ 60 FPS Logic (Startup -> Active -> Recovery) ---
 
@@ -500,23 +545,18 @@ func _enter_active_phase(spec: Dictionary) -> void:
 	var hitbox_spec: Dictionary = spec.get("hitbox", {})
 	var shape_type: String = str(hitbox_spec.get("shape", "arc"))
 	var w_type: String = str(current_weapon_data.get("type", "staff"))
+	var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
 	
 	if shape_type == "projectile":
-		# Bắn đạn tầm xa (Ná)
-		var proj: Area2D = ProjectileScript.new()
-		var spd: float = float(hitbox_spec.get("speed", 220.0))
-		var life: float = float(hitbox_spec.get("life", 0.75))
-		var rad: float = float(hitbox_spec.get("radius", 3.0))
-		var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
-		proj.setup(facing_direction, spd, dmg, life, self, rad)
-		proj.global_position = global_position + Vector2(0, -10) + facing_direction * 8.0
-		get_parent().add_child(proj)
+		# Bắn đạn tầm xa (Ná) qua HitboxService
+		var spawn_pos: Vector2 = global_position + Vector2(0, -10) + facing_direction * 8.0
+		HitboxService.spawn_projectile(get_parent(), hitbox_spec, facing_direction, spawn_pos, self, dmg)
 		
 		if visual_node != null and visual_node.has_method("start_attack_visual"):
 			visual_node.start_attack_visual(facing_direction, combo_step, w_type)
 	else:
-		# Cận chiến: kích hoạt Hitbox
-		HitboxService.configure_hitbox(attack_hitbox, hitbox_spec, dir_suffix, flip_left)
+		# Cận chiến: tạo/cấu hình Hitbox theo hình dạng (arc, line, rect)
+		HitboxService.configure_hitbox(attack_hitbox, hitbox_spec, dir_suffix, flip_left, facing_direction)
 		attack_hitbox.monitoring = true
 		check_melee_overlaps()
 		
@@ -525,7 +565,7 @@ func _enter_active_phase(spec: Dictionary) -> void:
 
 func _enter_recovery_phase() -> void:
 	is_in_hit_frame = false
-	attack_hitbox.monitoring = false
+	HitboxService.deactivate_hitbox(attack_hitbox)
 
 func _advance_combo() -> void:
 	var chain: Array = current_weapon_data.get("light_chain", [])
@@ -550,7 +590,7 @@ func _finish_attack_recovery(spec: Dictionary, chain: Array) -> void:
 func end_attack(reset_step: bool = true) -> void:
 	is_attacking = false
 	is_in_hit_frame = false
-	attack_hitbox.monitoring = false
+	HitboxService.deactivate_hitbox(attack_hitbox)
 	combat_state.attack_phase = CombatState.AttackPhase.NONE
 	combat_state.current_state = CombatState.State.IDLE
 	can_attack = true
@@ -587,13 +627,18 @@ func _on_attack_hitbox_area_entered(area: Area2D) -> void:
 		var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
 		HitboxService.process_single_target(area, self, dmg, already_hit_enemies, _on_enemy_hit)
 
-func _on_enemy_hit(_target: Node, dmg: int, _res: Dictionary) -> void:
-	print("[COMBAT] Đòn %d đánh trúng kẻ thù! Gây %d sát thương." % [combo_step + 1, dmg])
+func _on_enemy_hit(target: Node, dmg: int, _res: Dictionary) -> void:
+	if debug_combat_log:
+		print("[COMBAT] Đòn %d của %s đánh trúng %s! Gây %d sát thương." % [
+			combo_step + 1, current_weapon_data.get("name", current_weapon_id), target.name, dmg
+		])
 	accumulated_melee_damage += dmg
 	if accumulated_melee_damage >= 10:
 		var guard_pts := accumulated_melee_damage / 10
 		accumulated_melee_damage = accumulated_melee_damage % 10
 		BehaviorTracker.add_points(BehaviorTracker.ACTION_GUARD, guard_pts)
+		if debug_combat_log:
+			print("[COMBAT] +%d điểm GUARD từ tích lũy sát thương cận chiến!" % guard_pts)
 
 func get_direction_suffix(dir: Vector2) -> String:
 	if abs(dir.x) >= abs(dir.y):

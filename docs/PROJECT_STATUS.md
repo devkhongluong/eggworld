@@ -82,16 +82,19 @@
       - `max_stamina = 60 + VIT * 2` (80.0 Stamina tại VIT 10).
       - Cân bằng lại chi phí tương ứng bể thể lực 80: lăn né `16.0` (trước là 20), hồi thể lực `26.0/s` (trước là 30), đòn đánh `[8.0, 10.0, 14.0]`, đỡ đòn `20.0/hit`.
     - *File liên quan:* `data/stats.json`, `scripts/player/player.gd`, `scripts/combat/*.gd`.
-12. **Triển khai Giai đoạn A – Hệ thống Vũ khí & Chuỗi đòn 60 FPS Logic (Commit 2):**
-    - `data/weapons.json`: Định nghĩa đầy đủ 4 cấu hình vũ khí (`staff_wood`, `dagger`, `sling`, `fist`) với cấu trúc chuẩn COMBAT_SPEC (tên, kiểu, trọng lượng, base damage, scaling, requirements, light_chain với startup/active/recovery/cancel_from, poise_dmg, combo_window).
+12. **Triển khai Giai đoạn A – Hệ thống Vũ khí & Chuỗi đòn 60 FPS Logic:**
+    - `data/weapons.json`: Định nghĩa đầy đủ 4 cấu hình vũ khí (`staff_wood`, `dagger`, `sling`, `fist`) với cấu trúc chuẩn COMBAT_SPEC mục 4 (tên, kiểu, trọng lượng, base damage, scaling, requirements, light_chain với startup/active/recovery/cancel_from, poise_dmg, combo_window).
+    - `GameData.gd` nạp `weapons.json` và `WeaponDB.gd` đọc qua `GameData`, áp dụng công thức scaling và phạt khi thiếu chỉ số.
     - Chu kỳ 3 pha theo khung hình logic 60 FPS: `startup` $\rightarrow$ `active` $\rightarrow$ `recovery` với khả năng hủy đòn sang lăn né (`dodge cancel`) hoặc nối chuỗi combo từ khung `cancel_from`.
-    - Input Map `swap_weapon` (phím `Q`, Joypad D-pad Lên): Đổi luân phiên giữa các vũ khí trang bị (`staff_wood`, `dagger`, `sling`).
-    - Vũ khí tầm xa Ná (`sling`): Bắn đạn `Projectile` bay theo hướng nhìn, va chạm Hurtbox kẻ thù, gây sát thương và cộng +2 điểm `MAGIC` vào `BehaviorTracker`.
-    - Vũ khí cận chiến Dao Găm (`dagger`): Tốc độ cực nhanh (startup 2 khung, active 2 khung), tiêu hao ít Stamina (4-6), vẽ vệt đâm nhọn thẳng.
-    - Vũ khí Gậy Gỗ (`staff_wood`): Quét vòng cung rộng, đòn thứ 3 uy lực và quét mạnh.
-    - Cập nhật giao diện HUD: hiển thị tên vũ khí hiện tại `[Q] Gậy Gỗ / Dao Găm / Ná`, tự động cập nhật khi đổi vũ khí.
-    - Kịch bản kiểm thử tự động: `tools/test_combat_stage_a.gd`.
-    - *File liên quan:* `data/weapons.json`, `project.godot`, `scripts/player/player.gd`, `scripts/player/egg_visual.gd`, `scripts/combat/*.gd`, `scripts/ui/hud.gd`, `scenes/ui/hud.tscn`, `scenes/levels/test_arena.gd`, `tools/test_combat_stage_a.gd`.
+    - Input Map khai báo theo mục 2: `swap_weapon` (Q, Joypad D-pad Lên - đã kích hoạt), `use_item` (R), `cycle_item` (Z), `skill` (I), `two_hand` (Tab).
+    - Đổi vũ khí bằng `swap_weapon` giữa 2 ô trang bị (`weapon_slots`). Hỗ trợ phím số 1, 2, 3, 4 hoặc `cycle_item` (Z) để đổi nhanh vũ khí trang bị vào ô đang chọn phục vụ thử nghiệm.
+    - Hình khối tạm (Placeholder visual) cho vũ khí đang cầm và đòn đánh trên thân nhân vật: Gậy Gỗ (thanh nâu), Dao Găm (lưỡi bạc), Ná (chạc chữ Y).
+    - Vũ khí tầm xa Ná (`sling`): Bắn đạn `Projectile` qua `HitboxService`, bay theo hướng nhìn, va chạm Hurtbox kẻ thù, gây sát thương và cộng +2 điểm `MAGIC` vào `BehaviorTracker`.
+    - `HitboxService.gd`: Tạo, định vị và cấu hình hitbox chuẩn xác theo 4 hình dạng (`arc`, `rect`, `line`, `projectile`), xoay theo `facing_direction` và lật theo `flip_h`.
+    - Mỗi đòn trúng cộng điểm theo mục 12 và in console log khi bật cờ `debug.show_combat_log` trong `data/stats.json`.
+    - Cập nhật HUD: hiển thị trực quan ô vũ khí và tên vũ khí `[Q] Ô 1: Gậy Gỗ`, tự động cập nhật khi đổi ô.
+    - Kịch bản kiểm thử tự động toàn diện: `tools/test_combat_stage_a.gd` (kiểm tra đầy đủ 7 tiêu chí đơn vị).
+    - *File liên quan:* `data/weapons.json`, `data/stats.json`, `project.godot`, `scripts/autoload/game_data.gd`, `scripts/combat/*.gd`, `scripts/player/*.gd`, `scripts/ui/hud.gd`, `scenes/ui/hud.tscn`, `scenes/levels/test_arena.gd`, `tools/test_combat_stage_a.gd`.
 
 ---
 

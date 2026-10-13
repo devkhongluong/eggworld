@@ -4,6 +4,7 @@ extends Node
 # Đảm bảo không hard-code bất kỳ chỉ số cân bằng nào vào mã nguồn.
 
 var stats: Dictionary = {}
+var weapons: Dictionary = {}
 
 func _ready() -> void:
 	load_all_data()
@@ -14,6 +15,12 @@ func load_all_data() -> void:
 		push_error("GameData: Không thể nạp dữ liệu từ stats.json!")
 	else:
 		print("GameData: Nạp thành công stats.json.")
+	
+	weapons = load_json_file("res://data/weapons.json")
+	if weapons.is_empty():
+		push_error("GameData: Không thể nạp dữ liệu từ weapons.json!")
+	else:
+		print("GameData: Nạp thành công weapons.json (%d loại vũ khí)." % weapons.size())
 
 func load_json_file(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
@@ -38,3 +45,11 @@ func get_stat(category: String, key: String, default_value: Variant = null) -> V
 	if stats.has(category) and stats[category] is Dictionary and stats[category].has(key):
 		return stats[category][key]
 	return default_value
+
+func get_weapon(weapon_id: String) -> Dictionary:
+	if weapons.has(weapon_id) and weapons[weapon_id] is Dictionary:
+		return weapons[weapon_id]
+	return {}
+
+func get_all_weapons() -> Dictionary:
+	return weapons

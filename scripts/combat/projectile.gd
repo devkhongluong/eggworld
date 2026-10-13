@@ -51,7 +51,9 @@ func _draw() -> void:
 func _on_area_entered(area: Area2D) -> void:
 	var target: Node = area.get_parent()
 	if target != null and target != attacker and target.has_method("receive_hit"):
-		var res: Dictionary = target.receive_hit(damage, attacker)
-		print("[PROJECTILE] Đạn Ná bắn trúng %s! Gây %d sát thương. (+2 MAGIC)" % [target.name, damage])
+		var _res: Dictionary = target.receive_hit(damage, attacker)
+		var show_log: bool = bool(GameData.get_stat("debug", "show_combat_log", true))
+		if show_log:
+			print("[PROJECTILE] Đạn Ná bắn trúng %s! Gây %d sát thương. (+2 MAGIC)" % [target.name, damage])
 		BehaviorTracker.add_points(BehaviorTracker.ACTION_MAGIC, 2)
 		queue_free()

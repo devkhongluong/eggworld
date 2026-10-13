@@ -60,6 +60,7 @@
 	"exp_drop": 15
   },
   "debug": {
-	"show_dodge_debug": false
+	"show_dodge_debug": false,
+	"show_combat_log": true
   }
 }

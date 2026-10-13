@@ -21,6 +21,6 @@ func _ready() -> void:
 		hud.update_hp(player.current_hp, player.max_hp)
 		hud.update_stamina(player.current_stamina, player.max_stamina)
 		var w_name: String = str(player.current_weapon_data.get("name", player.current_weapon_id))
-		hud.update_weapon(player.current_weapon_id, w_name)
+		hud.update_weapon(player.active_slot_idx, player.current_weapon_id, w_name)
 	
-	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD), Lăn né (Space), Tấn công (J), Đỡ (L), Đổi vũ khí (Q).")
+	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD), Lăn né (Space), Tấn công (J), Đỡ (L), Đổi vũ khí 2 ô (Q), Đổi trang bị (1,2,3,4).")

@@ -169,3 +169,44 @@ func _draw() -> void:
 		draw_arc(shield_center, 9.0, g_start, g_end, 10, Palette.XAM_SAT, 2.0)
 		# Điểm tâm khiên Vàng Cổ
 		draw_circle(shield_center, 2.0, Palette.VANG_CO)
+	
+	# 5. Hình khối tạm thời biểu diễn vũ khí đang cầm (Placeholder Weapon Visual)
+	_draw_placeholder_weapon()
+
+var equipped_weapon_id: String = "staff_wood"
+var facing_dir: Vector2 = Vector2.DOWN
+
+func set_equipped_weapon(w_id: String, dir: Vector2) -> void:
+	equipped_weapon_id = w_id
+	facing_dir = dir
+	queue_redraw()
+
+func _draw_placeholder_weapon() -> void:
+	if is_guarding:
+		return
+	
+	var flip_sign: float = -1.0 if facing_dir.x < 0 else 1.0
+	var hand_pos: Vector2 = Vector2(7.0 * flip_sign, -8.0)
+	if abs(facing_dir.y) > abs(facing_dir.x):
+		hand_pos = Vector2(7.0, -8.0 if facing_dir.y > 0 else -10.0)
+	
+	match equipped_weapon_id:
+		"staff_wood":
+			# Gậy gỗ dài màu Nâu Da
+			draw_line(hand_pos + Vector2(0, 4), hand_pos + Vector2(2 * flip_sign, -12), Palette.NAU_DA, 2.5)
+			draw_circle(hand_pos + Vector2(2 * flip_sign, -12), 1.5, Palette.KEM)
+		"dagger":
+			# Dao găm ngắn màu Xám Sắt
+			var aim := facing_dir.normalized()
+			if aim == Vector2.ZERO:
+				aim = Vector2.DOWN
+			draw_line(hand_pos, hand_pos + aim * 8.0, Palette.XAM_SAT, 2.0)
+			draw_circle(hand_pos, 1.5, Palette.NAU_HAM)
+		"sling":
+			# Ná chạc chữ Y màu Cát
+			draw_line(hand_pos, hand_pos + Vector2(0, -4), Palette.CAT, 2.0)
+			draw_line(hand_pos + Vector2(0, -4), hand_pos + Vector2(3 * flip_sign, -7), Palette.CAT, 1.5)
+			draw_line(hand_pos + Vector2(0, -4), hand_pos + Vector2(-3 * flip_sign, -7), Palette.CAT, 1.5)
+		"fist", _:
+			pass
+

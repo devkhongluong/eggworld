@@ -20,6 +20,15 @@ static func _ensure_loaded() -> void:
 	if not _weapons_cache.is_empty():
 		return
 	
+	# Đọc dữ liệu qua GameData (Autoload) theo yêu cầu COMBAT_SPEC
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var gd = root.root.get_node_or_null("GameData")
+		if gd != null and not gd.weapons.is_empty():
+			_weapons_cache = gd.weapons
+			return
+	
+	# Fallback nếu chạy trong môi trường SceneTree độc lập chưa có Autoload
 	var path := "res://data/weapons.json"
 	if FileAccess.file_exists(path):
 		var file := FileAccess.open(path, FileAccess.READ)
@@ -27,10 +36,8 @@ static func _ensure_loaded() -> void:
 			var json := JSON.new()
 			if json.parse(file.get_as_text()) == OK and json.data is Dictionary:
 				_weapons_cache = json.data
-				print("[WeaponDB] Đã tải thành công weapons.json (%d vũ khí)." % _weapons_cache.size())
 				return
 	
-	# Fallback mặc định
 	_weapons_cache = {}
 
 const SCALING_COEFF: Dictionary = {

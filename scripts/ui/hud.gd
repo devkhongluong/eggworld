@@ -68,9 +68,9 @@ func update_stamina(new_stamina: float, new_max_stamina: float) -> void:
 	var ratio: float = clampf(current_stamina / maxf(1.0, max_stamina), 0.0, 1.0)
 	stamina_bar_fill.size.x = stamina_bar_max_width * ratio
 
-func update_weapon(_weapon_id: String, weapon_name: String) -> void:
+func update_weapon(slot_idx: int, _weapon_id: String, weapon_name: String) -> void:
 	if weapon_label != null:
-		weapon_label.text = "[Q] " + weapon_name
+		weapon_label.text = "[Q] Ô %d: %s" % [slot_idx + 1, weapon_name]
 
 func _on_behavior_points_changed(action_name: String, _new_points: int, _total: int) -> void:
 	if action_name == BehaviorTracker.ACTION_DODGE:

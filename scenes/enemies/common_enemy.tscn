@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://cenemy001common"]
+[gd_scene format=3 uid="uid://da6ht4f4h0yqb"]
 
 [ext_resource type="Script" path="res://scripts/combat/base_enemy.gd" id="1_enemy"]
 [ext_resource type="Script" path="res://scripts/combat/common_enemy_visual.gd" id="2_visual"]

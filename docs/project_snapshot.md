@@ -125,7 +125,8 @@
 	"exp_drop": 15
   },
   "debug": {
-	"show_dodge_debug": false
+	"show_dodge_debug": false,
+	"show_combat_log": true
   }
 }
 `
@@ -468,6 +469,31 @@ swap_weapon={
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":11,"pressure":0.0,"pressed":false,"script":null)
 ]
 }
+skill={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":73,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":10,"pressure":0.0,"pressed":false,"script":null)
+]
+}
+two_hand={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194306,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":8,"pressure":0.0,"pressed":false,"script":null)
+]
+}
+use_item={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":82,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":14,"pressure":0.0,"pressed":false,"script":null)
+]
+}
+cycle_item={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":90,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":12,"pressure":0.0,"pressed":false,"script":null)
+]
+}
+
 
 
 [physics]
@@ -484,7 +510,7 @@ rendering_device/driver.windows="d3d12"
 
 ## scenes\enemies\common_enemy.tscn
 `tscn
-[gd_scene load_steps=5 format=3 uid="uid://cenemy001common"]
+[gd_scene format=3 uid="uid://da6ht4f4h0yqb"]
 
 [ext_resource type="Script" path="res://scripts/combat/base_enemy.gd" id="1_enemy"]
 [ext_resource type="Script" path="res://scripts/combat/common_enemy_visual.gd" id="2_visual"]
@@ -585,9 +611,9 @@ func _ready() -> void:
 		hud.update_hp(player.current_hp, player.max_hp)
 		hud.update_stamina(player.current_stamina, player.max_stamina)
 		var w_name: String = str(player.current_weapon_data.get("name", player.current_weapon_id))
-		hud.update_weapon(player.current_weapon_id, w_name)
+		hud.update_weapon(player.active_slot_idx, player.current_weapon_id, w_name)
 	
-	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD), Lăn né (Space), Tấn công (J), Đỡ (L), Đổi vũ khí (Q).")
+	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD), Lăn né (Space), Tấn công (J), Đỡ (L), Đổi vũ khí 2 ô (Q), Đổi trang bị (1,2,3,4).")
 `
 
 ## scenes\levels\test_arena.tscn
@@ -907,6 +933,7 @@ extends Node
 # Đảm bảo không hard-code bất kỳ chỉ số cân bằng nào vào mã nguồn.
 
 var stats: Dictionary = {}
+var weapons: Dictionary = {}
 
 func _ready() -> void:
 	load_all_data()
@@ -917,6 +944,12 @@ func load_all_data() -> void:
 		push_error("GameData: Không thể nạp dữ liệu từ stats.json!")
 	else:
 		print("GameData: Nạp thành công stats.json.")
+	
+	weapons = load_json_file("res://data/weapons.json")
+	if weapons.is_empty():
+		push_error("GameData: Không thể nạp dữ liệu từ weapons.json!")
+	else:
+		print("GameData: Nạp thành công weapons.json (%d loại vũ khí)." % weapons.size())
 
 func load_json_file(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
@@ -941,6 +974,14 @@ func get_stat(category: String, key: String, default_value: Variant = null) -> V
 	if stats.has(category) and stats[category] is Dictionary and stats[category].has(key):
 		return stats[category][key]
 	return default_value
+
+func get_weapon(weapon_id: String) -> Dictionary:
+	if weapons.has(weapon_id) and weapons[weapon_id] is Dictionary:
+		return weapons[weapon_id]
+	return {}
+
+func get_all_weapons() -> Dictionary:
+	return weapons
 `
 
 ## scripts\autoload\palette.gd
@@ -1624,8 +1665,11 @@ func _draw() -> void:
 extends Node
 class_name HitboxService
 
-# HitboxService: Quản lý vị trí, kích thước và kích hoạt vùng va chạm tấn công
-# Nhận diện mục tiêu và chuyển giao sát thương cho đối tượng trúng đòn
+# HitboxService: Quản lý vị trí, kích thước, hình dạng và kích hoạt vùng va chạm tấn công
+# Hỗ trợ các hình dạng theo COMBAT_SPEC: arc (cung), rect (chữ nhật), line (đường đâm), projectile (đạn bay)
+# Định vị và lật theo facing_direction và flip_h
+
+const ProjectileScript = preload("res://scripts/combat/projectile.gd")
 
 static func update_attack_hitbox_position(hitbox: Area2D, dir_suffix: String, flip_left: bool) -> void:
 	if hitbox == null:
@@ -1642,33 +1686,90 @@ static func update_attack_hitbox_position(hitbox: Area2D, dir_suffix: String, fl
 			else:
 				hitbox.position = Vector2(16, -10)
 
-static func configure_hitbox(hitbox: Area2D, hitbox_spec: Dictionary, dir_suffix: String, flip_left: bool) -> void:
+static func configure_hitbox(hitbox: Area2D, hitbox_spec: Dictionary, dir_suffix: String, flip_left: bool, facing_dir: Vector2 = Vector2.ZERO) -> void:
 	if hitbox == null:
 		return
 	
+	var shape_type: String = str(hitbox_spec.get("shape", "arc"))
 	var radius: float = float(hitbox_spec.get("radius", 18.0))
-	
-	# Đặt vị trí dựa theo kích thước bán kính của vũ khí
-	match dir_suffix:
-		"down":
-			hitbox.position = Vector2(0, maxf(6.0, radius * 0.4))
-		"up":
-			hitbox.position = Vector2(0, -maxf(20.0, radius * 1.1))
-		"side":
-			if flip_left:
-				hitbox.position = Vector2(-maxf(14.0, radius * 0.9), -10)
-			else:
-				hitbox.position = Vector2(maxf(14.0, radius * 0.9), -10)
-	
-	# Cập nhật kích thước vùng va chạm nếu có CollisionShape2D
 	var shape_owner := hitbox.get_node_or_null("CollisionShape2D") as CollisionShape2D
-	if shape_owner != null:
-		if shape_owner.shape is RectangleShape2D:
-			var rect: RectangleShape2D = shape_owner.shape
-			rect.size = Vector2(radius * 1.5, radius * 1.5)
-		elif shape_owner.shape is CircleShape2D:
-			var circle: CircleShape2D = shape_owner.shape
-			circle.radius = radius
+	
+	match shape_type:
+		"line":
+			# Đường đâm thẳng dài và hẹp theo hướng nhìn
+			var reach: float = float(hitbox_spec.get("reach", radius * 1.3))
+			var thickness: float = float(hitbox_spec.get("thickness", 8.0))
+			match dir_suffix:
+				"down":
+					hitbox.position = Vector2(0, reach * 0.5)
+					if shape_owner != null:
+						var rect := RectangleShape2D.new()
+						rect.size = Vector2(thickness, reach)
+						shape_owner.shape = rect
+				"up":
+					hitbox.position = Vector2(0, -reach * 0.9)
+					if shape_owner != null:
+						var rect := RectangleShape2D.new()
+						rect.size = Vector2(thickness, reach)
+						shape_owner.shape = rect
+				"side":
+					var offset_x: float = -reach * 0.6 if flip_left else reach * 0.6
+					hitbox.position = Vector2(offset_x, -10)
+					if shape_owner != null:
+						var rect := RectangleShape2D.new()
+						rect.size = Vector2(reach, thickness)
+						shape_owner.shape = rect
+		
+		"rect":
+			# Vùng va chạm hình chữ nhật cố định
+			var sz: Array = hitbox_spec.get("size", [radius * 1.2, radius * 1.2])
+			var w: float = float(sz[0])
+			var h: float = float(sz[1]) if sz.size() > 1 else w
+			match dir_suffix:
+				"down":
+					hitbox.position = Vector2(0, h * 0.4)
+				"up":
+					hitbox.position = Vector2(0, -h * 0.9)
+				"side":
+					hitbox.position = Vector2(-w * 0.7 if flip_left else w * 0.7, -10)
+			if shape_owner != null:
+				var rect := RectangleShape2D.new()
+				rect.size = Vector2(w, h)
+				shape_owner.shape = rect
+				
+		"arc", _:
+			# Cung quét vung vũ khí cận chiến
+			match dir_suffix:
+				"down":
+					hitbox.position = Vector2(0, maxf(6.0, radius * 0.4))
+				"up":
+					hitbox.position = Vector2(0, -maxf(20.0, radius * 1.1))
+				"side":
+					if flip_left:
+						hitbox.position = Vector2(-maxf(14.0, radius * 0.9), -10)
+					else:
+						hitbox.position = Vector2(maxf(14.0, radius * 0.9), -10)
+			
+			if shape_owner != null:
+				var circle := CircleShape2D.new()
+				circle.radius = radius
+				shape_owner.shape = circle
+
+static func spawn_projectile(parent: Node, hitbox_spec: Dictionary, facing_dir: Vector2, spawn_pos: Vector2, attacker: Node, damage: int) -> Area2D:
+	if parent == null:
+		return null
+	var proj: Area2D = ProjectileScript.new()
+	var spd: float = float(hitbox_spec.get("speed", 220.0))
+	var life: float = float(hitbox_spec.get("life", 0.75))
+	var rad: float = float(hitbox_spec.get("radius", 3.0))
+	proj.setup(facing_dir, spd, damage, life, attacker, rad)
+	proj.global_position = spawn_pos
+	parent.add_child(proj)
+	return proj
+
+static func deactivate_hitbox(hitbox: Area2D) -> void:
+	if hitbox != null:
+		hitbox.monitoring = false
 
 static func check_and_process_overlaps(hitbox: Area2D, attacker: Node, damage: int, already_hit: Array[Node], on_hit_callback: Callable = Callable()) -> void:
 	if hitbox == null or not hitbox.monitoring:
@@ -1743,8 +1844,10 @@ func _draw() -> void:
 func _on_area_entered(area: Area2D) -> void:
 	var target: Node = area.get_parent()
 	if target != null and target != attacker and target.has_method("receive_hit"):
-		var res: Dictionary = target.receive_hit(damage, attacker)
-		print("[PROJECTILE] Đạn Ná bắn trúng %s! Gây %d sát thương. (+2 MAGIC)" % [target.name, damage])
+		var _res: Dictionary = target.receive_hit(damage, attacker)
+		var show_log: bool = bool(GameData.get_stat("debug", "show_combat_log", true))
+		if show_log:
+			print("[PROJECTILE] Đạn Ná bắn trúng %s! Gây %d sát thương. (+2 MAGIC)" % [target.name, damage])
 		BehaviorTracker.add_points(BehaviorTracker.ACTION_MAGIC, 2)
 		queue_free()
 `
@@ -1830,6 +1933,15 @@ static func _ensure_loaded() -> void:
 	if not _weapons_cache.is_empty():
 		return
 	
+	# Đọc dữ liệu qua GameData (Autoload) theo yêu cầu COMBAT_SPEC
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var gd = root.root.get_node_or_null("GameData")
+		if gd != null and not gd.weapons.is_empty():
+			_weapons_cache = gd.weapons
+			return
+	
+	# Fallback nếu chạy trong môi trường SceneTree độc lập chưa có Autoload
 	var path := "res://data/weapons.json"
 	if FileAccess.file_exists(path):
 		var file := FileAccess.open(path, FileAccess.READ)
@@ -1837,10 +1949,8 @@ static func _ensure_loaded() -> void:
 			var json := JSON.new()
 			if json.parse(file.get_as_text()) == OK and json.data is Dictionary:
 				_weapons_cache = json.data
-				print("[WeaponDB] Đã tải thành công weapons.json (%d vũ khí)." % _weapons_cache.size())
 				return
 	
-	# Fallback mặc định
 	_weapons_cache = {}
 
 const SCALING_COEFF: Dictionary = {
@@ -2074,6 +2184,46 @@ func _draw() -> void:
 		draw_arc(shield_center, 9.0, g_start, g_end, 10, Palette.XAM_SAT, 2.0)
 		# Điểm tâm khiên Vàng Cổ
 		draw_circle(shield_center, 2.0, Palette.VANG_CO)
+	
+	# 5. Hình khối tạm thời biểu diễn vũ khí đang cầm (Placeholder Weapon Visual)
+	_draw_placeholder_weapon()
+
+var equipped_weapon_id: String = "staff_wood"
+var facing_dir: Vector2 = Vector2.DOWN
+
+func set_equipped_weapon(w_id: String, dir: Vector2) -> void:
+	equipped_weapon_id = w_id
+	facing_dir = dir
+	queue_redraw()
+
+func _draw_placeholder_weapon() -> void:
+	if is_guarding:
+		return
+	
+	var flip_sign: float = -1.0 if facing_dir.x < 0 else 1.0
+	var hand_pos: Vector2 = Vector2(7.0 * flip_sign, -8.0)
+	if abs(facing_dir.y) > abs(facing_dir.x):
+		hand_pos = Vector2(7.0, -8.0 if facing_dir.y > 0 else -10.0)
+	
+	match equipped_weapon_id:
+		"staff_wood":
+			# Gậy gỗ dài màu Nâu Da
+			draw_line(hand_pos + Vector2(0, 4), hand_pos + Vector2(2 * flip_sign, -12), Palette.NAU_DA, 2.5)
+			draw_circle(hand_pos + Vector2(2 * flip_sign, -12), 1.5, Palette.KEM)
+		"dagger":
+			# Dao găm ngắn màu Xám Sắt
+			var aim := facing_dir.normalized()
+			if aim == Vector2.ZERO:
+				aim = Vector2.DOWN
+			draw_line(hand_pos, hand_pos + aim * 8.0, Palette.XAM_SAT, 2.0)
+			draw_circle(hand_pos, 1.5, Palette.NAU_HAM)
+		"sling":
+			# Ná chạc chữ Y màu Cát
+			draw_line(hand_pos, hand_pos + Vector2(0, -4), Palette.CAT, 2.0)
+			draw_line(hand_pos + Vector2(0, -4), hand_pos + Vector2(3 * flip_sign, -7), Palette.CAT, 1.5)
+			draw_line(hand_pos + Vector2(0, -4), hand_pos + Vector2(-3 * flip_sign, -7), Palette.CAT, 1.5)
+		"fist", _:
+			pass
 `
 
 ## scripts\player\player.gd
@@ -2094,7 +2244,7 @@ signal stamina_changed(new_stamina: float, max_stamina: float)
 signal player_died()
 signal player_respawned()
 signal combo_stepped(current_step: int)
-signal weapon_swapped(weapon_id: String, weapon_name: String)
+signal weapon_swapped(active_slot: int, weapon_id: String, weapon_name: String)
 
 @onready var visual_node: Node2D = $EggVisual
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -2141,12 +2291,13 @@ var is_attacking: bool = false
 var can_attack: bool = true
 var combo_step: int = 0 # 0, 1, 2 tương ứng các đòn trong chuỗi
 
-# Hệ thống vũ khí (Giai đoạn A)
-var inventory_weapons: Array[String] = ["staff_wood", "dagger", "sling"]
-var equipped_weapon_index: int = 0
+# Hệ thống vũ khí (Giai đoạn A: 2 ô vũ khí trang bị)
+var weapon_slots: Array[String] = ["staff_wood", "dagger"]
+var active_slot_idx: int = 0
 var current_weapon_id: String = "staff_wood"
 var current_weapon_data: Dictionary = {}
 var player_stats: Dictionary = {}
+var debug_combat_log: bool = true
 
 const LOGIC_FRAME_TIME: float = 1.0 / 60.0
 var attack_frame_accumulator: float = 0.0
@@ -2193,9 +2344,13 @@ func _ready() -> void:
 		animated_sprite.frame_changed.connect(_on_sprite_frame_changed)
 		animated_sprite.animation_finished.connect(_on_sprite_animation_finished)
 	
+	if visual_node != null and visual_node.has_method("set_equipped_weapon"):
+		visual_node.set_equipped_weapon(current_weapon_id, facing_direction)
+	
 	update_animations()
 
 func load_stats_from_data() -> void:
+	debug_combat_log = bool(GameData.get_stat("debug", "show_combat_log", true))
 	var vit: int = int(GameData.get_stat("base_stats", "VIT", 10))
 	var hp_base: int = int(GameData.get_stat("formulas", "hp_base", 60))
 	var hp_per_vit: int = int(GameData.get_stat("formulas", "hp_per_vit", 4))
@@ -2398,6 +2553,8 @@ func process_input_and_movement(delta: float) -> void:
 	var input_vector: Vector2 = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if input_vector != Vector2.ZERO:
 		facing_direction = input_vector.normalized()
+		if visual_node != null and visual_node.has_method("set_equipped_weapon"):
+			visual_node.set_equipped_weapon(current_weapon_id, facing_direction)
 		var speed: float = move_speed
 		if is_guarding:
 			speed *= guard_speed_multiplier
@@ -2409,6 +2566,21 @@ func process_input_and_movement(delta: float) -> void:
 	if not is_guarding and not is_dodging:
 		if Input.is_action_just_pressed("swap_weapon"):
 			swap_weapon()
+		
+		# Hỗ trợ phím số 1, 2, 3, 4 để người chơi thử nghiệm đủ 3 vũ khí + tay không vào ô đang chọn
+		if Input.is_key_pressed(KEY_1):
+			equip_weapon_to_active_slot("staff_wood")
+		elif Input.is_key_pressed(KEY_2):
+			equip_weapon_to_active_slot("dagger")
+		elif Input.is_key_pressed(KEY_3):
+			equip_weapon_to_active_slot("sling")
+		elif Input.is_key_pressed(KEY_4):
+			equip_weapon_to_active_slot("fist")
+		elif Input.is_action_just_pressed("cycle_item"):
+			var all_keys := ["staff_wood", "dagger", "sling", "fist"]
+			var cur_i := all_keys.find(current_weapon_id)
+			var nxt_i := (cur_i + 1) % all_keys.size() if cur_i != -1 else 0
+			equip_weapon_to_active_slot(all_keys[nxt_i])
 	
 	if not is_guarding:
 		if Input.is_action_just_pressed("attack"):
@@ -2424,19 +2596,42 @@ func process_input_and_movement(delta: float) -> void:
 func swap_weapon() -> void:
 	if is_attacking or is_dodging or is_dead or is_stunned:
 		return
-	if inventory_weapons.is_empty():
-		return
 	
-	equipped_weapon_index = (equipped_weapon_index + 1) % inventory_weapons.size()
-	current_weapon_id = inventory_weapons[equipped_weapon_index]
+	# Đổi qua lại giữa 2 ô vũ khí trang bị
+	active_slot_idx = 1 - active_slot_idx
+	current_weapon_id = weapon_slots[active_slot_idx]
 	current_weapon_data = WeaponDB.get_weapon(current_weapon_id)
 	
 	combat_state.reset_combo()
 	combo_step = 0
 	
+	if visual_node != null and visual_node.has_method("set_equipped_weapon"):
+		visual_node.set_equipped_weapon(current_weapon_id, facing_direction)
+	
 	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
-	print("[PLAYER] Đã đổi sang vũ khí: %s (%s)" % [w_name, current_weapon_id])
-	weapon_swapped.emit(current_weapon_id, w_name)
+	if debug_combat_log:
+		print("[PLAYER] Đổi ô vũ khí: Ô %d -> %s (%s)" % [active_slot_idx + 1, w_name, current_weapon_id])
+	weapon_swapped.emit(active_slot_idx, current_weapon_id, w_name)
+
+func equip_weapon_to_active_slot(weapon_id: String) -> void:
+	if is_attacking or is_dodging or is_dead or is_stunned:
+		return
+	if current_weapon_id == weapon_id:
+		return
+	var w_data := WeaponDB.get_weapon(weapon_id)
+	if w_data.is_empty():
+		return
+	weapon_slots[active_slot_idx] = weapon_id
+	current_weapon_id = weapon_id
+	current_weapon_data = w_data
+	combat_state.reset_combo()
+	combo_step = 0
+	if visual_node != null and visual_node.has_method("set_equipped_weapon"):
+		visual_node.set_equipped_weapon(current_weapon_id, facing_direction)
+	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
+	if debug_combat_log:
+		print("[PLAYER] Trang bị vào Ô %d: %s (%s)" % [active_slot_idx + 1, w_name, current_weapon_id])
+	weapon_swapped.emit(active_slot_idx, current_weapon_id, w_name)
 
 # --- Chuỗi đòn nhẹ 60 FPS Logic (Startup -> Active -> Recovery) ---
 
@@ -2580,23 +2775,18 @@ func _enter_active_phase(spec: Dictionary) -> void:
 	var hitbox_spec: Dictionary = spec.get("hitbox", {})
 	var shape_type: String = str(hitbox_spec.get("shape", "arc"))
 	var w_type: String = str(current_weapon_data.get("type", "staff"))
+	var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
 	
 	if shape_type == "projectile":
-		# Bắn đạn tầm xa (Ná)
-		var proj: Area2D = ProjectileScript.new()
-		var spd: float = float(hitbox_spec.get("speed", 220.0))
-		var life: float = float(hitbox_spec.get("life", 0.75))
-		var rad: float = float(hitbox_spec.get("radius", 3.0))
-		var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
-		proj.setup(facing_direction, spd, dmg, life, self, rad)
-		proj.global_position = global_position + Vector2(0, -10) + facing_direction * 8.0
-		get_parent().add_child(proj)
+		# Bắn đạn tầm xa (Ná) qua HitboxService
+		var spawn_pos: Vector2 = global_position + Vector2(0, -10) + facing_direction * 8.0
+		HitboxService.spawn_projectile(get_parent(), hitbox_spec, facing_direction, spawn_pos, self, dmg)
 		
 		if visual_node != null and visual_node.has_method("start_attack_visual"):
 			visual_node.start_attack_visual(facing_direction, combo_step, w_type)
 	else:
-		# Cận chiến: kích hoạt Hitbox
-		HitboxService.configure_hitbox(attack_hitbox, hitbox_spec, dir_suffix, flip_left)
+		# Cận chiến: tạo/cấu hình Hitbox theo hình dạng (arc, line, rect)
+		HitboxService.configure_hitbox(attack_hitbox, hitbox_spec, dir_suffix, flip_left, facing_direction)
 		attack_hitbox.monitoring = true
 		check_melee_overlaps()
 		
@@ -2605,7 +2795,7 @@ func _enter_active_phase(spec: Dictionary) -> void:
 
 func _enter_recovery_phase() -> void:
 	is_in_hit_frame = false
-	attack_hitbox.monitoring = false
+	HitboxService.deactivate_hitbox(attack_hitbox)
 
 func _advance_combo() -> void:
 	var chain: Array = current_weapon_data.get("light_chain", [])
@@ -2630,7 +2820,7 @@ func _finish_attack_recovery(spec: Dictionary, chain: Array) -> void:
 func end_attack(reset_step: bool = true) -> void:
 	is_attacking = false
 	is_in_hit_frame = false
-	attack_hitbox.monitoring = false
+	HitboxService.deactivate_hitbox(attack_hitbox)
 	combat_state.attack_phase = CombatState.AttackPhase.NONE
 	combat_state.current_state = CombatState.State.IDLE
 	can_attack = true
@@ -2667,13 +2857,18 @@ func _on_attack_hitbox_area_entered(area: Area2D) -> void:
 		var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
 		HitboxService.process_single_target(area, self, dmg, already_hit_enemies, _on_enemy_hit)
 
-func _on_enemy_hit(_target: Node, dmg: int, _res: Dictionary) -> void:
-	print("[COMBAT] Đòn %d đánh trúng kẻ thù! Gây %d sát thương." % [combo_step + 1, dmg])
+func _on_enemy_hit(target: Node, dmg: int, _res: Dictionary) -> void:
+	if debug_combat_log:
+		print("[COMBAT] Đòn %d của %s đánh trúng %s! Gây %d sát thương." % [
+			combo_step + 1, current_weapon_data.get("name", current_weapon_id), target.name, dmg
+		])
 	accumulated_melee_damage += dmg
 	if accumulated_melee_damage >= 10:
 		var guard_pts := accumulated_melee_damage / 10
 		accumulated_melee_damage = accumulated_melee_damage % 10
 		BehaviorTracker.add_points(BehaviorTracker.ACTION_GUARD, guard_pts)
+		if debug_combat_log:
+			print("[COMBAT] +%d điểm GUARD từ tích lũy sát thương cận chiến!" % guard_pts)
 
 func get_direction_suffix(dir: Vector2) -> String:
 	if abs(dir.x) >= abs(dir.y):
@@ -2960,9 +3155,9 @@ func update_stamina(new_stamina: float, new_max_stamina: float) -> void:
 	var ratio: float = clampf(current_stamina / maxf(1.0, max_stamina), 0.0, 1.0)
 	stamina_bar_fill.size.x = stamina_bar_max_width * ratio
 
-func update_weapon(_weapon_id: String, weapon_name: String) -> void:
+func update_weapon(slot_idx: int, _weapon_id: String, weapon_name: String) -> void:
 	if weapon_label != null:
-		weapon_label.text = "[Q] " + weapon_name
+		weapon_label.text = "[Q] Ô %d: %s" % [slot_idx + 1, weapon_name]
 
 func _on_behavior_points_changed(action_name: String, _new_points: int, _total: int) -> void:
 	if action_name == BehaviorTracker.ACTION_DODGE:
@@ -3900,7 +4095,7 @@ func _init() -> void:
 	assert(weapons.has("dagger"), "Thieu dagger!")
 	assert(weapons.has("sling"), "Thieu sling!")
 	assert(weapons.has("fist"), "Thieu fist!")
-	print("[PASS] WeaponDB da tai day du 4 loai vu khi tu weapons.json.")
+	print("[PASS] 1. WeaponDB da tai day du 4 loai vu khi tu weapons.json.")
 	
 	# 2. Test Stats & Damage Calculation
 	var stats := { "STR": 10, "DEX": 10, "INT": 10, "FAI": 10, "VIT": 10, "LUK": 10 }
@@ -3908,7 +4103,7 @@ func _init() -> void:
 	var staff_spec_1: Dictionary = staff_data["light_chain"][0]
 	var dmg_staff_1: int = WeaponDB.calculate_damage(staff_data, staff_spec_1, stats)
 	var sta_staff_1: float = WeaponDB.calculate_stamina_cost(staff_spec_1, staff_data, stats)
-	print("[STAFF] Don 1: Sát thương = %d, Stamina = %.1f" % [dmg_staff_1, sta_staff_1])
+	print("[PASS] 2. Sát thương Gậy Gỗ đòn 1 = %d, Stamina = %.1f" % [dmg_staff_1, sta_staff_1])
 	assert(dmg_staff_1 == 12, "Sat thuong don 1 Gay Go phai la 12!")
 	assert(is_equal_approx(sta_staff_1, 8.0), "Stamina don 1 Gay Go phai la 8.0!")
 	
@@ -3916,7 +4111,7 @@ func _init() -> void:
 	var dagger_spec_1: Dictionary = dagger_data["light_chain"][0]
 	var dmg_dagger_1: int = WeaponDB.calculate_damage(dagger_data, dagger_spec_1, stats)
 	var sta_dagger_1: float = WeaponDB.calculate_stamina_cost(dagger_spec_1, dagger_data, stats)
-	print("[DAGGER] Don 1: Sát thương = %d, Stamina = %.1f" % [dmg_dagger_1, sta_dagger_1])
+	print("[PASS] 3. Sát thương Dao Găm đòn 1 = %d, Stamina = %.1f" % [dmg_dagger_1, sta_dagger_1])
 	assert(dmg_dagger_1 == 6, "Sat thuong don 1 Dao Gam phai la 6 (9 * 0.7)!")
 	assert(is_equal_approx(sta_dagger_1, 4.0), "Stamina don 1 Dao Gam phai la 4.0!")
 	
@@ -3924,7 +4119,7 @@ func _init() -> void:
 	var sling_spec_1: Dictionary = sling_data["light_chain"][0]
 	var dmg_sling_1: int = WeaponDB.calculate_damage(sling_data, sling_spec_1, stats)
 	var sta_sling_1: float = WeaponDB.calculate_stamina_cost(sling_spec_1, sling_data, stats)
-	print("[SLING] Don 1: Sát thương = %d, Stamina = %.1f" % [dmg_sling_1, sta_sling_1])
+	print("[PASS] 4. Sát thương Ná đòn 1 = %d, Stamina = %.1f" % [dmg_sling_1, sta_sling_1])
 	assert(dmg_sling_1 == 9, "Sat thuong don 1 Na phai la 9 (10 * 0.9)!")
 	assert(is_equal_approx(sta_sling_1, 7.0), "Stamina don 1 Na phai la 7.0!")
 	
@@ -3932,9 +4127,40 @@ func _init() -> void:
 	var low_stats := { "STR": 5, "DEX": 5, "INT": 10, "FAI": 10, "VIT": 10, "LUK": 10 }
 	var dmg_pen: int = WeaponDB.calculate_damage(staff_data, staff_spec_1, low_stats)
 	var sta_pen: float = WeaponDB.calculate_stamina_cost(staff_spec_1, staff_data, low_stats)
-	print("[PENALTY] Gay Go voi STR 5, DEX 5 (thieu 6 diem): Sát thương = %d (giam), Stamina = %.1f (tang)" % [dmg_pen, sta_pen])
+	print("[PASS] 5. Penalty thiếu chỉ số: Sát thương = %d (giảm), Stamina = %.1f (tăng)" % [dmg_pen, sta_pen])
 	assert(dmg_pen < dmg_staff_1, "Sát thương phai bi phat khi thieu chi so!")
 	assert(sta_pen > sta_staff_1, "Stamina phai tang khi thieu chi so!")
+	
+	# 4. Test CombatState 60 FPS Logic
+	var cs := CombatState.new()
+	assert(not cs.is_attacking(), "Ban dau khong duoc o trang thai attacking!")
+	cs.attack_phase = CombatState.AttackPhase.STARTUP
+	assert(cs.is_attacking(), "Phai la attacking o pha startup!")
+	assert(not cs.can_cancel_to_dodge(3), "Khong the cancel dodge o pha startup!")
+	
+	cs.attack_phase = CombatState.AttackPhase.RECOVERY
+	cs.attack_frame = 2
+	assert(not cs.can_cancel_to_dodge(3), "Chua toi khung 3 thi chua the cancel dodge!")
+	cs.attack_frame = 3
+	assert(cs.can_cancel_to_dodge(3), "Khung 3 recovery phai duoc cancel dodge!")
+	assert(cs.can_chain_combo(3), "Khung 3 recovery phai duoc chain combo!")
+	print("[PASS] 6. CombatState: 3 pha logic va cancel_from hoat dong chinh xac.")
+	
+	# 5. Test HitboxService Shapes
+	var test_area := Area2D.new()
+	var col_shape := CollisionShape2D.new()
+	test_area.add_child(col_shape)
+	
+	HitboxService.configure_hitbox(test_area, { "shape": "arc", "radius": 18 }, "down", false)
+	assert(col_shape.shape is CircleShape2D, "Hitbox arc phai co CircleShape2D!")
+	assert(is_equal_approx(col_shape.shape.radius, 18.0), "Radius arc phai la 18!")
+	
+	HitboxService.configure_hitbox(test_area, { "shape": "line", "reach": 24, "thickness": 6 }, "side", false)
+	assert(col_shape.shape is RectangleShape2D, "Hitbox line phai co RectangleShape2D!")
+	
+	HitboxService.configure_hitbox(test_area, { "shape": "rect", "size": [14, 14] }, "up", false)
+	assert(col_shape.shape is RectangleShape2D, "Hitbox rect phai co RectangleShape2D!")
+	print("[PASS] 7. HitboxService: Cấu hình chính xác các hình dạng arc, line, rect.")
 	
 	print("--- TAT CA CAC TEST UNIT CUA STAGE A DA VUOT QUA THANH CONG! ---")
 	quit(0)
