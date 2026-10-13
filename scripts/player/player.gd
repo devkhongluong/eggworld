@@ -14,6 +14,7 @@ signal stamina_changed(new_stamina: float, max_stamina: float)
 signal player_died()
 signal player_respawned()
 signal combo_stepped(current_step: int)
+signal weapon_swapped(weapon_id: String, weapon_name: String)
 
 @onready var visual_node: Node2D = $EggVisual
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -58,7 +59,17 @@ var dodge_direction: Vector2 = Vector2.ZERO
 var combat_state: CombatState = CombatState.new()
 var is_attacking: bool = false
 var can_attack: bool = true
-var combo_step: int = 0 # 0, 1, 2 tương ứng 3 đòn
+var combo_step: int = 0 # 0, 1, 2 tương ứng các đòn trong chuỗi
+
+# Hệ thống vũ khí (Giai đoạn A)
+var inventory_weapons: Array[String] = ["staff_wood", "dagger", "sling"]
+var equipped_weapon_index: int = 0
+var current_weapon_id: String = "staff_wood"
+var current_weapon_data: Dictionary = {}
+var player_stats: Dictionary = {}
+
+const LOGIC_FRAME_TIME: float = 1.0 / 60.0
+var attack_frame_accumulator: float = 0.0
 var attack_cooldown_timer: float = 0.0
 var combo_window_timer: float = 0.0
 var already_hit_enemies: Array[Node] = []
@@ -113,6 +124,16 @@ func load_stats_from_data() -> void:
 	
 	max_hp = hp_base + vit * hp_per_vit
 	max_stamina = sta_base + float(vit) * sta_per_vit
+	
+	player_stats = {
+		"STR": int(GameData.get_stat("base_stats", "STR", 10)),
+		"DEX": int(GameData.get_stat("base_stats", "DEX", 10)),
+		"INT": int(GameData.get_stat("base_stats", "INT", 10)),
+		"FAI": int(GameData.get_stat("base_stats", "FAI", 10)),
+		"VIT": vit,
+		"LUK": int(GameData.get_stat("base_stats", "LUK", 10))
+	}
+	current_weapon_data = WeaponDB.get_weapon(current_weapon_id)
 	
 	move_speed = float(GameData.get_stat("player", "move_speed", 95.0))
 	dodge_speed_multiplier = float(GameData.get_stat("player", "dodge_speed_multiplier", 1.85))
@@ -201,11 +222,9 @@ func _physics_process(delta: float) -> void:
 	process_cooldowns(delta)
 	process_input_and_movement(delta)
 	process_stamina(delta)
+	process_attack_logic(delta)
 	process_visual_effects(delta)
 	update_animations()
-	
-	if is_attacking and is_in_hit_frame:
-		check_melee_overlaps()
 
 func update_animations() -> void:
 	if is_dead:
@@ -307,6 +326,10 @@ func process_input_and_movement(delta: float) -> void:
 	else:
 		velocity = Vector2.ZERO
 	
+	if not is_guarding and not is_dodging:
+		if Input.is_action_just_pressed("swap_weapon"):
+			swap_weapon()
+	
 	if not is_guarding:
 		if Input.is_action_just_pressed("attack"):
 			try_attack()
@@ -316,13 +339,63 @@ func process_input_and_movement(delta: float) -> void:
 	
 	move_and_slide()
 
-func try_attack() -> void:
-	if is_attacking or is_dodging or not can_attack:
+# --- Hệ thống Vũ khí & Đổi vũ khí (Giai đoạn A) ---
+
+func swap_weapon() -> void:
+	if is_attacking or is_dodging or is_dead or is_stunned:
+		return
+	if inventory_weapons.is_empty():
 		return
 	
-	var cost: float = float(attack_stamina_costs[combo_step])
+	equipped_weapon_index = (equipped_weapon_index + 1) % inventory_weapons.size()
+	current_weapon_id = inventory_weapons[equipped_weapon_index]
+	current_weapon_data = WeaponDB.get_weapon(current_weapon_id)
+	
+	combat_state.reset_combo()
+	combo_step = 0
+	
+	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
+	print("[PLAYER] Đã đổi sang vũ khí: %s (%s)" % [w_name, current_weapon_id])
+	weapon_swapped.emit(current_weapon_id, w_name)
+
+# --- Chuỗi đòn nhẹ 60 FPS Logic (Startup -> Active -> Recovery) ---
+
+const ProjectileScript = preload("res://scripts/combat/projectile.gd")
+
+func try_attack() -> void:
+	if is_dodging or is_dead or is_stunned or is_guarding:
+		return
+	
+	# Nếu đang trong pha recovery và đã qua mốc cancel_from, cho phép nối combo ngay
+	if is_attacking:
+		var chain: Array = current_weapon_data.get("light_chain", [])
+		if combo_step < chain.size():
+			var spec: Dictionary = chain[combo_step]
+			var cancel_from: int = int(spec.get("cancel_from", 3))
+			if combat_state.can_chain_combo(cancel_from):
+				_advance_combo()
+				return
+		combat_state.combo_buffered = true
+		return
+	
+	_start_attack_step(combo_step)
+
+func _start_attack_step(step: int) -> void:
+	var chain: Array = current_weapon_data.get("light_chain", [])
+	if chain.is_empty():
+		return
+	
+	if step >= chain.size():
+		step = 0
+	combo_step = step
+	
+	var spec: Dictionary = chain[combo_step]
+	var cost: float = WeaponDB.calculate_stamina_cost(spec, current_weapon_data, player_stats)
+	
 	if current_stamina < cost:
 		print("[PLAYER] Không đủ Stamina để tấn công đòn %d! (Cần %.1f, có %.1f)" % [combo_step + 1, cost, current_stamina])
+		combat_state.reset_combo()
+		combo_step = 0
 		return
 	
 	current_stamina -= cost
@@ -330,73 +403,188 @@ func try_attack() -> void:
 	stamina_delay_timer = stamina_recovery_delay
 	
 	is_attacking = true
-	combat_state.current_state = CombatState.State.ATTACKING
-	combat_state.combo_step = combo_step
 	can_attack = false
+	combat_state.current_state = CombatState.State.ATTACK_STARTUP
+	combat_state.attack_phase = CombatState.AttackPhase.STARTUP
+	combat_state.attack_frame = 0
+	combat_state.combo_step = combo_step
+	combat_state.combo_buffered = false
+	attack_frame_accumulator = 0.0
 	already_hit_enemies.clear()
 	combo_stepped.emit(combo_step)
 	
 	var dir_suffix := get_direction_suffix(facing_direction)
 	var anim_name := "attack_" + dir_suffix
 	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
-	
 	animated_sprite.flip_h = flip_left
-	update_attack_hitbox_transform(dir_suffix, flip_left)
 	
-	if animations_config.has(anim_name):
-		current_hit_frames = animations_config[anim_name].get("hit_frames", [2])
-	else:
-		current_hit_frames = [2]
+	if animated_sprite != null and animations_config.has(anim_name):
+		animated_sprite.play(anim_name)
 	
-	is_in_hit_frame = false
-	animated_sprite.play(anim_name)
-	print("[PLAYER] Tung đòn combo %d/3! Sát thương: %d, Hướng: %s, Tiêu hao: %.1f Stamina" % [
-		combo_step + 1, attack_combo_damage[combo_step], dir_suffix, cost
+	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
+	print("[PLAYER] Tung đòn combo %d/%d (%s)! Startup: %d khung, Tiêu hao: %.1f Stamina" % [
+		combo_step + 1, chain.size(), w_name, int(spec.get("startup", 4)), cost
 	])
-	
-	if visual_node != null and visual_node.has_method("start_attack_visual"):
-		visual_node.start_attack_visual(facing_direction, combo_step)
 
-func _on_sprite_frame_changed() -> void:
+func process_attack_logic(delta: float) -> void:
 	if not is_attacking:
 		return
 	
-	var cur_frame: int = animated_sprite.frame
-	if cur_frame in current_hit_frames:
-		is_in_hit_frame = true
-		check_melee_overlaps()
+	attack_frame_accumulator += delta
+	while attack_frame_accumulator >= LOGIC_FRAME_TIME:
+		attack_frame_accumulator -= LOGIC_FRAME_TIME
+		_tick_attack_frame()
+
+func _tick_attack_frame() -> void:
+	if not is_attacking:
+		return
+	
+	var chain: Array = current_weapon_data.get("light_chain", [])
+	if combo_step < 0 or combo_step >= chain.size():
+		end_attack(true)
+		return
+	
+	var spec: Dictionary = chain[combo_step]
+	var startup_frames: int = int(spec.get("startup", 4))
+	var active_frames: int = int(spec.get("active", 3))
+	var recovery_frames: int = int(spec.get("recovery", 6))
+	var cancel_from: int = int(spec.get("cancel_from", 3))
+	
+	match combat_state.attack_phase:
+		CombatState.AttackPhase.STARTUP:
+			combat_state.attack_frame += 1
+			if combat_state.attack_frame >= startup_frames:
+				combat_state.attack_phase = CombatState.AttackPhase.ACTIVE
+				combat_state.current_state = CombatState.State.ATTACK_ACTIVE
+				combat_state.attack_frame = 0
+				_enter_active_phase(spec)
+				
+		CombatState.AttackPhase.ACTIVE:
+			combat_state.attack_frame += 1
+			var hitbox_spec: Dictionary = spec.get("hitbox", {})
+			if str(hitbox_spec.get("shape", "arc")) != "projectile":
+				check_melee_overlaps()
+				
+			if combat_state.attack_frame >= active_frames:
+				combat_state.attack_phase = CombatState.AttackPhase.RECOVERY
+				combat_state.current_state = CombatState.State.ATTACK_RECOVERY
+				combat_state.attack_frame = 0
+				_enter_recovery_phase()
+				
+		CombatState.AttackPhase.RECOVERY:
+			combat_state.attack_frame += 1
+			
+			# Hủy sang né (dodge cancel) từ khung cancel_from
+			if combat_state.can_cancel_to_dodge(cancel_from) and Input.is_action_just_pressed("dodge"):
+				end_attack(false)
+				var input_vec := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+				try_dodge(input_vec)
+				return
+			
+			# Nối chuỗi combo từ khung cancel_from
+			if combat_state.can_chain_combo(cancel_from):
+				if combat_state.combo_buffered or Input.is_action_just_pressed("attack"):
+					combat_state.combo_buffered = false
+					_advance_combo()
+					return
+			
+			if combat_state.attack_frame >= recovery_frames:
+				_finish_attack_recovery(spec, chain)
+
+func _enter_active_phase(spec: Dictionary) -> void:
+	is_in_hit_frame = true
+	already_hit_enemies.clear()
+	
+	var dir_suffix := get_direction_suffix(facing_direction)
+	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
+	var hitbox_spec: Dictionary = spec.get("hitbox", {})
+	var shape_type: String = str(hitbox_spec.get("shape", "arc"))
+	var w_type: String = str(current_weapon_data.get("type", "staff"))
+	
+	if shape_type == "projectile":
+		# Bắn đạn tầm xa (Ná)
+		var proj: Area2D = ProjectileScript.new()
+		var spd: float = float(hitbox_spec.get("speed", 220.0))
+		var life: float = float(hitbox_spec.get("life", 0.75))
+		var rad: float = float(hitbox_spec.get("radius", 3.0))
+		var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
+		proj.setup(facing_direction, spd, dmg, life, self, rad)
+		proj.global_position = global_position + Vector2(0, -10) + facing_direction * 8.0
+		get_parent().add_child(proj)
+		
+		if visual_node != null and visual_node.has_method("start_attack_visual"):
+			visual_node.start_attack_visual(facing_direction, combo_step, w_type)
 	else:
-		is_in_hit_frame = false
+		# Cận chiến: kích hoạt Hitbox
+		HitboxService.configure_hitbox(attack_hitbox, hitbox_spec, dir_suffix, flip_left)
+		attack_hitbox.monitoring = true
+		check_melee_overlaps()
+		
+		if visual_node != null and visual_node.has_method("start_attack_visual"):
+			visual_node.start_attack_visual(facing_direction, combo_step, w_type)
 
-func _on_sprite_animation_finished() -> void:
-	if is_attacking:
-		end_attack()
+func _enter_recovery_phase() -> void:
+	is_in_hit_frame = false
+	attack_hitbox.monitoring = false
 
-func end_attack() -> void:
+func _advance_combo() -> void:
+	var chain: Array = current_weapon_data.get("light_chain", [])
+	if combo_step + 1 < chain.size():
+		_start_attack_step(combo_step + 1)
+	else:
+		_start_attack_step(0)
+
+func _finish_attack_recovery(spec: Dictionary, chain: Array) -> void:
+	var combo_win: int = int(spec.get("combo_window", 0))
+	if combo_step + 1 < chain.size() and combo_win > 0:
+		is_attacking = false
+		combat_state.attack_phase = CombatState.AttackPhase.NONE
+		combat_state.current_state = CombatState.State.IDLE
+		can_attack = true
+		combo_step += 1
+		combat_state.combo_step = combo_step
+		combo_window_timer = float(combo_win) / 60.0
+	else:
+		end_attack(true)
+
+func end_attack(reset_step: bool = true) -> void:
 	is_attacking = false
 	is_in_hit_frame = false
+	attack_hitbox.monitoring = false
+	combat_state.attack_phase = CombatState.AttackPhase.NONE
 	combat_state.current_state = CombatState.State.IDLE
-	
-	attack_cooldown_timer = float(attack_cooldowns[combo_step])
-	
-	if combo_step < 2:
-		combo_step += 1
-		combo_window_timer = combo_window
-	else:
+	can_attack = true
+	attack_frame_accumulator = 0.0
+	if reset_step:
 		combo_step = 0
+		combat_state.combo_step = 0
 		combo_window_timer = 0.0
-	combat_state.combo_step = combo_step
+		combat_state.combo_buffered = false
+
+func _on_sprite_frame_changed() -> void:
+	pass
+
+func _on_sprite_animation_finished() -> void:
+	pass
 
 func update_attack_hitbox_transform(dir_suffix: String, flip_left: bool) -> void:
 	HitboxService.update_attack_hitbox_position(attack_hitbox, dir_suffix, flip_left)
 
 func check_melee_overlaps() -> void:
-	var dmg: int = int(attack_combo_damage[combo_step])
+	var chain: Array = current_weapon_data.get("light_chain", [])
+	if combo_step >= chain.size():
+		return
+	var spec: Dictionary = chain[combo_step]
+	var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
 	HitboxService.check_and_process_overlaps(attack_hitbox, self, dmg, already_hit_enemies, _on_enemy_hit)
 
 func _on_attack_hitbox_area_entered(area: Area2D) -> void:
 	if is_in_hit_frame:
-		var dmg: int = int(attack_combo_damage[combo_step])
+		var chain: Array = current_weapon_data.get("light_chain", [])
+		if combo_step >= chain.size():
+			return
+		var spec: Dictionary = chain[combo_step]
+		var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
 		HitboxService.process_single_target(area, self, dmg, already_hit_enemies, _on_enemy_hit)
 
 func _on_enemy_hit(_target: Node, dmg: int, _res: Dictionary) -> void:

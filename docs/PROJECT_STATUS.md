@@ -72,6 +72,26 @@
     - `common_enemy_visual.gd`: Dựng hình khối tạm chuẩn 16 màu Palette (Nâu Da, Cát, mảng ăn mòn Tím Mục, mắt Đỏ Rượu).
     - `shell_shard_pickup.gd`: Hạt tinh thể Mảnh Vỏ Vụn hình thoi bay nhấp nháy, tự hút nhặt khi chạm Player.
     - *File liên quan:* `data/stats.json`, `scripts/combat/base_enemy.gd`, `scripts/combat/common_enemy_visual.gd`, `scripts/combat/shell_shard_pickup.gd`, `scenes/enemies/common_enemy.tscn`, `scenes/levels/test_arena.tscn`.
+11. **Tái cấu trúc kiến trúc Combat & Công thức Stamina động (Commit 1):**
+    - Tách `player.gd` thành các dịch vụ độc lập theo quy tắc kiến trúc COMBAT_SPEC mục 15:
+      - `scripts/combat/combat_state.gd` (`CombatState`): Quản lý FSM và các chu kỳ trạng thái nhân vật.
+      - `scripts/combat/hitbox_service.gd` (`HitboxService`): Quản lý vị trí, kích thước và kích hoạt vùng va chạm tấn công.
+      - `scripts/combat/weapon_db.gd` (`WeaponDB`): Nạp và truy vấn dữ liệu vũ khí từ `data/weapons.json`.
+    - Tích hợp công thức động cho Stamina & HP từ `data/stats.json` theo COMBAT_SPEC mục 9:
+      - `max_hp = 60 + VIT * 4` (100 HP tại VIT 10).
+      - `max_stamina = 60 + VIT * 2` (80.0 Stamina tại VIT 10).
+      - Cân bằng lại chi phí tương ứng bể thể lực 80: lăn né `16.0` (trước là 20), hồi thể lực `26.0/s` (trước là 30), đòn đánh `[8.0, 10.0, 14.0]`, đỡ đòn `20.0/hit`.
+    - *File liên quan:* `data/stats.json`, `scripts/player/player.gd`, `scripts/combat/*.gd`.
+12. **Triển khai Giai đoạn A – Hệ thống Vũ khí & Chuỗi đòn 60 FPS Logic (Commit 2):**
+    - `data/weapons.json`: Định nghĩa đầy đủ 4 cấu hình vũ khí (`staff_wood`, `dagger`, `sling`, `fist`) với cấu trúc chuẩn COMBAT_SPEC (tên, kiểu, trọng lượng, base damage, scaling, requirements, light_chain với startup/active/recovery/cancel_from, poise_dmg, combo_window).
+    - Chu kỳ 3 pha theo khung hình logic 60 FPS: `startup` $\rightarrow$ `active` $\rightarrow$ `recovery` với khả năng hủy đòn sang lăn né (`dodge cancel`) hoặc nối chuỗi combo từ khung `cancel_from`.
+    - Input Map `swap_weapon` (phím `Q`, Joypad D-pad Lên): Đổi luân phiên giữa các vũ khí trang bị (`staff_wood`, `dagger`, `sling`).
+    - Vũ khí tầm xa Ná (`sling`): Bắn đạn `Projectile` bay theo hướng nhìn, va chạm Hurtbox kẻ thù, gây sát thương và cộng +2 điểm `MAGIC` vào `BehaviorTracker`.
+    - Vũ khí cận chiến Dao Găm (`dagger`): Tốc độ cực nhanh (startup 2 khung, active 2 khung), tiêu hao ít Stamina (4-6), vẽ vệt đâm nhọn thẳng.
+    - Vũ khí Gậy Gỗ (`staff_wood`): Quét vòng cung rộng, đòn thứ 3 uy lực và quét mạnh.
+    - Cập nhật giao diện HUD: hiển thị tên vũ khí hiện tại `[Q] Gậy Gỗ / Dao Găm / Ná`, tự động cập nhật khi đổi vũ khí.
+    - Kịch bản kiểm thử tự động: `tools/test_combat_stage_a.gd`.
+    - *File liên quan:* `data/weapons.json`, `project.godot`, `scripts/player/player.gd`, `scripts/player/egg_visual.gd`, `scripts/combat/*.gd`, `scripts/ui/hud.gd`, `scenes/ui/hud.tscn`, `scenes/levels/test_arena.gd`, `tools/test_combat_stage_a.gd`.
 
 ---
 
@@ -153,6 +173,7 @@
 - `guard`: `L`, Chuột phải, Nút Joypad L1.
 - `interact`: `E`, Nút Joypad Y (Triangle/Y).
 - `pause`: `Escape`, Nút Joypad Start.
+- `swap_weapon`: `Q`, Joypad D-pad Lên.
 
 ---
 
@@ -162,8 +183,8 @@ Lộ trình ưu tiên cho Vertical Slice: **Giai đoạn A $\rightarrow$ Lên c�
 
 | Giai đoạn | Nội dung trọng tâm | Tiêu chí hoàn thành | Trạng thái |
 |---|---|---|---|
-| **Giai đoạn A** | - Tạo `data/weapons.json` (3 vũ khí khởi đầu: Gậy Gỗ, Dao Găm, Ná + đòn tay không).<br>- Tách đòn đánh theo khung hình logic 60 FPS (`startup`, `active`, `recovery`, `cancel_from`).<br>- Thêm Input Map: `swap_weapon` (Q / D-pad lên).<br>- Tách dịch vụ: `CombatState`, `HitboxService`, `WeaponDB`. | Đổi mượt mà giữa Gậy / Dao / Ná; mỗi loại có cự ly, tốc độ, hitbox và cảm giác đánh riêng biệt; hitbox bật/tắt đúng khung hình logic. | **TIẾP THEO (CHUẨN BỊ LÀM)** |
-| **Giai đoạn Lên cấp** | - Quản lý Mảnh Vỏ Vụn (EXP) tích lũy của Player.<br>- Điểm lưu Ổ Rơm (`StrawBed`) tương tác bằng phím E.<br>- UI cộng chỉ số tại Ổ Rơm (bàn phím & tay cầm), xem trước chỉ số phát sinh (HP, Stamina, Sát thương, Sức tải).<br>- Công thức tính chỉ số chuẩn mục 9 COMBAT_SPEC.<br>- Cơ chế làm rơi Mảnh Vỏ Vụn tại chỗ chết và nhặt lại.<br>- Lưu/tải chỉ số vào `savegame.json`. | Cộng điểm được, chi phí tính đúng công thức, xem trước chính xác, chỉ số ảnh hưởng trực tiếp gameplay, chết nhặt lại được EXP, lưu/tải không mất tiến trình. | **CHƯA LÀM** |
+| **Giai đoạn A** | - Tạo `data/weapons.json` (3 vũ khí khởi đầu: Gậy Gỗ, Dao Găm, Ná + đòn tay không).<br>- Tách đòn đánh theo khung hình logic 60 FPS (`startup`, `active`, `recovery`, `cancel_from`).<br>- Thêm Input Map: `swap_weapon` (Q / D-pad lên).<br>- Tách dịch vụ: `CombatState`, `HitboxService`, `WeaponDB`. | Đổi mượt mà giữa Gậy / Dao / Ná; mỗi loại có cự ly, tốc độ, hitbox và cảm giác đánh riêng biệt; hitbox bật/tắt đúng khung hình logic. | **ĐÃ HOÀN THÀNH** |
+| **Giai đoạn Lên cấp** | - Quản lý Mảnh Vỏ Vụn (EXP) tích lũy của Player.<br>- Điểm lưu Ổ Rơm (`StrawBed`) tương tác bằng phím E.<br>- UI cộng chỉ số tại Ổ Rơm (bàn phím & tay cầm), xem trước chỉ số phát sinh (HP, Stamina, Sát thương, Sức tải).<br>- Công thức tính chỉ số chuẩn mục 9 COMBAT_SPEC.<br>- Cơ chế làm rơi Mảnh Vỏ Vụn tại chỗ chết và nhặt lại.<br>- Lưu/tải chỉ số vào `savegame.json`. | Cộng điểm được, chi phí tính đúng công thức, xem trước chính xác, chỉ số ảnh hưởng trực tiếp gameplay, chết nhặt lại được EXP, lưu/tải không mất tiến trình. | **TIẾP THEO** |
 | **Giai đoạn B** | - Đòn nặng tích lực (`heavy_charge`).<br>- Hệ thống Poise (độ vững) & Choáng (`stagger`) cho Player và Enemy.<br>- Đâm lén (`backstab` cung 90° phía sau) + Đòn kết liễu (`critical`).<br>- Đỡ khéo (`parry` trong 8 khung đầu của Guard) mở phản đòn. | Quái bị trừ poise và choáng khi hết poise; đâm lén trúng cung sau nhân sát thương và cộng DODGE; parry thành công gây choáng tức thì và cộng GUARD +4. | **CHƯA LÀM** |
 | **Giai đoạn Overlay** | - Hệ thống tư thế đánh dùng chung của Trứng (`swing_h`, `swing_v`, `thrust`, `shoot`...).<br>- Lớp phủ vũ khí 16×16 px vẽ đè lên bàn tay theo `data/pose_anchors.json`.<br>- Vệt chém (slash effect) riêng từng vũ khí. | Đổi vũ khí tự động đổi sprite vũ khí và vệt chém trên tay nhân vật mà không cần vẽ lại thân Trứng. | **CHƯA LÀM** |
 | **Giai đoạn C** | - Ô kỹ năng vũ khí (`skill_slot`, `data/skills.json`, nút `skill`).<br>- Thế cầm hai tay (`two_hand`, nút Tab). | Tháo lắp được kỹ năng giữa các vũ khí tương thích; bật hai tay nhận `two_hand_bonus` sát thương nhưng bỏ khiên. | **ĐỂ SAU VERTICAL SLICE** |

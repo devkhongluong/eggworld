@@ -8,6 +8,7 @@ extends Node2D
 var attack_slash_timer: float = 0.0
 var attack_slash_dir: Vector2 = Vector2.DOWN
 var attack_slash_step: int = 0
+var attack_weapon_type: String = "staff"
 var show_placeholder_body: bool = false
 
 # Dữ liệu vết nứt vỏ trứng (tính theo tỉ lệ hp: 1.0 -> 0.0)
@@ -56,10 +57,16 @@ func spawn_shell_burst(amount: int = 6) -> void:
 		})
 	queue_redraw()
 
-func start_attack_visual(dir: Vector2, step: int) -> void:
+func start_attack_visual(dir: Vector2, step: int, weapon_type: String = "staff") -> void:
 	attack_slash_dir = dir
 	attack_slash_step = step
-	attack_slash_timer = 0.18
+	attack_weapon_type = weapon_type
+	if weapon_type == "dagger":
+		attack_slash_timer = 0.10
+	elif weapon_type == "sling":
+		attack_slash_timer = 0.12
+	else:
+		attack_slash_timer = 0.18
 	queue_redraw()
 
 func _process(delta: float) -> void:
@@ -122,16 +129,34 @@ func _draw() -> void:
 		var p: Vector2 = shard["pos"]
 		draw_rect(Rect2(p.x - sz.x * 0.5, p.y - sz.y * 0.5, sz.x, sz.y), c)
 	
-	# 3. Vệt chém combo đòn đánh cận chiến
+	# 3. Vệt tấn công theo từng loại vũ khí
 	if attack_slash_timer > 0.0:
 		var slash_center := Vector2(0, -10) + attack_slash_dir.normalized() * 14.0
-		var slash_color: Color = Palette.KEM if attack_slash_step == 2 else Palette.XAM_DA
-		var arc_radius: float = 12.0 if attack_slash_step == 2 else 9.0
 		var base_angle: float = attack_slash_dir.angle()
-		var start_ang: float = base_angle - PI * 0.45
-		var end_ang: float = base_angle + PI * 0.45
-		draw_arc(slash_center, arc_radius, start_ang, end_ang, 12, slash_color, 2.0)
-		draw_arc(slash_center, arc_radius - 2.0, start_ang, end_ang, 12, Palette.NAU_HAM, 1.0)
+		if attack_weapon_type == "dagger":
+			# Vệt đâm nhọn thẳng nhanh
+			var tip := Vector2(0, -10) + attack_slash_dir.normalized() * 20.0
+			var base_pt := Vector2(0, -10) + attack_slash_dir.normalized() * 6.0
+			draw_line(base_pt, tip, Palette.KEM, 2.0)
+			draw_line(base_pt, tip + Vector2(-attack_slash_dir.y, attack_slash_dir.x) * 3.0, Palette.XAM_SAT, 1.0)
+		elif attack_weapon_type == "sling":
+			# Tia giật dây ná khi bắn
+			var p1 := Vector2(0, -10) + Vector2(-attack_slash_dir.y, attack_slash_dir.x) * 5.0
+			var p2 := Vector2(0, -10) + Vector2(attack_slash_dir.y, -attack_slash_dir.x) * 5.0
+			draw_line(p1, p2, Palette.CAT, 1.5)
+		elif attack_weapon_type == "unarmed":
+			# Vệt thụi nắm đấm ngắn
+			var punch_center := Vector2(0, -10) + attack_slash_dir.normalized() * 10.0
+			draw_circle(punch_center, 4.0, Palette.KEM)
+		else:
+			# Quét vòng cung cho Gậy Gỗ (Staff)
+			var slash_color: Color = Palette.KEM if attack_slash_step == 2 else Palette.XAM_DA
+			var arc_radius: float = 14.0 if attack_slash_step == 2 else 11.0
+			var start_ang: float = base_angle - PI * 0.45
+			var end_ang: float = base_angle + PI * 0.45
+			draw_arc(slash_center, arc_radius, start_ang, end_ang, 12, slash_color, 2.0)
+			draw_arc(slash_center, arc_radius - 2.0, start_ang, end_ang, 12, Palette.NAU_HAM, 1.0)
+
 	
 	# 4. Hình khối tạm thời biểu diễn thế Đỡ Đòn (Guard)
 	if is_guarding:

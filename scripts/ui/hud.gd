@@ -8,6 +8,7 @@ extends CanvasLayer
 @onready var stamina_bar_fill: ColorRect = $MarginContainer/VBoxContainer/StaminaBar/Fill
 @onready var stamina_bar_bg: ColorRect = $MarginContainer/VBoxContainer/StaminaBar/Background
 @onready var debug_label: Label = $MarginContainer/VBoxContainer/DebugDodgeLabel
+@onready var weapon_label: Label = $MarginContainer/VBoxContainer/WeaponLabel
 @onready var death_overlay: Control = $DeathOverlay
 
 var max_hp: int = 100
@@ -38,6 +39,8 @@ func apply_palette() -> void:
 	stamina_bar_fill.color = Palette.XANH_LA_UA
 	
 	debug_label.add_theme_color_override("font_color", Palette.KEM)
+	if weapon_label != null:
+		weapon_label.add_theme_color_override("font_color", Palette.KEM)
 	
 	var death_label: Label = $DeathOverlay/CenterContainer/VBoxContainer/DeathLabel
 	death_label.add_theme_color_override("font_color", Palette.DO_GACH)
@@ -64,6 +67,10 @@ func update_stamina(new_stamina: float, new_max_stamina: float) -> void:
 	max_stamina = new_max_stamina
 	var ratio: float = clampf(current_stamina / maxf(1.0, max_stamina), 0.0, 1.0)
 	stamina_bar_fill.size.x = stamina_bar_max_width * ratio
+
+func update_weapon(_weapon_id: String, weapon_name: String) -> void:
+	if weapon_label != null:
+		weapon_label.text = "[Q] " + weapon_name
 
 func _on_behavior_points_changed(action_name: String, _new_points: int, _total: int) -> void:
 	if action_name == BehaviorTracker.ACTION_DODGE:

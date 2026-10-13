@@ -58,3 +58,15 @@ Thư mục này chứa các kịch bản hỗ trợ tạo, cắt lát, xuất m�
   ```bash
   godot --headless -s tools/generate_run_roll_sprites.gd
   ```
+
+### 8. `test_combat_stage_a.gd`
+- **Công dụng:** Kịch bản kiểm thử tự động hệ thống chiến đấu Giai đoạn A:
+  - Nạp dữ liệu `data/weapons.json` (Gậy Gỗ, Dao Găm, Ná, Tay Không).
+  - Tính toán sát thương theo scaling thuộc tính (STR, DEX, INT).
+  - Kiểm tra hệ số phạt khi người chơi không đạt chỉ số yêu cầu (`requirements`).
+  - Kiểm tra tính toán tiêu hao thể lực Stamina.
+- **Cách chạy:**
+  ```bash
+  godot --headless -s tools/test_combat_stage_a.gd
+  ```
+

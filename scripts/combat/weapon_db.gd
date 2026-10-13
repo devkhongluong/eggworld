@@ -32,3 +32,61 @@ static func _ensure_loaded() -> void:
 	
 	# Fallback mặc định
 	_weapons_cache = {}
+
+const SCALING_COEFF: Dictionary = {
+	"S": 0.08,
+	"A": 0.06,
+	"B": 0.045,
+	"C": 0.03,
+	"D": 0.02,
+	"E": 0.01,
+	"-": 0.0
+}
+
+static func calculate_damage(weapon: Dictionary, attack_spec: Dictionary, stats: Dictionary) -> int:
+	var base_dmg: float = float(weapon.get("base_damage", 10))
+	var mv: float = float(attack_spec.get("damage_mv", 1.0))
+	
+	# Tính scaling
+	var scaling: Dictionary = weapon.get("scaling", {})
+	var scaling_sum: float = 0.0
+	for stat_name in scaling:
+		var grade: String = str(scaling[stat_name])
+		var coeff: float = float(SCALING_COEFF.get(grade, 0.0))
+		var stat_val: int = int(stats.get(stat_name, 10))
+		var stat_diff: int = maxi(0, stat_val - 10)
+		scaling_sum += coeff * float(stat_diff)
+	
+	var dmg: float = base_dmg * mv * (1.0 + scaling_sum)
+	
+	# Kiểm tra thiếu chỉ số yêu cầu (Requirements penalty)
+	var reqs: Dictionary = weapon.get("requirements", {})
+	var missing_pts: int = 0
+	for stat_name in reqs:
+		var req_val: int = int(reqs[stat_name])
+		var stat_val: int = int(stats.get(stat_name, 10))
+		if stat_val < req_val:
+			missing_pts += (req_val - stat_val)
+	
+	if missing_pts > 0:
+		var penalty_mult: float = maxf(0.5, 1.0 - 0.05 * float(missing_pts))
+		dmg *= penalty_mult
+	
+	return maxi(1, int(round(dmg)))
+
+static func calculate_stamina_cost(attack_spec: Dictionary, weapon: Dictionary, stats: Dictionary) -> float:
+	var base_cost: float = float(attack_spec.get("stamina", 8.0))
+	
+	var reqs: Dictionary = weapon.get("requirements", {})
+	var missing_pts: int = 0
+	for stat_name in reqs:
+		var req_val: int = int(reqs[stat_name])
+		var stat_val: int = int(stats.get(stat_name, 10))
+		if stat_val < req_val:
+			missing_pts += (req_val - stat_val)
+	
+	if missing_pts > 0:
+		base_cost *= (1.0 + 0.04 * float(missing_pts))
+	
+	return base_cost
+

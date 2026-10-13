@@ -16,8 +16,11 @@ func _ready() -> void:
 		player.stamina_changed.connect(hud.update_stamina)
 		player.player_died.connect(func(): hud.show_death_screen(true))
 		player.player_respawned.connect(func(): hud.show_death_screen(false))
+		player.weapon_swapped.connect(hud.update_weapon)
 		# Khởi tạo giá trị ban đầu cho HUD
 		hud.update_hp(player.current_hp, player.max_hp)
 		hud.update_stamina(player.current_stamina, player.max_stamina)
+		var w_name: String = str(player.current_weapon_data.get("name", player.current_weapon_id))
+		hud.update_weapon(player.current_weapon_id, w_name)
 	
-	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD/Mũi tên), Lăn né (Space/K).")
+	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD), Lăn né (Space), Tấn công (J), Đỡ (L), Đổi vũ khí (Q).")

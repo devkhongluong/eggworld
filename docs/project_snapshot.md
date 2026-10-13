@@ -1,134 +1,40 @@
-# PROJECT SNAPSHOT - VÕ VỎ (SHELLBOUND)
+# PROJECT SNAPSHOT
 
-## 1. CÂY THƯ MỤC DỰ ÁN
-`	ext
-.editorconfig
-.gitattributes
-.gitignore
-icon.svg
-icon.svg.import
-project.godot
-assets/
-  audio/
-    .gitkeep
-  sprites/
-    .gitkeep
-    player/
-      animations.json
-      player_egg_attack_down.png
-      player_egg_attack_down.png.import
-      player_egg_attack_side.png
-      player_egg_attack_side.png.import
-      player_egg_attack_up.png
-      player_egg_attack_up.png.import
-      player_egg_death.png
-      player_egg_death.png.import
-      player_egg_hurt.png
-      player_egg_hurt.png.import
-      player_egg_idle_down.png
-      player_egg_idle_down.png.import
-      player_egg_idle_side.png
-      player_egg_idle_side.png.import
-      player_egg_idle_up.png
-      player_egg_idle_up.png.import
-      player_egg_roll_down.png
-      player_egg_roll_down.png.import
-      player_egg_roll_side.png
-      player_egg_roll_side.png.import
-      player_egg_roll_up.png
-      player_egg_roll_up.png.import
-      player_egg_run_down.png
-      player_egg_run_down.png.import
-      player_egg_run_side.png
-      player_egg_run_side.png.import
-      player_egg_run_up.png
-      player_egg_run_up.png.import
-  tiles/
-    .gitkeep
-  ui/
-    .gitkeep
-data/
-  .gitkeep
-  stats.json
-docs/
-  .gitkeep
-  CHARACTER_SPEC.md
-  COMBAT_SPEC.md
-  GDD.md
-  PROJECT_STATUS.md
-  project_snapshot.md
-scenes/
-  bosses/
-    .gitkeep
-  enemies/
-    .gitkeep
-    common_enemy.tscn
-    dummy_enemy.tscn
-  levels/
-    .gitkeep
-    test_arena.gd
-    test_arena.gd.uid
-    test_arena.tscn
-  player/
-    .gitkeep
-    player.tscn
-  ui/
-    .gitkeep
-    hud.tscn
-scripts/
-  autoload/
-    .gitkeep
-    behavior_tracker.gd
-    behavior_tracker.gd.uid
-    game_data.gd
-    game_data.gd.uid
-    palette.gd
-    palette.gd.uid
-    save_manager.gd
-    save_manager.gd.uid
-  combat/
-    .gitkeep
-    base_enemy.gd
-    base_enemy.gd.uid
-    common_enemy_visual.gd
-    common_enemy_visual.gd.uid
-    dummy_enemy.gd
-    dummy_enemy.gd.uid
-    enemy_visual.gd
-    enemy_visual.gd.uid
-    shell_shard_pickup.gd
-    shell_shard_pickup.gd.uid
-  evolution/
-    .gitkeep
-  player/
-    .gitkeep
-    egg_visual.gd
-    egg_visual.gd.uid
-    player.gd
-    player.gd.uid
-  ui/
-    .gitkeep
-    hud.gd
-    hud.gd.uid
-tools/
-  README.md
-  generate_run_roll_sprites.gd
-  generate_run_roll_sprites.gd.uid
-  generate_run_roll_v2.gd
-  generate_run_roll_v2.gd.uid
-  make_hurt_death.py
-  make_previews.py
-  slice_attack_sheet.py
-  slice_hurt_death.py
-  slice_spritesheet.py
-  validate_sprites.py
-`
+## CÂY THƯ MỤC CÁC TỆP MÃ NGUỒN VÀ DỮ LIỆU
+
+- assets\sprites\player\animations.json
+- data\stats.json
+- data\weapons.json
+- project.godot
+- scenes\enemies\common_enemy.tscn
+- scenes\enemies\dummy_enemy.tscn
+- scenes\levels\test_arena.gd
+- scenes\levels\test_arena.tscn
+- scenes\player\player.tscn
+- scenes\ui\hud.tscn
+- scripts\autoload\behavior_tracker.gd
+- scripts\autoload\game_data.gd
+- scripts\autoload\palette.gd
+- scripts\autoload\save_manager.gd
+- scripts\combat\base_enemy.gd
+- scripts\combat\combat_state.gd
+- scripts\combat\common_enemy_visual.gd
+- scripts\combat\dummy_enemy.gd
+- scripts\combat\enemy_visual.gd
+- scripts\combat\hitbox_service.gd
+- scripts\combat\projectile.gd
+- scripts\combat\shell_shard_pickup.gd
+- scripts\combat\weapon_db.gd
+- scripts\player\egg_visual.gd
+- scripts\player\player.gd
+- scripts\ui\hud.gd
+- tools\generate_run_roll_sprites.gd
+- tools\generate_run_roll_v2.gd
+- tools\test_combat_stage_a.gd
 
 ---
 
-## 2. NỘI DUNG CHI TIẾT TỪNG FILE MÃ NGUỒN VÀ DỮ LIỆU
-
-### assets/sprites/player/animations.json
+## assets\sprites\player\animations.json
 `json
 {
   "player_egg": {
@@ -155,7 +61,7 @@ tools/
 }
 `
 
-### data/stats.json
+## data\stats.json
 `json
 {
   "_huong_dan": "Dữ liệu cân bằng cho Trứng và hệ thống chiến đấu ban đầu. Bạn có thể tự do điều chỉnh các chỉ số dưới đây mà không cần sửa code.",
@@ -167,15 +73,23 @@ tools/
 	"FAI": 10,
 	"LUK": 10
   },
+  "formulas": {
+	"hp_base": 60,
+	"hp_per_vit": 4,
+	"stamina_base": 60.0,
+	"stamina_per_vit": 2.0,
+	"equip_capacity_base": 40.0,
+	"equip_capacity_per_vit": 1.5,
+	"mp_base": 20,
+	"mp_per_int": 3
+  },
   "player": {
-	"max_hp": 100,
-	"max_stamina": 100.0,
 	"move_speed": 95.0,
 	"dodge_speed_multiplier": 1.85,
 	"dodge_duration": 0.25,
 	"dodge_cooldown": 0.2,
-	"dodge_stamina_cost": 20.0,
-	"stamina_recovery_rate": 30.0,
+	"dodge_stamina_cost": 16.0,
+	"stamina_recovery_rate": 26.0,
 	"stamina_recovery_delay": 0.35,
 	"collision_size": [10.0, 6.0],
 	"collision_offset": [0.0, -3.0],
@@ -184,9 +98,9 @@ tools/
 	"attack_combo_damage": [15, 18, 28],
 	"attack_cooldowns": [0.15, 0.15, 0.45],
 	"combo_window": 0.55,
-	"attack_stamina_costs": [10.0, 12.0, 18.0],
+	"attack_stamina_costs": [8.0, 10.0, 14.0],
 	"guard_damage_reduction": 0.75,
-	"guard_stamina_cost_per_hit": 25.0,
+	"guard_stamina_cost_per_hit": 20.0,
 	"guard_speed_multiplier": 0.45,
 	"guard_break_stun_duration": 0.8,
 	"guard_arc_degrees": 180.0
@@ -216,8 +130,238 @@ tools/
 }
 `
 
-### project.godot
-`ini
+## data\weapons.json
+`json
+{
+  "fist": {
+    "name": "Tay Không",
+    "type": "unarmed",
+    "pose_set": "swing",
+    "weight": 0.0,
+    "base_damage": 6,
+    "scaling": { "STR": "D", "DEX": "D", "INT": "-", "FAI": "-" },
+    "requirements": {},
+    "light_chain": [
+      {
+        "pose": "punch_l",
+        "startup": 3,
+        "active": 2,
+        "recovery": 5,
+        "cancel_from": 2,
+        "hitbox": { "shape": "arc", "radius": 14, "angle": 90 },
+        "damage_mv": 0.7,
+        "stamina": 5.0,
+        "poise_dmg": 4,
+        "combo_window": 10
+      },
+      {
+        "pose": "punch_r",
+        "startup": 3,
+        "active": 2,
+        "recovery": 6,
+        "cancel_from": 3,
+        "hitbox": { "shape": "arc", "radius": 14, "angle": 90 },
+        "damage_mv": 0.9,
+        "stamina": 6.0,
+        "poise_dmg": 6,
+        "combo_window": 0
+      }
+    ],
+    "heavy": {
+      "pose": "punch_charge",
+      "charge_min": 0.2,
+      "charge_max": 0.7,
+      "startup": 6,
+      "active": 3,
+      "recovery": 10,
+      "hitbox": { "shape": "arc", "radius": 16, "angle": 90 },
+      "damage_mv_min": 1.3,
+      "damage_mv_max": 1.8,
+      "stamina": 12.0,
+      "poise_dmg": 15
+    },
+    "skill_slot": false,
+    "two_hand_bonus": 1.0
+  },
+  "staff_wood": {
+    "name": "Gậy Gỗ",
+    "type": "staff",
+    "pose_set": "swing",
+    "weight": 3.0,
+    "base_damage": 12,
+    "scaling": { "STR": "C", "DEX": "D", "INT": "-", "FAI": "-" },
+    "requirements": { "STR": 8, "DEX": 8 },
+    "light_chain": [
+      {
+        "pose": "swing_h",
+        "startup": 4,
+        "active": 3,
+        "recovery": 6,
+        "cancel_from": 3,
+        "hitbox": { "shape": "arc", "radius": 18, "angle": 120 },
+        "damage_mv": 1.0,
+        "stamina": 8.0,
+        "poise_dmg": 10,
+        "combo_window": 10
+      },
+      {
+        "pose": "swing_h_rev",
+        "startup": 4,
+        "active": 3,
+        "recovery": 6,
+        "cancel_from": 3,
+        "hitbox": { "shape": "arc", "radius": 18, "angle": 120 },
+        "damage_mv": 1.0,
+        "stamina": 8.0,
+        "poise_dmg": 10,
+        "combo_window": 10
+      },
+      {
+        "pose": "swing_v",
+        "startup": 6,
+        "active": 3,
+        "recovery": 12,
+        "cancel_from": 8,
+        "hitbox": { "shape": "arc", "radius": 20, "angle": 90 },
+        "damage_mv": 1.5,
+        "stamina": 12.0,
+        "poise_dmg": 22,
+        "combo_window": 0
+      }
+    ],
+    "heavy": {
+      "pose": "swing_v",
+      "charge_min": 0.25,
+      "charge_max": 0.9,
+      "startup": 8,
+      "active": 4,
+      "recovery": 14,
+      "hitbox": { "shape": "arc", "radius": 22, "angle": 100 },
+      "damage_mv_min": 1.8,
+      "damage_mv_max": 2.6,
+      "stamina": 22.0,
+      "poise_dmg": 40
+    },
+    "skill_slot": true,
+    "two_hand_bonus": 1.35
+  },
+  "dagger": {
+    "name": "Dao Găm",
+    "type": "dagger",
+    "pose_set": "thrust",
+    "weight": 1.5,
+    "base_damage": 9,
+    "scaling": { "STR": "E", "DEX": "B", "INT": "-", "FAI": "-" },
+    "requirements": { "DEX": 9 },
+    "light_chain": [
+      {
+        "pose": "thrust_1",
+        "startup": 2,
+        "active": 2,
+        "recovery": 4,
+        "cancel_from": 2,
+        "hitbox": { "shape": "arc", "radius": 14, "angle": 70 },
+        "damage_mv": 0.7,
+        "stamina": 4.0,
+        "poise_dmg": 5,
+        "combo_window": 10
+      },
+      {
+        "pose": "thrust_2",
+        "startup": 2,
+        "active": 2,
+        "recovery": 4,
+        "cancel_from": 2,
+        "hitbox": { "shape": "arc", "radius": 14, "angle": 70 },
+        "damage_mv": 0.8,
+        "stamina": 4.0,
+        "poise_dmg": 6,
+        "combo_window": 10
+      },
+      {
+        "pose": "thrust_3",
+        "startup": 3,
+        "active": 3,
+        "recovery": 6,
+        "cancel_from": 3,
+        "hitbox": { "shape": "arc", "radius": 16, "angle": 80 },
+        "damage_mv": 1.2,
+        "stamina": 6.0,
+        "poise_dmg": 12,
+        "combo_window": 0
+      }
+    ],
+    "heavy": {
+      "pose": "pierce",
+      "charge_min": 0.2,
+      "charge_max": 0.7,
+      "startup": 5,
+      "active": 3,
+      "recovery": 10,
+      "hitbox": { "shape": "line", "radius": 24, "angle": 45 },
+      "damage_mv_min": 1.6,
+      "damage_mv_max": 2.2,
+      "stamina": 14.0,
+      "poise_dmg": 24
+    },
+    "skill_slot": true,
+    "two_hand_bonus": 1.2
+  },
+  "sling": {
+    "name": "Ná",
+    "type": "sling",
+    "pose_set": "shoot",
+    "weight": 1.2,
+    "base_damage": 10,
+    "scaling": { "STR": "-", "DEX": "C", "INT": "D", "FAI": "-" },
+    "requirements": { "DEX": 8 },
+    "light_chain": [
+      {
+        "pose": "shoot_quick",
+        "startup": 5,
+        "active": 2,
+        "recovery": 7,
+        "cancel_from": 4,
+        "hitbox": { "shape": "projectile", "speed": 220.0, "life": 0.75, "radius": 4 },
+        "damage_mv": 0.9,
+        "stamina": 7.0,
+        "poise_dmg": 6,
+        "combo_window": 12
+      },
+      {
+        "pose": "shoot_quick_2",
+        "startup": 5,
+        "active": 2,
+        "recovery": 8,
+        "cancel_from": 4,
+        "hitbox": { "shape": "projectile", "speed": 230.0, "life": 0.75, "radius": 4 },
+        "damage_mv": 1.1,
+        "stamina": 8.0,
+        "poise_dmg": 8,
+        "combo_window": 0
+      }
+    ],
+    "heavy": {
+      "pose": "shoot_charged",
+      "charge_min": 0.3,
+      "charge_max": 1.0,
+      "startup": 8,
+      "active": 2,
+      "recovery": 12,
+      "hitbox": { "shape": "projectile", "speed": 300.0, "life": 1.0, "radius": 5 },
+      "damage_mv_min": 1.8,
+      "damage_mv_max": 2.5,
+      "stamina": 16.0,
+      "poise_dmg": 20
+    },
+    "skill_slot": true,
+    "two_hand_bonus": 1.2
+  }
+}
+`
+
+## project.godot
+`godot
 ; Engine configuration file.
 ; It's best edited using the editor UI and not directly,
 ; since the parameters that go here are not all obvious.
@@ -318,6 +462,13 @@ pause={
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":6,"pressure":0.0,"pressed":false,"script":null)
 ]
 }
+swap_weapon={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":81,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":11,"pressure":0.0,"pressed":false,"script":null)
+]
+}
+
 
 [physics]
 
@@ -331,8 +482,8 @@ rendering_device/driver.windows="d3d12"
 2d/snap/snap_2d_vertices_to_pixel=true
 `
 
-### scenes/enemies/common_enemy.tscn
-`ini
+## scenes\enemies\common_enemy.tscn
+`tscn
 [gd_scene load_steps=5 format=3 uid="uid://cenemy001common"]
 
 [ext_resource type="Script" path="res://scripts/combat/base_enemy.gd" id="1_enemy"]
@@ -370,8 +521,8 @@ collision_mask = 0
 shape = SubResource("RectangleShape2D_body")
 `
 
-### scenes/enemies/dummy_enemy.tscn
-`ini
+## scenes\enemies\dummy_enemy.tscn
+`tscn
 [gd_scene load_steps=5 format=3 uid="uid://dmmyenemy001"]
 
 [ext_resource type="Script" path="res://scripts/combat/dummy_enemy.gd" id="1_enemy"]
@@ -409,7 +560,7 @@ collision_mask = 0
 shape = SubResource("RectangleShape2D_body")
 `
 
-### scenes/levels/test_arena.gd
+## scenes\levels\test_arena.gd
 `gdscript
 extends Node2D
 
@@ -429,15 +580,18 @@ func _ready() -> void:
 		player.stamina_changed.connect(hud.update_stamina)
 		player.player_died.connect(func(): hud.show_death_screen(true))
 		player.player_respawned.connect(func(): hud.show_death_screen(false))
+		player.weapon_swapped.connect(hud.update_weapon)
 		# Khởi tạo giá trị ban đầu cho HUD
 		hud.update_hp(player.current_hp, player.max_hp)
 		hud.update_stamina(player.current_stamina, player.max_stamina)
+		var w_name: String = str(player.current_weapon_data.get("name", player.current_weapon_id))
+		hud.update_weapon(player.current_weapon_id, w_name)
 	
-	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD/Mũi tên), Lăn né (Space/K).")
+	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD), Lăn né (Space), Tấn công (J), Đỡ (L), Đổi vũ khí (Q).")
 `
 
-### scenes/levels/test_arena.tscn
-`ini
+## scenes\levels\test_arena.tscn
+`tscn
 [gd_scene format=3 uid="uid://btestarena001"]
 
 [ext_resource type="Script" path="res://scenes/levels/test_arena.gd" id="1_arena"]
@@ -522,8 +676,8 @@ limit_bottom = 270
 [node name="HUD" parent="." instance=ExtResource("4_hud")]
 `
 
-### scenes/player/player.tscn
-`ini
+## scenes\player\player.tscn
+`tscn
 [gd_scene load_steps=6 format=3 uid="uid://df7xeggplayer01"]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
@@ -568,8 +722,8 @@ collision_mask = 16
 shape = SubResource("RectangleShape2D_attack")
 `
 
-### scenes/ui/hud.tscn
-`ini
+## scenes\ui\hud.tscn
+`tscn
 [gd_scene format=3 uid="uid://bvyhud001"]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
@@ -619,6 +773,11 @@ offset_right = 52.0
 offset_bottom = 4.0
 color = Color(0.419608, 0.498039, 0.227451, 1)
 
+[node name="WeaponLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "[Q] Gậy Gỗ"
+
 [node name="DebugDodgeLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 visible = false
 layout_mode = 2
@@ -665,7 +824,7 @@ text = "Đang hồi sinh..."
 horizontal_alignment = 1
 `
 
-### scripts/autoload/behavior_tracker.gd
+## scripts\autoload\behavior_tracker.gd
 `gdscript
 extends Node
 
@@ -740,7 +899,7 @@ func import_data(data: Dictionary) -> void:
 			_counters[action_name] = int(data[action_name])
 `
 
-### scripts/autoload/game_data.gd
+## scripts\autoload\game_data.gd
 `gdscript
 extends Node
 
@@ -784,7 +943,7 @@ func get_stat(category: String, key: String, default_value: Variant = null) -> V
 	return default_value
 `
 
-### scripts/autoload/palette.gd
+## scripts\autoload\palette.gd
 `gdscript
 extends Node
 
@@ -808,7 +967,7 @@ const XANH_THEP: Color = Color("#2F4A63")     # 15. Nước, sương, đêm, ph�
 const TIM_MUC: Color = Color("#5A3A5E")       # 16. Mục Rữa, phép hắc ám
 `
 
-### scripts/autoload/save_manager.gd
+## scripts\autoload\save_manager.gd
 `gdscript
 extends Node
 
@@ -877,7 +1036,7 @@ func delete_save() -> bool:
 	return true
 `
 
-### scripts/combat/base_enemy.gd
+## scripts\combat\base_enemy.gd
 `gdscript
 extends CharacterBody2D
 class_name BaseEnemy
@@ -1126,7 +1285,89 @@ func spawn_exp_drop() -> void:
 	get_parent().call_deferred("add_child", pickup)
 `
 
-### scripts/combat/common_enemy_visual.gd
+## scripts\combat\combat_state.gd
+`gdscript
+extends RefCounted
+class_name CombatState
+
+# CombatState: Quản lý trạng thái và chu kỳ đòn đánh của nhân vật
+# Hỗ trợ FSM trạng thái: IDLE, MOVE, ATTACK_STARTUP, ATTACK_ACTIVE, ATTACK_RECOVERY, DODGING, GUARDING, STUNNED, DEAD
+# Quản lý 3 pha logic 60 FPS: startup -> active -> recovery (với cancel_from)
+
+enum State {
+	IDLE,
+	MOVE,
+	ATTACKING,
+	ATTACK_STARTUP,
+	ATTACK_ACTIVE,
+	ATTACK_RECOVERY,
+	DODGING,
+	GUARDING,
+	STUNNED,
+	DEAD
+}
+
+enum AttackPhase {
+	NONE,
+	STARTUP,
+	ACTIVE,
+	RECOVERY
+}
+
+var current_state: State = State.IDLE
+var attack_phase: AttackPhase = AttackPhase.NONE
+
+var combo_step: int = 0
+var attack_frame: int = 0
+var combo_window_frames: int = 0
+var combo_buffered: bool = false
+
+var is_in_hit_frame: bool = false
+var already_hit_enemies: Array[Node] = []
+
+var attack_cooldown_timer: float = 0.0
+var combo_window_timer: float = 0.0
+var stun_timer: float = 0.0
+
+func is_attacking() -> bool:
+	return attack_phase != AttackPhase.NONE or current_state == State.ATTACKING or \
+		current_state == State.ATTACK_STARTUP or current_state == State.ATTACK_ACTIVE or \
+		current_state == State.ATTACK_RECOVERY
+
+func can_cancel_to_dodge(cancel_from: int) -> bool:
+	# Chỉ được hủy sang né khi đang ở pha recovery và đã qua khung cancel_from
+	return attack_phase == AttackPhase.RECOVERY and attack_frame >= cancel_from
+
+func can_chain_combo(cancel_from: int) -> bool:
+	# Cho phép nối chuỗi combo từ khung cancel_from của pha recovery
+	return attack_phase == AttackPhase.RECOVERY and attack_frame >= cancel_from
+
+func reset_combo() -> void:
+	combo_step = 0
+	attack_phase = AttackPhase.NONE
+	attack_frame = 0
+	combo_window_frames = 0
+	combo_buffered = false
+	is_in_hit_frame = false
+	combo_window_timer = 0.0
+	already_hit_enemies.clear()
+
+func process_timers(delta: float, attacking_flag: bool) -> void:
+	if attack_cooldown_timer > 0.0:
+		attack_cooldown_timer -= delta
+	
+	if combo_window_timer > 0.0:
+		combo_window_timer -= delta
+		if combo_window_timer <= 0.0 and not attacking_flag:
+			combo_step = 0
+	
+	if stun_timer > 0.0:
+		stun_timer -= delta
+		if stun_timer <= 0.0 and current_state == State.STUNNED:
+			current_state = State.IDLE
+`
+
+## scripts\combat\common_enemy_visual.gd
 `gdscript
 extends Node2D
 
@@ -1191,7 +1432,7 @@ func _draw() -> void:
 		draw_rect(Rect2(3, -5, 3, 3), Palette.DO_RUOU)
 `
 
-### scripts/combat/dummy_enemy.gd
+## scripts\combat\dummy_enemy.gd
 `gdscript
 extends CharacterBody2D
 
@@ -1326,7 +1567,7 @@ func receive_hit(amount: int, _attack_source: Node) -> Dictionary:
 	return {"hit": true, "damage": amount}
 `
 
-### scripts/combat/enemy_visual.gd
+## scripts\combat\enemy_visual.gd
 `gdscript
 extends Node2D
 
@@ -1378,7 +1619,137 @@ func _draw() -> void:
 	draw_rect(Rect2(3, -4, 3, 3), Palette.DO_GACH)
 `
 
-### scripts/combat/shell_shard_pickup.gd
+## scripts\combat\hitbox_service.gd
+`gdscript
+extends Node
+class_name HitboxService
+
+# HitboxService: Quản lý vị trí, kích thước và kích hoạt vùng va chạm tấn công
+# Nhận diện mục tiêu và chuyển giao sát thương cho đối tượng trúng đòn
+
+static func update_attack_hitbox_position(hitbox: Area2D, dir_suffix: String, flip_left: bool) -> void:
+	if hitbox == null:
+		return
+	
+	match dir_suffix:
+		"down":
+			hitbox.position = Vector2(0, 6)
+		"up":
+			hitbox.position = Vector2(0, -24)
+		"side":
+			if flip_left:
+				hitbox.position = Vector2(-16, -10)
+			else:
+				hitbox.position = Vector2(16, -10)
+
+static func configure_hitbox(hitbox: Area2D, hitbox_spec: Dictionary, dir_suffix: String, flip_left: bool) -> void:
+	if hitbox == null:
+		return
+	
+	var radius: float = float(hitbox_spec.get("radius", 18.0))
+	
+	# Đặt vị trí dựa theo kích thước bán kính của vũ khí
+	match dir_suffix:
+		"down":
+			hitbox.position = Vector2(0, maxf(6.0, radius * 0.4))
+		"up":
+			hitbox.position = Vector2(0, -maxf(20.0, radius * 1.1))
+		"side":
+			if flip_left:
+				hitbox.position = Vector2(-maxf(14.0, radius * 0.9), -10)
+			else:
+				hitbox.position = Vector2(maxf(14.0, radius * 0.9), -10)
+	
+	# Cập nhật kích thước vùng va chạm nếu có CollisionShape2D
+	var shape_owner := hitbox.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if shape_owner != null:
+		if shape_owner.shape is RectangleShape2D:
+			var rect: RectangleShape2D = shape_owner.shape
+			rect.size = Vector2(radius * 1.5, radius * 1.5)
+		elif shape_owner.shape is CircleShape2D:
+			var circle: CircleShape2D = shape_owner.shape
+			circle.radius = radius
+
+static func check_and_process_overlaps(hitbox: Area2D, attacker: Node, damage: int, already_hit: Array[Node], on_hit_callback: Callable = Callable()) -> void:
+	if hitbox == null or not hitbox.monitoring:
+		return
+	
+	var areas := hitbox.get_overlapping_areas()
+	for area in areas:
+		process_single_target(area, attacker, damage, already_hit, on_hit_callback)
+
+static func process_single_target(area: Area2D, attacker: Node, damage: int, already_hit: Array[Node], on_hit_callback: Callable = Callable()) -> void:
+	var target: Node = area.get_parent()
+	if target != null and target != attacker and not target in already_hit:
+		if target.has_method("receive_hit"):
+			already_hit.append(target)
+			var res: Dictionary = target.receive_hit(damage, attacker)
+			if on_hit_callback.is_valid():
+				on_hit_callback.call(target, damage, res)
+`
+
+## scripts\combat\projectile.gd
+`gdscript
+extends Area2D
+class_name Projectile
+
+# Projectile: Đạn bắn tầm xa (dùng cho Ná - Sling, phép thuật...)
+# Bay theo hướng xác định, va chạm Hurtbox kẻ thù (Layer 16)
+# Khi trúng đích: gây sát thương, cộng +2 điểm MAGIC cho BehaviorTracker
+
+var direction: Vector2 = Vector2.DOWN
+var speed: float = 220.0
+var damage: int = 10
+var lifetime: float = 0.8
+var attacker: Node = null
+var radius: float = 3.0
+
+var _traveled_time: float = 0.0
+
+func setup(p_direction: Vector2, p_speed: float, p_damage: int, p_lifetime: float, p_attacker: Node, p_radius: float = 3.0) -> void:
+	direction = p_direction.normalized()
+	speed = p_speed
+	damage = p_damage
+	lifetime = p_lifetime
+	attacker = p_attacker
+	radius = p_radius
+
+func _ready() -> void:
+	collision_layer = 0
+	collision_mask = 16 # Lớp Hurtbox của kẻ thù
+	monitoring = true
+	monitorable = false
+	
+	area_entered.connect(_on_area_entered)
+	
+	# Tạo shape va chạm
+	var col := CollisionShape2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = radius
+	col.shape = circle
+	add_child(col)
+
+func _physics_process(delta: float) -> void:
+	position += direction * speed * delta
+	_traveled_time += delta
+	if _traveled_time >= lifetime:
+		queue_free()
+
+func _draw() -> void:
+	# Vẽ viên sỏi pixel (Palette chuẩn GDD)
+	draw_circle(Vector2.ZERO, radius, Palette.XAM_SAT)
+	draw_circle(Vector2(-1, -1), radius * 0.5, Palette.KEM)
+
+func _on_area_entered(area: Area2D) -> void:
+	var target: Node = area.get_parent()
+	if target != null and target != attacker and target.has_method("receive_hit"):
+		var res: Dictionary = target.receive_hit(damage, attacker)
+		print("[PROJECTILE] Đạn Ná bắn trúng %s! Gây %d sát thương. (+2 MAGIC)" % [target.name, damage])
+		BehaviorTracker.add_points(BehaviorTracker.ACTION_MAGIC, 2)
+		queue_free()
+`
+
+## scripts\combat\shell_shard_pickup.gd
 `gdscript
 extends Area2D
 class_name ShellShardPickup
@@ -1435,7 +1806,102 @@ func _collect(player_node: Node) -> void:
 	queue_free()
 `
 
-### scripts/player/egg_visual.gd
+## scripts\combat\weapon_db.gd
+`gdscript
+extends RefCounted
+class_name WeaponDB
+
+# WeaponDB: Dịch vụ truy vấn và quản lý dữ liệu vũ khí
+# Tải cấu hình từ data/weapons.json (nếu có) hoặc fallback dữ liệu mặc định
+
+static var _weapons_cache: Dictionary = {}
+
+static func get_weapon(weapon_id: String) -> Dictionary:
+	_ensure_loaded()
+	if _weapons_cache.has(weapon_id):
+		return _weapons_cache[weapon_id]
+	return {}
+
+static func get_all_weapons() -> Dictionary:
+	_ensure_loaded()
+	return _weapons_cache
+
+static func _ensure_loaded() -> void:
+	if not _weapons_cache.is_empty():
+		return
+	
+	var path := "res://data/weapons.json"
+	if FileAccess.file_exists(path):
+		var file := FileAccess.open(path, FileAccess.READ)
+		if file != null:
+			var json := JSON.new()
+			if json.parse(file.get_as_text()) == OK and json.data is Dictionary:
+				_weapons_cache = json.data
+				print("[WeaponDB] Đã tải thành công weapons.json (%d vũ khí)." % _weapons_cache.size())
+				return
+	
+	# Fallback mặc định
+	_weapons_cache = {}
+
+const SCALING_COEFF: Dictionary = {
+	"S": 0.08,
+	"A": 0.06,
+	"B": 0.045,
+	"C": 0.03,
+	"D": 0.02,
+	"E": 0.01,
+	"-": 0.0
+}
+
+static func calculate_damage(weapon: Dictionary, attack_spec: Dictionary, stats: Dictionary) -> int:
+	var base_dmg: float = float(weapon.get("base_damage", 10))
+	var mv: float = float(attack_spec.get("damage_mv", 1.0))
+	
+	# Tính scaling
+	var scaling: Dictionary = weapon.get("scaling", {})
+	var scaling_sum: float = 0.0
+	for stat_name in scaling:
+		var grade: String = str(scaling[stat_name])
+		var coeff: float = float(SCALING_COEFF.get(grade, 0.0))
+		var stat_val: int = int(stats.get(stat_name, 10))
+		var stat_diff: int = maxi(0, stat_val - 10)
+		scaling_sum += coeff * float(stat_diff)
+	
+	var dmg: float = base_dmg * mv * (1.0 + scaling_sum)
+	
+	# Kiểm tra thiếu chỉ số yêu cầu (Requirements penalty)
+	var reqs: Dictionary = weapon.get("requirements", {})
+	var missing_pts: int = 0
+	for stat_name in reqs:
+		var req_val: int = int(reqs[stat_name])
+		var stat_val: int = int(stats.get(stat_name, 10))
+		if stat_val < req_val:
+			missing_pts += (req_val - stat_val)
+	
+	if missing_pts > 0:
+		var penalty_mult: float = maxf(0.5, 1.0 - 0.05 * float(missing_pts))
+		dmg *= penalty_mult
+	
+	return maxi(1, int(round(dmg)))
+
+static func calculate_stamina_cost(attack_spec: Dictionary, weapon: Dictionary, stats: Dictionary) -> float:
+	var base_cost: float = float(attack_spec.get("stamina", 8.0))
+	
+	var reqs: Dictionary = weapon.get("requirements", {})
+	var missing_pts: int = 0
+	for stat_name in reqs:
+		var req_val: int = int(reqs[stat_name])
+		var stat_val: int = int(stats.get(stat_name, 10))
+		if stat_val < req_val:
+			missing_pts += (req_val - stat_val)
+	
+	if missing_pts > 0:
+		base_cost *= (1.0 + 0.04 * float(missing_pts))
+	
+	return base_cost
+`
+
+## scripts\player\egg_visual.gd
 `gdscript
 extends Node2D
 
@@ -1447,6 +1913,7 @@ extends Node2D
 var attack_slash_timer: float = 0.0
 var attack_slash_dir: Vector2 = Vector2.DOWN
 var attack_slash_step: int = 0
+var attack_weapon_type: String = "staff"
 var show_placeholder_body: bool = false
 
 # Dữ liệu vết nứt vỏ trứng (tính theo tỉ lệ hp: 1.0 -> 0.0)
@@ -1495,10 +1962,16 @@ func spawn_shell_burst(amount: int = 6) -> void:
 		})
 	queue_redraw()
 
-func start_attack_visual(dir: Vector2, step: int) -> void:
+func start_attack_visual(dir: Vector2, step: int, weapon_type: String = "staff") -> void:
 	attack_slash_dir = dir
 	attack_slash_step = step
-	attack_slash_timer = 0.18
+	attack_weapon_type = weapon_type
+	if weapon_type == "dagger":
+		attack_slash_timer = 0.10
+	elif weapon_type == "sling":
+		attack_slash_timer = 0.12
+	else:
+		attack_slash_timer = 0.18
 	queue_redraw()
 
 func _process(delta: float) -> void:
@@ -1561,16 +2034,34 @@ func _draw() -> void:
 		var p: Vector2 = shard["pos"]
 		draw_rect(Rect2(p.x - sz.x * 0.5, p.y - sz.y * 0.5, sz.x, sz.y), c)
 	
-	# 3. Vệt chém combo đòn đánh cận chiến
+	# 3. Vệt tấn công theo từng loại vũ khí
 	if attack_slash_timer > 0.0:
 		var slash_center := Vector2(0, -10) + attack_slash_dir.normalized() * 14.0
-		var slash_color: Color = Palette.KEM if attack_slash_step == 2 else Palette.XAM_DA
-		var arc_radius: float = 12.0 if attack_slash_step == 2 else 9.0
 		var base_angle: float = attack_slash_dir.angle()
-		var start_ang: float = base_angle - PI * 0.45
-		var end_ang: float = base_angle + PI * 0.45
-		draw_arc(slash_center, arc_radius, start_ang, end_ang, 12, slash_color, 2.0)
-		draw_arc(slash_center, arc_radius - 2.0, start_ang, end_ang, 12, Palette.NAU_HAM, 1.0)
+		if attack_weapon_type == "dagger":
+			# Vệt đâm nhọn thẳng nhanh
+			var tip := Vector2(0, -10) + attack_slash_dir.normalized() * 20.0
+			var base_pt := Vector2(0, -10) + attack_slash_dir.normalized() * 6.0
+			draw_line(base_pt, tip, Palette.KEM, 2.0)
+			draw_line(base_pt, tip + Vector2(-attack_slash_dir.y, attack_slash_dir.x) * 3.0, Palette.XAM_SAT, 1.0)
+		elif attack_weapon_type == "sling":
+			# Tia giật dây ná khi bắn
+			var p1 := Vector2(0, -10) + Vector2(-attack_slash_dir.y, attack_slash_dir.x) * 5.0
+			var p2 := Vector2(0, -10) + Vector2(attack_slash_dir.y, -attack_slash_dir.x) * 5.0
+			draw_line(p1, p2, Palette.CAT, 1.5)
+		elif attack_weapon_type == "unarmed":
+			# Vệt thụi nắm đấm ngắn
+			var punch_center := Vector2(0, -10) + attack_slash_dir.normalized() * 10.0
+			draw_circle(punch_center, 4.0, Palette.KEM)
+		else:
+			# Quét vòng cung cho Gậy Gỗ (Staff)
+			var slash_color: Color = Palette.KEM if attack_slash_step == 2 else Palette.XAM_DA
+			var arc_radius: float = 14.0 if attack_slash_step == 2 else 11.0
+			var start_ang: float = base_angle - PI * 0.45
+			var end_ang: float = base_angle + PI * 0.45
+			draw_arc(slash_center, arc_radius, start_ang, end_ang, 12, slash_color, 2.0)
+			draw_arc(slash_center, arc_radius - 2.0, start_ang, end_ang, 12, Palette.NAU_HAM, 1.0)
+
 	
 	# 4. Hình khối tạm thời biểu diễn thế Đỡ Đòn (Guard)
 	if is_guarding:
@@ -1585,7 +2076,7 @@ func _draw() -> void:
 		draw_circle(shield_center, 2.0, Palette.VANG_CO)
 `
 
-### scripts/player/player.gd
+## scripts\player\player.gd
 `gdscript
 extends CharacterBody2D
 class_name Player
@@ -1603,6 +2094,7 @@ signal stamina_changed(new_stamina: float, max_stamina: float)
 signal player_died()
 signal player_respawned()
 signal combo_stepped(current_step: int)
+signal weapon_swapped(weapon_id: String, weapon_name: String)
 
 @onready var visual_node: Node2D = $EggVisual
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -1644,9 +2136,20 @@ var stamina_delay_timer: float = 0.0
 var dodge_direction: Vector2 = Vector2.ZERO
 
 # Trạng thái combo tấn công
+var combat_state: CombatState = CombatState.new()
 var is_attacking: bool = false
 var can_attack: bool = true
-var combo_step: int = 0 # 0, 1, 2 tương ứng 3 đòn
+var combo_step: int = 0 # 0, 1, 2 tương ứng các đòn trong chuỗi
+
+# Hệ thống vũ khí (Giai đoạn A)
+var inventory_weapons: Array[String] = ["staff_wood", "dagger", "sling"]
+var equipped_weapon_index: int = 0
+var current_weapon_id: String = "staff_wood"
+var current_weapon_data: Dictionary = {}
+var player_stats: Dictionary = {}
+
+const LOGIC_FRAME_TIME: float = 1.0 / 60.0
+var attack_frame_accumulator: float = 0.0
 var attack_cooldown_timer: float = 0.0
 var combo_window_timer: float = 0.0
 var already_hit_enemies: Array[Node] = []
@@ -1693,23 +2196,40 @@ func _ready() -> void:
 	update_animations()
 
 func load_stats_from_data() -> void:
-	max_hp = int(GameData.get_stat("player", "max_hp", 100))
-	max_stamina = float(GameData.get_stat("player", "max_stamina", 100.0))
+	var vit: int = int(GameData.get_stat("base_stats", "VIT", 10))
+	var hp_base: int = int(GameData.get_stat("formulas", "hp_base", 60))
+	var hp_per_vit: int = int(GameData.get_stat("formulas", "hp_per_vit", 4))
+	var sta_base: float = float(GameData.get_stat("formulas", "stamina_base", 60.0))
+	var sta_per_vit: float = float(GameData.get_stat("formulas", "stamina_per_vit", 2.0))
+	
+	max_hp = hp_base + vit * hp_per_vit
+	max_stamina = sta_base + float(vit) * sta_per_vit
+	
+	player_stats = {
+		"STR": int(GameData.get_stat("base_stats", "STR", 10)),
+		"DEX": int(GameData.get_stat("base_stats", "DEX", 10)),
+		"INT": int(GameData.get_stat("base_stats", "INT", 10)),
+		"FAI": int(GameData.get_stat("base_stats", "FAI", 10)),
+		"VIT": vit,
+		"LUK": int(GameData.get_stat("base_stats", "LUK", 10))
+	}
+	current_weapon_data = WeaponDB.get_weapon(current_weapon_id)
+	
 	move_speed = float(GameData.get_stat("player", "move_speed", 95.0))
 	dodge_speed_multiplier = float(GameData.get_stat("player", "dodge_speed_multiplier", 1.85))
 	dodge_duration = float(GameData.get_stat("player", "dodge_duration", 0.25))
 	dodge_cooldown = float(GameData.get_stat("player", "dodge_cooldown", 0.2))
-	dodge_stamina_cost = float(GameData.get_stat("player", "dodge_stamina_cost", 20.0))
-	stamina_recovery_rate = float(GameData.get_stat("player", "stamina_recovery_rate", 30.0))
+	dodge_stamina_cost = float(GameData.get_stat("player", "dodge_stamina_cost", 16.0))
+	stamina_recovery_rate = float(GameData.get_stat("player", "stamina_recovery_rate", 26.0))
 	stamina_recovery_delay = float(GameData.get_stat("player", "stamina_recovery_delay", 0.35))
 	
 	attack_combo_damage = GameData.get_stat("player", "attack_combo_damage", [15, 18, 28])
 	attack_cooldowns = GameData.get_stat("player", "attack_cooldowns", [0.15, 0.15, 0.45])
 	combo_window = float(GameData.get_stat("player", "combo_window", 0.55))
-	attack_stamina_costs = GameData.get_stat("player", "attack_stamina_costs", [10.0, 12.0, 18.0])
+	attack_stamina_costs = GameData.get_stat("player", "attack_stamina_costs", [8.0, 10.0, 14.0])
 	
 	guard_damage_reduction = float(GameData.get_stat("player", "guard_damage_reduction", 0.75))
-	guard_stamina_cost_per_hit = float(GameData.get_stat("player", "guard_stamina_cost_per_hit", 25.0))
+	guard_stamina_cost_per_hit = float(GameData.get_stat("player", "guard_stamina_cost_per_hit", 20.0))
 	guard_speed_multiplier = float(GameData.get_stat("player", "guard_speed_multiplier", 0.45))
 	guard_break_stun_duration = float(GameData.get_stat("player", "guard_break_stun_duration", 0.8))
 	guard_arc_degrees = float(GameData.get_stat("player", "guard_arc_degrees", 180.0))
@@ -1782,11 +2302,9 @@ func _physics_process(delta: float) -> void:
 	process_cooldowns(delta)
 	process_input_and_movement(delta)
 	process_stamina(delta)
+	process_attack_logic(delta)
 	process_visual_effects(delta)
 	update_animations()
-	
-	if is_attacking and is_in_hit_frame:
-		check_melee_overlaps()
 
 func update_animations() -> void:
 	if is_dead:
@@ -1888,6 +2406,10 @@ func process_input_and_movement(delta: float) -> void:
 	else:
 		velocity = Vector2.ZERO
 	
+	if not is_guarding and not is_dodging:
+		if Input.is_action_just_pressed("swap_weapon"):
+			swap_weapon()
+	
 	if not is_guarding:
 		if Input.is_action_just_pressed("attack"):
 			try_attack()
@@ -1897,13 +2419,63 @@ func process_input_and_movement(delta: float) -> void:
 	
 	move_and_slide()
 
-func try_attack() -> void:
-	if is_attacking or is_dodging or not can_attack:
+# --- Hệ thống Vũ khí & Đổi vũ khí (Giai đoạn A) ---
+
+func swap_weapon() -> void:
+	if is_attacking or is_dodging or is_dead or is_stunned:
+		return
+	if inventory_weapons.is_empty():
 		return
 	
-	var cost: float = float(attack_stamina_costs[combo_step])
+	equipped_weapon_index = (equipped_weapon_index + 1) % inventory_weapons.size()
+	current_weapon_id = inventory_weapons[equipped_weapon_index]
+	current_weapon_data = WeaponDB.get_weapon(current_weapon_id)
+	
+	combat_state.reset_combo()
+	combo_step = 0
+	
+	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
+	print("[PLAYER] Đã đổi sang vũ khí: %s (%s)" % [w_name, current_weapon_id])
+	weapon_swapped.emit(current_weapon_id, w_name)
+
+# --- Chuỗi đòn nhẹ 60 FPS Logic (Startup -> Active -> Recovery) ---
+
+const ProjectileScript = preload("res://scripts/combat/projectile.gd")
+
+func try_attack() -> void:
+	if is_dodging or is_dead or is_stunned or is_guarding:
+		return
+	
+	# Nếu đang trong pha recovery và đã qua mốc cancel_from, cho phép nối combo ngay
+	if is_attacking:
+		var chain: Array = current_weapon_data.get("light_chain", [])
+		if combo_step < chain.size():
+			var spec: Dictionary = chain[combo_step]
+			var cancel_from: int = int(spec.get("cancel_from", 3))
+			if combat_state.can_chain_combo(cancel_from):
+				_advance_combo()
+				return
+		combat_state.combo_buffered = true
+		return
+	
+	_start_attack_step(combo_step)
+
+func _start_attack_step(step: int) -> void:
+	var chain: Array = current_weapon_data.get("light_chain", [])
+	if chain.is_empty():
+		return
+	
+	if step >= chain.size():
+		step = 0
+	combo_step = step
+	
+	var spec: Dictionary = chain[combo_step]
+	var cost: float = WeaponDB.calculate_stamina_cost(spec, current_weapon_data, player_stats)
+	
 	if current_stamina < cost:
 		print("[PLAYER] Không đủ Stamina để tấn công đòn %d! (Cần %.1f, có %.1f)" % [combo_step + 1, cost, current_stamina])
+		combat_state.reset_combo()
+		combo_step = 0
 		return
 	
 	current_stamina -= cost
@@ -1912,93 +2484,196 @@ func try_attack() -> void:
 	
 	is_attacking = true
 	can_attack = false
+	combat_state.current_state = CombatState.State.ATTACK_STARTUP
+	combat_state.attack_phase = CombatState.AttackPhase.STARTUP
+	combat_state.attack_frame = 0
+	combat_state.combo_step = combo_step
+	combat_state.combo_buffered = false
+	attack_frame_accumulator = 0.0
 	already_hit_enemies.clear()
 	combo_stepped.emit(combo_step)
 	
 	var dir_suffix := get_direction_suffix(facing_direction)
 	var anim_name := "attack_" + dir_suffix
 	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
-	
 	animated_sprite.flip_h = flip_left
-	update_attack_hitbox_transform(dir_suffix, flip_left)
 	
-	if animations_config.has(anim_name):
-		current_hit_frames = animations_config[anim_name].get("hit_frames", [2])
-	else:
-		current_hit_frames = [2]
+	if animated_sprite != null and animations_config.has(anim_name):
+		animated_sprite.play(anim_name)
 	
-	is_in_hit_frame = false
-	animated_sprite.play(anim_name)
-	print("[PLAYER] Tung đòn combo %d/3! Sát thương: %d, Hướng: %s, Tiêu hao: %.1f Stamina" % [
-		combo_step + 1, attack_combo_damage[combo_step], dir_suffix, cost
+	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
+	print("[PLAYER] Tung đòn combo %d/%d (%s)! Startup: %d khung, Tiêu hao: %.1f Stamina" % [
+		combo_step + 1, chain.size(), w_name, int(spec.get("startup", 4)), cost
 	])
-	
-	if visual_node != null and visual_node.has_method("start_attack_visual"):
-		visual_node.start_attack_visual(facing_direction, combo_step)
 
-func _on_sprite_frame_changed() -> void:
+func process_attack_logic(delta: float) -> void:
 	if not is_attacking:
 		return
 	
-	var cur_frame: int = animated_sprite.frame
-	if cur_frame in current_hit_frames:
-		is_in_hit_frame = true
-		check_melee_overlaps()
+	attack_frame_accumulator += delta
+	while attack_frame_accumulator >= LOGIC_FRAME_TIME:
+		attack_frame_accumulator -= LOGIC_FRAME_TIME
+		_tick_attack_frame()
+
+func _tick_attack_frame() -> void:
+	if not is_attacking:
+		return
+	
+	var chain: Array = current_weapon_data.get("light_chain", [])
+	if combo_step < 0 or combo_step >= chain.size():
+		end_attack(true)
+		return
+	
+	var spec: Dictionary = chain[combo_step]
+	var startup_frames: int = int(spec.get("startup", 4))
+	var active_frames: int = int(spec.get("active", 3))
+	var recovery_frames: int = int(spec.get("recovery", 6))
+	var cancel_from: int = int(spec.get("cancel_from", 3))
+	
+	match combat_state.attack_phase:
+		CombatState.AttackPhase.STARTUP:
+			combat_state.attack_frame += 1
+			if combat_state.attack_frame >= startup_frames:
+				combat_state.attack_phase = CombatState.AttackPhase.ACTIVE
+				combat_state.current_state = CombatState.State.ATTACK_ACTIVE
+				combat_state.attack_frame = 0
+				_enter_active_phase(spec)
+				
+		CombatState.AttackPhase.ACTIVE:
+			combat_state.attack_frame += 1
+			var hitbox_spec: Dictionary = spec.get("hitbox", {})
+			if str(hitbox_spec.get("shape", "arc")) != "projectile":
+				check_melee_overlaps()
+				
+			if combat_state.attack_frame >= active_frames:
+				combat_state.attack_phase = CombatState.AttackPhase.RECOVERY
+				combat_state.current_state = CombatState.State.ATTACK_RECOVERY
+				combat_state.attack_frame = 0
+				_enter_recovery_phase()
+				
+		CombatState.AttackPhase.RECOVERY:
+			combat_state.attack_frame += 1
+			
+			# Hủy sang né (dodge cancel) từ khung cancel_from
+			if combat_state.can_cancel_to_dodge(cancel_from) and Input.is_action_just_pressed("dodge"):
+				end_attack(false)
+				var input_vec := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+				try_dodge(input_vec)
+				return
+			
+			# Nối chuỗi combo từ khung cancel_from
+			if combat_state.can_chain_combo(cancel_from):
+				if combat_state.combo_buffered or Input.is_action_just_pressed("attack"):
+					combat_state.combo_buffered = false
+					_advance_combo()
+					return
+			
+			if combat_state.attack_frame >= recovery_frames:
+				_finish_attack_recovery(spec, chain)
+
+func _enter_active_phase(spec: Dictionary) -> void:
+	is_in_hit_frame = true
+	already_hit_enemies.clear()
+	
+	var dir_suffix := get_direction_suffix(facing_direction)
+	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
+	var hitbox_spec: Dictionary = spec.get("hitbox", {})
+	var shape_type: String = str(hitbox_spec.get("shape", "arc"))
+	var w_type: String = str(current_weapon_data.get("type", "staff"))
+	
+	if shape_type == "projectile":
+		# Bắn đạn tầm xa (Ná)
+		var proj: Area2D = ProjectileScript.new()
+		var spd: float = float(hitbox_spec.get("speed", 220.0))
+		var life: float = float(hitbox_spec.get("life", 0.75))
+		var rad: float = float(hitbox_spec.get("radius", 3.0))
+		var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
+		proj.setup(facing_direction, spd, dmg, life, self, rad)
+		proj.global_position = global_position + Vector2(0, -10) + facing_direction * 8.0
+		get_parent().add_child(proj)
+		
+		if visual_node != null and visual_node.has_method("start_attack_visual"):
+			visual_node.start_attack_visual(facing_direction, combo_step, w_type)
 	else:
-		is_in_hit_frame = false
+		# Cận chiến: kích hoạt Hitbox
+		HitboxService.configure_hitbox(attack_hitbox, hitbox_spec, dir_suffix, flip_left)
+		attack_hitbox.monitoring = true
+		check_melee_overlaps()
+		
+		if visual_node != null and visual_node.has_method("start_attack_visual"):
+			visual_node.start_attack_visual(facing_direction, combo_step, w_type)
 
-func _on_sprite_animation_finished() -> void:
-	if is_attacking:
-		end_attack()
+func _enter_recovery_phase() -> void:
+	is_in_hit_frame = false
+	attack_hitbox.monitoring = false
 
-func end_attack() -> void:
+func _advance_combo() -> void:
+	var chain: Array = current_weapon_data.get("light_chain", [])
+	if combo_step + 1 < chain.size():
+		_start_attack_step(combo_step + 1)
+	else:
+		_start_attack_step(0)
+
+func _finish_attack_recovery(spec: Dictionary, chain: Array) -> void:
+	var combo_win: int = int(spec.get("combo_window", 0))
+	if combo_step + 1 < chain.size() and combo_win > 0:
+		is_attacking = false
+		combat_state.attack_phase = CombatState.AttackPhase.NONE
+		combat_state.current_state = CombatState.State.IDLE
+		can_attack = true
+		combo_step += 1
+		combat_state.combo_step = combo_step
+		combo_window_timer = float(combo_win) / 60.0
+	else:
+		end_attack(true)
+
+func end_attack(reset_step: bool = true) -> void:
 	is_attacking = false
 	is_in_hit_frame = false
-	
-	attack_cooldown_timer = float(attack_cooldowns[combo_step])
-	
-	if combo_step < 2:
-		combo_step += 1
-		combo_window_timer = combo_window
-	else:
+	attack_hitbox.monitoring = false
+	combat_state.attack_phase = CombatState.AttackPhase.NONE
+	combat_state.current_state = CombatState.State.IDLE
+	can_attack = true
+	attack_frame_accumulator = 0.0
+	if reset_step:
 		combo_step = 0
+		combat_state.combo_step = 0
 		combo_window_timer = 0.0
+		combat_state.combo_buffered = false
+
+func _on_sprite_frame_changed() -> void:
+	pass
+
+func _on_sprite_animation_finished() -> void:
+	pass
 
 func update_attack_hitbox_transform(dir_suffix: String, flip_left: bool) -> void:
-	match dir_suffix:
-		"down":
-			attack_hitbox.position = Vector2(0, 6)
-		"up":
-			attack_hitbox.position = Vector2(0, -24)
-		"side":
-			if flip_left:
-				attack_hitbox.position = Vector2(-16, -10)
-			else:
-				attack_hitbox.position = Vector2(16, -10)
+	HitboxService.update_attack_hitbox_position(attack_hitbox, dir_suffix, flip_left)
 
 func check_melee_overlaps() -> void:
-	var areas := attack_hitbox.get_overlapping_areas()
-	for area in areas:
-		_process_hit_target(area)
+	var chain: Array = current_weapon_data.get("light_chain", [])
+	if combo_step >= chain.size():
+		return
+	var spec: Dictionary = chain[combo_step]
+	var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
+	HitboxService.check_and_process_overlaps(attack_hitbox, self, dmg, already_hit_enemies, _on_enemy_hit)
 
 func _on_attack_hitbox_area_entered(area: Area2D) -> void:
 	if is_in_hit_frame:
-		_process_hit_target(area)
+		var chain: Array = current_weapon_data.get("light_chain", [])
+		if combo_step >= chain.size():
+			return
+		var spec: Dictionary = chain[combo_step]
+		var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
+		HitboxService.process_single_target(area, self, dmg, already_hit_enemies, _on_enemy_hit)
 
-func _process_hit_target(area: Area2D) -> void:
-	var target: Node = area.get_parent()
-	if target != null and target != self and not target in already_hit_enemies:
-		if target.has_method("receive_hit"):
-			already_hit_enemies.append(target)
-			var dmg: int = int(attack_combo_damage[combo_step])
-			target.receive_hit(dmg, self)
-			print("[COMBAT] Đòn %d đánh trúng kẻ thù! Gây %d sát thương." % [combo_step + 1, dmg])
-			
-			accumulated_melee_damage += dmg
-			if accumulated_melee_damage >= 10:
-				var guard_pts := accumulated_melee_damage / 10
-				accumulated_melee_damage = accumulated_melee_damage % 10
-				BehaviorTracker.add_points(BehaviorTracker.ACTION_GUARD, guard_pts)
+func _on_enemy_hit(_target: Node, dmg: int, _res: Dictionary) -> void:
+	print("[COMBAT] Đòn %d đánh trúng kẻ thù! Gây %d sát thương." % [combo_step + 1, dmg])
+	accumulated_melee_damage += dmg
+	if accumulated_melee_damage >= 10:
+		var guard_pts := accumulated_melee_damage / 10
+		accumulated_melee_damage = accumulated_melee_damage % 10
+		BehaviorTracker.add_points(BehaviorTracker.ACTION_GUARD, guard_pts)
 
 func get_direction_suffix(dir: Vector2) -> String:
 	if abs(dir.x) >= abs(dir.y):
@@ -2021,6 +2696,7 @@ func try_dodge(input_vector: Vector2) -> void:
 	stamina_delay_timer = stamina_recovery_delay
 	
 	is_dodging = true
+	combat_state.current_state = CombatState.State.DODGING
 	is_invulnerable = true
 	can_dodge = false
 	dodge_timer = dodge_duration
@@ -2034,6 +2710,7 @@ func try_dodge(input_vector: Vector2) -> void:
 
 func end_dodge() -> void:
 	is_dodging = false
+	combat_state.current_state = CombatState.State.IDLE
 	is_invulnerable = false
 	dodge_cooldown_timer = dodge_cooldown
 
@@ -2112,6 +2789,7 @@ func receive_hit(damage: int, attack_source: Node) -> Dictionary:
 				
 				is_guarding = false
 				is_stunned = true
+				combat_state.current_state = CombatState.State.STUNNED
 				stun_timer = guard_break_stun_duration
 				final_damage = damage # Nhận trọn sát thương
 				
@@ -2151,6 +2829,7 @@ func receive_hit(damage: int, attack_source: Node) -> Dictionary:
 
 func die() -> void:
 	is_dead = true
+	combat_state.current_state = CombatState.State.DEAD
 	is_hurt = false
 	is_guarding = false
 	is_stunned = false
@@ -2184,6 +2863,7 @@ func respawn() -> void:
 	current_hp = max_hp
 	current_stamina = max_stamina
 	is_dead = false
+	combat_state.current_state = CombatState.State.IDLE
 	is_hurt = false
 	is_guarding = false
 	is_stunned = false
@@ -2208,7 +2888,7 @@ func respawn() -> void:
 	player_respawned.emit()
 `
 
-### scripts/ui/hud.gd
+## scripts\ui\hud.gd
 `gdscript
 extends CanvasLayer
 
@@ -2220,6 +2900,7 @@ extends CanvasLayer
 @onready var stamina_bar_fill: ColorRect = $MarginContainer/VBoxContainer/StaminaBar/Fill
 @onready var stamina_bar_bg: ColorRect = $MarginContainer/VBoxContainer/StaminaBar/Background
 @onready var debug_label: Label = $MarginContainer/VBoxContainer/DebugDodgeLabel
+@onready var weapon_label: Label = $MarginContainer/VBoxContainer/WeaponLabel
 @onready var death_overlay: Control = $DeathOverlay
 
 var max_hp: int = 100
@@ -2250,6 +2931,8 @@ func apply_palette() -> void:
 	stamina_bar_fill.color = Palette.XANH_LA_UA
 	
 	debug_label.add_theme_color_override("font_color", Palette.KEM)
+	if weapon_label != null:
+		weapon_label.add_theme_color_override("font_color", Palette.KEM)
 	
 	var death_label: Label = $DeathOverlay/CenterContainer/VBoxContainer/DeathLabel
 	death_label.add_theme_color_override("font_color", Palette.DO_GACH)
@@ -2277,6 +2960,10 @@ func update_stamina(new_stamina: float, new_max_stamina: float) -> void:
 	var ratio: float = clampf(current_stamina / maxf(1.0, max_stamina), 0.0, 1.0)
 	stamina_bar_fill.size.x = stamina_bar_max_width * ratio
 
+func update_weapon(_weapon_id: String, weapon_name: String) -> void:
+	if weapon_label != null:
+		weapon_label.text = "[Q] " + weapon_name
+
 func _on_behavior_points_changed(action_name: String, _new_points: int, _total: int) -> void:
 	if action_name == BehaviorTracker.ACTION_DODGE:
 		update_debug_display()
@@ -2290,7 +2977,7 @@ func show_death_screen(show_it: bool) -> void:
 	death_overlay.visible = show_it
 `
 
-### tools/generate_run_roll_sprites.gd
+## tools\generate_run_roll_sprites.gd
 `gdscript
 extends SceneTree
 
@@ -2762,7 +3449,7 @@ func _init() -> void:
 	quit(0)
 `
 
-### tools/generate_run_roll_v2.gd
+## tools\generate_run_roll_v2.gd
 `gdscript
 extends SceneTree
 
@@ -3195,5 +3882,60 @@ func _init() -> void:
 	save_png(make_preview(rolls[2]),  PREV_DIR + "preview_roll_side.png")
 
 	print("=== Xong ===")
+	quit(0)
+`
+
+## tools\test_combat_stage_a.gd
+`gdscript
+extends SceneTree
+
+# Test verification script for Combat Stage A
+
+func _init() -> void:
+	print("--- BAT DAU TEST STAGE A: WEAPONS & COMBAT ---")
+	
+	# 1. Test WeaponDB
+	var weapons: Dictionary = WeaponDB.get_all_weapons()
+	assert(weapons.has("staff_wood"), "Thieu staff_wood!")
+	assert(weapons.has("dagger"), "Thieu dagger!")
+	assert(weapons.has("sling"), "Thieu sling!")
+	assert(weapons.has("fist"), "Thieu fist!")
+	print("[PASS] WeaponDB da tai day du 4 loai vu khi tu weapons.json.")
+	
+	# 2. Test Stats & Damage Calculation
+	var stats := { "STR": 10, "DEX": 10, "INT": 10, "FAI": 10, "VIT": 10, "LUK": 10 }
+	var staff_data: Dictionary = WeaponDB.get_weapon("staff_wood")
+	var staff_spec_1: Dictionary = staff_data["light_chain"][0]
+	var dmg_staff_1: int = WeaponDB.calculate_damage(staff_data, staff_spec_1, stats)
+	var sta_staff_1: float = WeaponDB.calculate_stamina_cost(staff_spec_1, staff_data, stats)
+	print("[STAFF] Don 1: Sát thương = %d, Stamina = %.1f" % [dmg_staff_1, sta_staff_1])
+	assert(dmg_staff_1 == 12, "Sat thuong don 1 Gay Go phai la 12!")
+	assert(is_equal_approx(sta_staff_1, 8.0), "Stamina don 1 Gay Go phai la 8.0!")
+	
+	var dagger_data: Dictionary = WeaponDB.get_weapon("dagger")
+	var dagger_spec_1: Dictionary = dagger_data["light_chain"][0]
+	var dmg_dagger_1: int = WeaponDB.calculate_damage(dagger_data, dagger_spec_1, stats)
+	var sta_dagger_1: float = WeaponDB.calculate_stamina_cost(dagger_spec_1, dagger_data, stats)
+	print("[DAGGER] Don 1: Sát thương = %d, Stamina = %.1f" % [dmg_dagger_1, sta_dagger_1])
+	assert(dmg_dagger_1 == 6, "Sat thuong don 1 Dao Gam phai la 6 (9 * 0.7)!")
+	assert(is_equal_approx(sta_dagger_1, 4.0), "Stamina don 1 Dao Gam phai la 4.0!")
+	
+	var sling_data: Dictionary = WeaponDB.get_weapon("sling")
+	var sling_spec_1: Dictionary = sling_data["light_chain"][0]
+	var dmg_sling_1: int = WeaponDB.calculate_damage(sling_data, sling_spec_1, stats)
+	var sta_sling_1: float = WeaponDB.calculate_stamina_cost(sling_spec_1, sling_data, stats)
+	print("[SLING] Don 1: Sát thương = %d, Stamina = %.1f" % [dmg_sling_1, sta_sling_1])
+	assert(dmg_sling_1 == 9, "Sat thuong don 1 Na phai la 9 (10 * 0.9)!")
+	assert(is_equal_approx(sta_sling_1, 7.0), "Stamina don 1 Na phai la 7.0!")
+	
+	# 3. Test Requirement Penalty
+	var low_stats := { "STR": 5, "DEX": 5, "INT": 10, "FAI": 10, "VIT": 10, "LUK": 10 }
+	var dmg_pen: int = WeaponDB.calculate_damage(staff_data, staff_spec_1, low_stats)
+	var sta_pen: float = WeaponDB.calculate_stamina_cost(staff_spec_1, staff_data, low_stats)
+	print("[PENALTY] Gay Go voi STR 5, DEX 5 (thieu 6 diem): Sát thương = %d (giam), Stamina = %.1f (tang)" % [dmg_pen, sta_pen])
+	assert(dmg_pen < dmg_staff_1, "Sát thương phai bi phat khi thieu chi so!")
+	assert(sta_pen > sta_staff_1, "Stamina phai tang khi thieu chi so!")
+	
+	print("--- TAT CA CAC TEST UNIT CUA STAGE A DA VUOT QUA THANH CONG! ---")
 	quit(0)
 `

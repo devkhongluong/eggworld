@@ -47,6 +47,11 @@ offset_right = 52.0
 offset_bottom = 4.0
 color = Color(0.419608, 0.498039, 0.227451, 1)
 
+[node name="WeaponLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "[Q] Gậy Gỗ"
+
 [node name="DebugDodgeLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 visible = false
 layout_mode = 2
