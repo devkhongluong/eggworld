@@ -78,13 +78,13 @@ func _build_stat_rows() -> void:
 	for s in STAT_NAMES:
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.theme_override_constants.separation = 4
+		row.add_theme_constant_override("separation", 4)
 		
 		# Nhãn tên chỉ số (VIT, STR, ...)
 		var name_lbl := Label.new()
 		name_lbl.custom_minimum_size = Vector2(28, 12)
 		name_lbl.text = s
-		name_lbl.theme_override_font_sizes.font_size = 8
+		name_lbl.add_theme_font_size_override("font_size", 8)
 		name_lbl.add_theme_color_override("font_color", Palette.KEM)
 		row.add_child(name_lbl)
 		
@@ -92,7 +92,7 @@ func _build_stat_rows() -> void:
 		var val_lbl := Label.new()
 		val_lbl.custom_minimum_size = Vector2(40, 12)
 		val_lbl.text = "10"
-		val_lbl.theme_override_font_sizes.font_size = 8
+		val_lbl.add_theme_font_size_override("font_size", 8)
 		val_lbl.add_theme_color_override("font_color", Palette.KEM)
 		row.add_child(val_lbl)
 		
@@ -100,7 +100,7 @@ func _build_stat_rows() -> void:
 		var btn_sub := Button.new()
 		btn_sub.custom_minimum_size = Vector2(16, 12)
 		btn_sub.text = "-"
-		btn_sub.theme_override_font_sizes.font_size = 8
+		btn_sub.add_theme_font_size_override("font_size", 8)
 		btn_sub.focus_mode = Control.FOCUS_NONE
 		btn_sub.pressed.connect(func(): _modify_stat(s, -1))
 		row.add_child(btn_sub)
@@ -109,7 +109,7 @@ func _build_stat_rows() -> void:
 		var btn_add := Button.new()
 		btn_add.custom_minimum_size = Vector2(16, 12)
 		btn_add.text = "+"
-		btn_add.theme_override_font_sizes.font_size = 8
+		btn_add.add_theme_font_size_override("font_size", 8)
 		btn_add.focus_mode = Control.FOCUS_NONE
 		btn_add.pressed.connect(func(): _modify_stat(s, +1))
 		row.add_child(btn_add)

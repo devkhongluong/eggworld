@@ -110,19 +110,23 @@ func _ready() -> void:
 	pile2.queue_free()
 	print("[PASS] 8. LostShard: Co che duy nhat 1 dong shards va huy dong cu khi chet lan 2 hoat dung.")
 	
-	# 7. Test StrawBed & LevelUpScreen scene loading
+	# 7. Test StrawBed & LevelUpScreen scene loading & UI lifecycle
 	var straw_bed_scene = load("res://scenes/world/straw_bed.tscn")
 	assert(straw_bed_scene != null, "scenes/world/straw_bed.tscn phai ton tai va hop le!")
 	var straw_bed = straw_bed_scene.instantiate()
 	assert(straw_bed is StrawBed, "straw_bed phai la instance cua class StrawBed!")
+	add_child(straw_bed)
 	straw_bed.queue_free()
 	
 	var level_up_scene = load("res://scenes/ui/level_up_screen.tscn")
 	assert(level_up_scene != null, "scenes/ui/level_up_screen.tscn phai ton tai va hop le!")
 	var level_up_ui = level_up_scene.instantiate()
 	assert(level_up_ui is LevelUpScreen, "level_up_ui phai la instance cua class LevelUpScreen!")
-	level_up_ui.queue_free()
-	print("[PASS] 9. Khoi tao thanh cong scenes StrawBed va LevelUpScreen.")
+	add_child(level_up_ui) # Trigger _ready() and _build_stat_rows()
+	level_up_ui.open(null)
+	assert(level_up_ui.stat_row_nodes.size() == 6, "Phai tao du 6 hang chi so!")
+	level_up_ui.close_screen()
+	print("[PASS] 9. Khoi tao & chay vong doi scenes StrawBed va LevelUpScreen thanh cong.")
 	
 	# Don dep
 	inv.queue_free()
