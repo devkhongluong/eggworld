@@ -1,40 +1,40 @@
 {
   "_huong_dan": "Dữ liệu cân bằng cho Trứng và hệ thống chiến đấu ban đầu. Bạn có thể tự do điều chỉnh các chỉ số dưới đây mà không cần sửa code.",
   "base_stats": {
-    "VIT": 10,
-    "STR": 10,
-    "DEX": 10,
-    "INT": 10,
-    "FAI": 10,
-    "LUK": 10
+	"VIT": 10,
+	"STR": 10,
+	"DEX": 10,
+	"INT": 10,
+	"FAI": 10,
+	"LUK": 10
   },
   "player": {
-    "max_hp": 100,
-    "max_stamina": 100.0,
-    "move_speed": 95.0,
-    "dodge_speed_multiplier": 1.85,
-    "dodge_duration": 0.25,
-    "dodge_cooldown": 0.2,
-    "dodge_stamina_cost": 20.0,
-    "stamina_recovery_rate": 30.0,
-    "stamina_recovery_delay": 0.35,
-    "collision_size": [10.0, 6.0],
-    "collision_offset": [0.0, -3.0],
-    "hurtbox_size": [10.0, 14.0],
-    "hurtbox_offset": [0.0, -10.0],
-    "attack_combo_damage": [15, 18, 28],
-    "attack_cooldowns": [0.15, 0.15, 0.45],
-    "combo_window": 0.55,
-    "attack_stamina_costs": [10.0, 12.0, 18.0]
+	"max_hp": 100,
+	"max_stamina": 100.0,
+	"move_speed": 95.0,
+	"dodge_speed_multiplier": 1.85,
+	"dodge_duration": 0.25,
+	"dodge_cooldown": 0.2,
+	"dodge_stamina_cost": 20.0,
+	"stamina_recovery_rate": 30.0,
+	"stamina_recovery_delay": 0.35,
+	"collision_size": [10.0, 6.0],
+	"collision_offset": [0.0, -3.0],
+	"hurtbox_size": [10.0, 14.0],
+	"hurtbox_offset": [0.0, -10.0],
+	"attack_combo_damage": [15, 18, 28],
+	"attack_cooldowns": [0.15, 0.15, 0.45],
+	"combo_window": 0.55,
+	"attack_stamina_costs": [10.0, 12.0, 18.0]
   },
   "dummy_enemy": {
-    "max_hp": 50,
-    "damage": 20,
-    "telegraph_duration": 0.3,
-    "attack_interval": 2.2,
-    "attack_radius": 28.0
+	"max_hp": 50,
+	"damage": 20,
+	"telegraph_duration": 0.3,
+	"attack_interval": 2.2,
+	"attack_radius": 28.0
   },
   "debug": {
-    "show_dodge_debug": false
+	"show_dodge_debug": false
   }
 }
