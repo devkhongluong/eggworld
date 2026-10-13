@@ -55,6 +55,7 @@ var stamina_delay_timer: float = 0.0
 var dodge_direction: Vector2 = Vector2.ZERO
 
 # Trạng thái combo tấn công
+var combat_state: CombatState = CombatState.new()
 var is_attacking: bool = false
 var can_attack: bool = true
 var combo_step: int = 0 # 0, 1, 2 tương ứng 3 đòn
@@ -104,23 +105,30 @@ func _ready() -> void:
 	update_animations()
 
 func load_stats_from_data() -> void:
-	max_hp = int(GameData.get_stat("player", "max_hp", 100))
-	max_stamina = float(GameData.get_stat("player", "max_stamina", 100.0))
+	var vit: int = int(GameData.get_stat("base_stats", "VIT", 10))
+	var hp_base: int = int(GameData.get_stat("formulas", "hp_base", 60))
+	var hp_per_vit: int = int(GameData.get_stat("formulas", "hp_per_vit", 4))
+	var sta_base: float = float(GameData.get_stat("formulas", "stamina_base", 60.0))
+	var sta_per_vit: float = float(GameData.get_stat("formulas", "stamina_per_vit", 2.0))
+	
+	max_hp = hp_base + vit * hp_per_vit
+	max_stamina = sta_base + float(vit) * sta_per_vit
+	
 	move_speed = float(GameData.get_stat("player", "move_speed", 95.0))
 	dodge_speed_multiplier = float(GameData.get_stat("player", "dodge_speed_multiplier", 1.85))
 	dodge_duration = float(GameData.get_stat("player", "dodge_duration", 0.25))
 	dodge_cooldown = float(GameData.get_stat("player", "dodge_cooldown", 0.2))
-	dodge_stamina_cost = float(GameData.get_stat("player", "dodge_stamina_cost", 20.0))
-	stamina_recovery_rate = float(GameData.get_stat("player", "stamina_recovery_rate", 30.0))
+	dodge_stamina_cost = float(GameData.get_stat("player", "dodge_stamina_cost", 16.0))
+	stamina_recovery_rate = float(GameData.get_stat("player", "stamina_recovery_rate", 26.0))
 	stamina_recovery_delay = float(GameData.get_stat("player", "stamina_recovery_delay", 0.35))
 	
 	attack_combo_damage = GameData.get_stat("player", "attack_combo_damage", [15, 18, 28])
 	attack_cooldowns = GameData.get_stat("player", "attack_cooldowns", [0.15, 0.15, 0.45])
 	combo_window = float(GameData.get_stat("player", "combo_window", 0.55))
-	attack_stamina_costs = GameData.get_stat("player", "attack_stamina_costs", [10.0, 12.0, 18.0])
+	attack_stamina_costs = GameData.get_stat("player", "attack_stamina_costs", [8.0, 10.0, 14.0])
 	
 	guard_damage_reduction = float(GameData.get_stat("player", "guard_damage_reduction", 0.75))
-	guard_stamina_cost_per_hit = float(GameData.get_stat("player", "guard_stamina_cost_per_hit", 25.0))
+	guard_stamina_cost_per_hit = float(GameData.get_stat("player", "guard_stamina_cost_per_hit", 20.0))
 	guard_speed_multiplier = float(GameData.get_stat("player", "guard_speed_multiplier", 0.45))
 	guard_break_stun_duration = float(GameData.get_stat("player", "guard_break_stun_duration", 0.8))
 	guard_arc_degrees = float(GameData.get_stat("player", "guard_arc_degrees", 180.0))
@@ -322,6 +330,8 @@ func try_attack() -> void:
 	stamina_delay_timer = stamina_recovery_delay
 	
 	is_attacking = true
+	combat_state.current_state = CombatState.State.ATTACKING
+	combat_state.combo_step = combo_step
 	can_attack = false
 	already_hit_enemies.clear()
 	combo_stepped.emit(combo_step)
@@ -365,6 +375,7 @@ func _on_sprite_animation_finished() -> void:
 func end_attack() -> void:
 	is_attacking = false
 	is_in_hit_frame = false
+	combat_state.current_state = CombatState.State.IDLE
 	
 	attack_cooldown_timer = float(attack_cooldowns[combo_step])
 	
@@ -374,42 +385,27 @@ func end_attack() -> void:
 	else:
 		combo_step = 0
 		combo_window_timer = 0.0
+	combat_state.combo_step = combo_step
 
 func update_attack_hitbox_transform(dir_suffix: String, flip_left: bool) -> void:
-	match dir_suffix:
-		"down":
-			attack_hitbox.position = Vector2(0, 6)
-		"up":
-			attack_hitbox.position = Vector2(0, -24)
-		"side":
-			if flip_left:
-				attack_hitbox.position = Vector2(-16, -10)
-			else:
-				attack_hitbox.position = Vector2(16, -10)
+	HitboxService.update_attack_hitbox_position(attack_hitbox, dir_suffix, flip_left)
 
 func check_melee_overlaps() -> void:
-	var areas := attack_hitbox.get_overlapping_areas()
-	for area in areas:
-		_process_hit_target(area)
+	var dmg: int = int(attack_combo_damage[combo_step])
+	HitboxService.check_and_process_overlaps(attack_hitbox, self, dmg, already_hit_enemies, _on_enemy_hit)
 
 func _on_attack_hitbox_area_entered(area: Area2D) -> void:
 	if is_in_hit_frame:
-		_process_hit_target(area)
+		var dmg: int = int(attack_combo_damage[combo_step])
+		HitboxService.process_single_target(area, self, dmg, already_hit_enemies, _on_enemy_hit)
 
-func _process_hit_target(area: Area2D) -> void:
-	var target: Node = area.get_parent()
-	if target != null and target != self and not target in already_hit_enemies:
-		if target.has_method("receive_hit"):
-			already_hit_enemies.append(target)
-			var dmg: int = int(attack_combo_damage[combo_step])
-			target.receive_hit(dmg, self)
-			print("[COMBAT] Đòn %d đánh trúng kẻ thù! Gây %d sát thương." % [combo_step + 1, dmg])
-			
-			accumulated_melee_damage += dmg
-			if accumulated_melee_damage >= 10:
-				var guard_pts := accumulated_melee_damage / 10
-				accumulated_melee_damage = accumulated_melee_damage % 10
-				BehaviorTracker.add_points(BehaviorTracker.ACTION_GUARD, guard_pts)
+func _on_enemy_hit(_target: Node, dmg: int, _res: Dictionary) -> void:
+	print("[COMBAT] Đòn %d đánh trúng kẻ thù! Gây %d sát thương." % [combo_step + 1, dmg])
+	accumulated_melee_damage += dmg
+	if accumulated_melee_damage >= 10:
+		var guard_pts := accumulated_melee_damage / 10
+		accumulated_melee_damage = accumulated_melee_damage % 10
+		BehaviorTracker.add_points(BehaviorTracker.ACTION_GUARD, guard_pts)
 
 func get_direction_suffix(dir: Vector2) -> String:
 	if abs(dir.x) >= abs(dir.y):
@@ -432,6 +428,7 @@ func try_dodge(input_vector: Vector2) -> void:
 	stamina_delay_timer = stamina_recovery_delay
 	
 	is_dodging = true
+	combat_state.current_state = CombatState.State.DODGING
 	is_invulnerable = true
 	can_dodge = false
 	dodge_timer = dodge_duration
@@ -445,6 +442,7 @@ func try_dodge(input_vector: Vector2) -> void:
 
 func end_dodge() -> void:
 	is_dodging = false
+	combat_state.current_state = CombatState.State.IDLE
 	is_invulnerable = false
 	dodge_cooldown_timer = dodge_cooldown
 
@@ -523,6 +521,7 @@ func receive_hit(damage: int, attack_source: Node) -> Dictionary:
 				
 				is_guarding = false
 				is_stunned = true
+				combat_state.current_state = CombatState.State.STUNNED
 				stun_timer = guard_break_stun_duration
 				final_damage = damage # Nhận trọn sát thương
 				
@@ -562,6 +561,7 @@ func receive_hit(damage: int, attack_source: Node) -> Dictionary:
 
 func die() -> void:
 	is_dead = true
+	combat_state.current_state = CombatState.State.DEAD
 	is_hurt = false
 	is_guarding = false
 	is_stunned = false
@@ -595,6 +595,7 @@ func respawn() -> void:
 	current_hp = max_hp
 	current_stamina = max_stamina
 	is_dead = false
+	combat_state.current_state = CombatState.State.IDLE
 	is_hurt = false
 	is_guarding = false
 	is_stunned = false
