@@ -15,8 +15,12 @@
       "attack_down": { "file": "player_egg_attack_down.png", "frames": 5, "fps": 12, "loop": false, "hit_frames": [2] },
       "attack_up": { "file": "player_egg_attack_up.png", "frames": 5, "fps": 12, "loop": false, "hit_frames": [2] },
       "attack_side": { "file": "player_egg_attack_side.png", "frames": 5, "fps": 12, "loop": false, "hit_frames": [2] },
-      "hurt_side": { "file": "player_egg_hurt_side.png", "frames": 2, "fps": 12, "loop": false, "hit_frames": [] },
-      "death_side": { "file": "player_egg_death_side.png", "frames": 6, "fps": 10, "loop": false, "hit_frames": [] }
+      "hurt_down": { "file": "player_egg_hurt.png", "frames": 5, "fps": 10, "loop": false, "hit_frames": [] },
+      "hurt_up":   { "file": "player_egg_hurt.png", "frames": 5, "fps": 10, "loop": false, "hit_frames": [] },
+      "hurt_side": { "file": "player_egg_hurt.png", "frames": 5, "fps": 10, "loop": false, "hit_frames": [] },
+      "death_down": { "file": "player_egg_death.png", "frames": 7, "fps": 8, "loop": false, "hit_frames": [] },
+      "death_up":   { "file": "player_egg_death.png", "frames": 7, "fps": 8, "loop": false, "hit_frames": [] },
+      "death_side": { "file": "player_egg_death.png", "frames": 7, "fps": 8, "loop": false, "hit_frames": [] }
     }
   }
 }
