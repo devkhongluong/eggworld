@@ -156,13 +156,16 @@
 
 ---
 
-## 6. CÁC BƯỚC TIẾP THEO ĐỀ XUẤT (THEO THỨ TỰ)
+## 6. KẾ HOẠCH CÁC GIAI ĐOẠN TRIỂN KHAI (THEO MỤC 13 CỦA COMBAT_SPEC.md)
 
-1. **Cơ chế Nhặt lại Mảnh Vỏ Vụn khi Chết (Lost Runes mechanic - GDD mục 7):**
-   - Khi chết để lại node `DeathRune` tại chỗ chết chứa số EXP đã tích lũy. Nhặt lại hồi phục; nếu chết lần 2 trước khi nhặt thì mất hẳn.
-2. **Xây dựng Tilemap môi trường Tổ Hoang (Chương 0):**
-   - Tạo tile nền và tường hầm 16×16 px chuẩn 16 màu theo GDD.
-3. **Hiện thực hóa Boss Chương 0: Quạ Gác Tổ (64×64 px):**
-   - Kế thừa `BaseEnemy`, triển khai 3 chiêu: Mổ thẳng (`peck`), quét cánh (`sweep`), dập lao (`dive` kèm bóng đổ báo vị trí).
-4. **Hệ thống Giao diện Menu Tạm dừng (Pause Menu) & Màn Lưu/Tải:**
-   - Kết nối trực tiếp vào `SaveManager.gd`.
+Lộ trình ưu tiên cho Vertical Slice: **Giai đoạn A $\rightarrow$ Lên cấp $\rightarrow$ Giai đoạn B $\rightarrow$ Overlay**. Các giai đoạn C, D, E sẽ triển khai khi cảm giác đánh đã hoàn toàn ổn định.
+
+| Giai đoạn | Nội dung trọng tâm | Tiêu chí hoàn thành | Trạng thái |
+|---|---|---|---|
+| **Giai đoạn A** | - Tạo `data/weapons.json` (3 vũ khí khởi đầu: Gậy Gỗ, Dao Găm, Ná + đòn tay không).<br>- Tách đòn đánh theo khung hình logic 60 FPS (`startup`, `active`, `recovery`, `cancel_from`).<br>- Thêm Input Map: `swap_weapon` (Q / D-pad lên).<br>- Tách dịch vụ: `CombatState`, `HitboxService`, `WeaponDB`. | Đổi mượt mà giữa Gậy / Dao / Ná; mỗi loại có cự ly, tốc độ, hitbox và cảm giác đánh riêng biệt; hitbox bật/tắt đúng khung hình logic. | **TIẾP THEO (CHUẨN BỊ LÀM)** |
+| **Giai đoạn Lên cấp** | - Quản lý Mảnh Vỏ Vụn (EXP) tích lũy của Player.<br>- Điểm lưu Ổ Rơm (`StrawBed`) tương tác bằng phím E.<br>- UI cộng chỉ số tại Ổ Rơm (bàn phím & tay cầm), xem trước chỉ số phát sinh (HP, Stamina, Sát thương, Sức tải).<br>- Công thức tính chỉ số chuẩn mục 9 COMBAT_SPEC.<br>- Cơ chế làm rơi Mảnh Vỏ Vụn tại chỗ chết và nhặt lại.<br>- Lưu/tải chỉ số vào `savegame.json`. | Cộng điểm được, chi phí tính đúng công thức, xem trước chính xác, chỉ số ảnh hưởng trực tiếp gameplay, chết nhặt lại được EXP, lưu/tải không mất tiến trình. | **CHƯA LÀM** |
+| **Giai đoạn B** | - Đòn nặng tích lực (`heavy_charge`).<br>- Hệ thống Poise (độ vững) & Choáng (`stagger`) cho Player và Enemy.<br>- Đâm lén (`backstab` cung 90° phía sau) + Đòn kết liễu (`critical`).<br>- Đỡ khéo (`parry` trong 8 khung đầu của Guard) mở phản đòn. | Quái bị trừ poise và choáng khi hết poise; đâm lén trúng cung sau nhân sát thương và cộng DODGE; parry thành công gây choáng tức thì và cộng GUARD +4. | **CHƯA LÀM** |
+| **Giai đoạn Overlay** | - Hệ thống tư thế đánh dùng chung của Trứng (`swing_h`, `swing_v`, `thrust`, `shoot`...).<br>- Lớp phủ vũ khí 16×16 px vẽ đè lên bàn tay theo `data/pose_anchors.json`.<br>- Vệt chém (slash effect) riêng từng vũ khí. | Đổi vũ khí tự động đổi sprite vũ khí và vệt chém trên tay nhân vật mà không cần vẽ lại thân Trứng. | **CHƯA LÀM** |
+| **Giai đoạn C** | - Ô kỹ năng vũ khí (`skill_slot`, `data/skills.json`, nút `skill`).<br>- Thế cầm hai tay (`two_hand`, nút Tab). | Tháo lắp được kỹ năng giữa các vũ khí tương thích; bật hai tay nhận `two_hand_bonus` sát thương nhưng bỏ khiên. | **ĐỂ SAU VERTICAL SLICE** |
+| **Giai đoạn D** | - Phụ ma (Lửa, Băng, Thánh, Mục) & Thanh tích lũy trạng thái (Buildup).<br>- Tương tác môi trường cơ bản (cháy rơm, ướt nước). | Tích lũy đủ kích hoạt hiệu ứng rút máu/chậm; lửa lan trên tile rơm. | **ĐỂ SAU VERTICAL SLICE** |
+| **Giai đoạn E** | - Tải Vỏ (Equip Load) tính từ trọng lượng vũ khí/giáp so với `equip_capacity`.<br>- Ba bậc lăn né: Nhẹ ($<30\%$), Vừa ($30-70\%$), Nặng ($>70\%$), Quá tải ($>100\%$). | Mang nặng thay đổi độ dài lăn né và khung bất tử i-frame đúng bảng dữ liệu. | **ĐỂ SAU VERTICAL SLICE** |
