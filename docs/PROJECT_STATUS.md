@@ -1,5 +1,5 @@
 # BÁO CÁO TÌNH TRẠNG DỰ ÁN "VỠ VỎ" (SHELLBOUND)
-*Ngày khảo sát: 13/10/2026*  
+*Cập nhật lần cuối: 13/10/2026*  
 *Nền tảng: Godot Engine v4.7.2.stable.official (GDScript typed, 2D Pixel Art)*
 
 ---
@@ -35,7 +35,7 @@
    - `hud.tscn`: Hiển thị thanh máu HP (Đỏ Gạch), thanh thể lực Stamina (Xanh Lá Úa), thông báo hồi sinh và nhãn debug phím F3.
    - *File liên quan:* `scenes/levels/test_arena.tscn`, `scenes/levels/test_arena.gd`, `scenes/enemies/dummy_enemy.tscn`, `scripts/combat/dummy_enemy.gd`, `scripts/combat/enemy_visual.gd`, `scenes/ui/hud.tscn`, `scripts/ui/hud.gd`.
 
-### Các việc bổ sung ở các phiên gần nhất (Sprite & Visuals):
+### Các tính năng hoàn thành trong đợt phát triển tiếp theo:
 6. **Hệ thống Sprite động (AnimatedSprite2D & JSON config):**
    - Đã cắt và tích hợp dải sprite sheet 32×32 pixel art từ nguồn mẫu tham khảo cho Trứng:
      - `idle` (down, up, side): 4 khung, 8 fps.
@@ -51,19 +51,40 @@
      - **Mảnh vỡ văng (Shell Debris Burst):** Tung tóe 7 mảnh vỏ rơi có trọng lực khi trúng đòn.
      - **Khung bất tử (i-frame nhận đòn):** 0.25 giây tự động hết, chớp màu Đỏ Gạch 0.18s, khắc phục triệt để lỗi bất tử vĩnh viễn và kẹt game.
    - *File liên quan:* `scripts/player/egg_visual.gd`, `scripts/player/player.gd`.
+8. **Tổ chức thư mục Tools & Validator Sprite:**
+   - Đã gom toàn bộ các file script hỗ trợ vào `tools/` kèm `tools/README.md`.
+   - Đã tạo `tools/validate_sprites.py` quét kiểm định 14 asset sprite PNG theo chuẩn GDD mục 2 & 3 (khung 32x32, alpha trong suốt, chia hết cho kích thước khung, kiểm tra 16 màu cố định).
+   - *File liên quan:* `tools/*`.
+9. **Cơ chế Đỡ đòn (Guard):**
+   - Giữ nút `guard` (`L`, chuột phải, Joypad L1): Giảm tốc độ di chuyển còn 45% (`guard_speed_multiplier`), khóa hồi Stamina trong khi giữ.
+   - Kiểm tra cung đỡ góc 180 độ phía trước theo `facing_direction`.
+   - Đỡ thành công: giảm 75% sát thương (`guard_damage_reduction`), tiêu hao 25 thể lực (`guard_stamina_cost_per_hit`), cộng +2 điểm `GUARD` trong `BehaviorTracker`.
+   - Vỡ thế đỡ (Guard Break): Nếu Stamina không đủ khi bị đánh trúng trong thế đỡ, người chơi bị choáng 0.8 giây (`guard_break_stun_duration`), nhận trọn 100% sát thương.
+   - Đòn đánh ngoài cung 180 độ hoặc từ sau lưng: không đỡ được, nhận trọn sát thương.
+   - Hiển thị thế đỡ bằng hình khối tạm (vòng cung khiên Nâu Hầm/Xám Sắt và điểm tâm Vàng Cổ).
+   - *File liên quan:* `data/stats.json`, `scripts/player/player.gd`, `scripts/player/egg_visual.gd`.
+10. **Khung Kẻ Thù Cơ Sở (BaseEnemy) & Quái Thường (CommonEnemy) có AI FSM:**
+    - `BaseEnemy.gd`: Thiết kế kế thừa cho kẻ thù thường và boss tương lai, quản lý đầy đủ FSM: `IDLE` $\rightarrow$ `CHASE` $\rightarrow$ `TELEGRAPH` $\rightarrow$ `ATTACK` $\rightarrow$ `RECOVERY` $\rightarrow$ `STUNNED` $\rightarrow$ `DEAD`.
+    - Tự động tìm Player, truy đuổi khi trong bán kính phát hiện (`detection_radius` 140px).
+    - Dừng lại báo hiệu Đỏ Gạch (`DO_GACH`) 0.35s trước khi tung đòn trong tầm (`attack_radius` 24px).
+    - Bị đẩy lùi nhẹ và choáng ngắn (`stun_duration` 0.25s) khi trúng đòn của Player.
+    - Chết rơi vật phẩm Mảnh Vỏ Vụn (EXP Pickup).
+    - `common_enemy_visual.gd`: Dựng hình khối tạm chuẩn 16 màu Palette (Nâu Da, Cát, mảng ăn mòn Tím Mục, mắt Đỏ Rượu).
+    - `shell_shard_pickup.gd`: Hạt tinh thể Mảnh Vỏ Vụn hình thoi bay nhấp nháy, tự hút nhặt khi chạm Player.
+    - *File liên quan:* `data/stats.json`, `scripts/combat/base_enemy.gd`, `scripts/combat/common_enemy_visual.gd`, `scripts/combat/shell_shard_pickup.gd`, `scenes/enemies/common_enemy.tscn`, `scenes/levels/test_arena.tscn`.
 
 ---
 
-## 2. ĐANG LÀM DỞ / CHƯA CHẮC CHẠY ĐÚNG
+## 2. ĐANG LÀM DỞ / CHƯA HOÀN THIỆN
 
-1. **Hành động Đỡ đòn (Guard):**
-   - Đã có action `guard` trong Input Map (`L`, chuột phải, Joypad L1) và hằng số `ACTION_GUARD`, nhưng trong `player.gd` chưa hiện thực hóa logic bấm giữ đỡ đòn (chưa có trạng thái `is_guarding`, giảm trừ sát thương khi đỡ, tiêu hao stamina khi đỡ).
-2. **Kẻ thù chỉ mới là bao cát (DummyEnemy):**
-   - Đứng yên một chỗ, chưa có AI đuổi theo người chơi hay tìm đường (Navigation/Pathfinding).
-3. **File kịch bản ngoài luồng còn sót lại trong thư mục gốc:**
-   - Các file python và gdscript tạo sprite hỗ trợ (`generate_run_roll_sprites.gd`, `make_hurt_death.py`, `slice_spritesheet.py`, v.v.) chưa được dọn vào thư mục `tools/` riêng.
-4. **Hệ thống EXP / Mảnh Vỏ Vụn (Lost Runes mechanic):**
-   - Cơ chế nhặt lại Mảnh Vỏ Vụn tại vị trí chết (mục 7 GDD) chưa được code, hiện tại chết chỉ đếm ngược 1.5s rồi respawn về vị trí spawn ban đầu.
+1. **Cơ chế Nhặt lại Mảnh Vỏ Vụn đã mất khi Chết (Lost Runes mechanic - GDD mục 7):**
+   - Hiện tại Player chết chỉ rơi thông báo đếm ngược hồi sinh về điểm spawn, chưa rơi node `LostShell` chứa toàn bộ EXP đã tích lũy tại vị trí chết để người chơi nhặt lại.
+2. **Khu vực Môi trường & Tilemap Chương 0 (Tổ Hoang):**
+   - Chưa dựng TileSet 16×16 px nền và tường gạch theo bảng màu GDD. Hiện test_arena vẫn đang dùng `ColorRect` đơn giản.
+3. **Boss Chương 0: Quạ Gác Tổ (64×64 px):**
+   - Đã có khung kế thừa `BaseEnemy`, sẵn sàng để mở rộng phase và các kỹ năng mổ thẳng (`peck`), quét cánh (`sweep`), dập lao (`dive`).
+4. **Hệ thống Giao diện Menu & Lưu/Tải game:**
+   - `SaveManager.gd` đã có hàm lưu và đọc `user://savegame.json`, nhưng chưa có màn hình UI Pause Menu hoặc Nút Save/Load trong game.
 
 ---
 
@@ -78,7 +99,7 @@
 3. **Cơ chế Combo 3 đòn:**
    - *Theo CHARACTER_SPEC:* Hoạt ảnh `attack` 5 khung cơ bản.
    - *Thực tế triển khai:* Combo 3 đòn liên hoàn sử dụng chung dải hoạt ảnh 5 khung nhưng khác biệt về thông số sát thương (`[15, 18, 28]`), tiêu hao thể lực (`[10.0, 12.0, 18.0]`), thời gian hồi (`[0.15, 0.15, 0.45]`) và độ rộng vệt chém phụ trợ.
-4. **Sprite hướng Side cho Death:**
+4. **Sprite các hướng cho Death:**
    - *Theo CHARACTER_SPEC:* Chỉ cần `death_side`.
    - *Thực tế triển khai:* Đăng ký cả `death_down`, `death_up`, `death_side` trong `animations.json` (dùng chung file `player_egg_death.png`) để code logic xoay hướng nào cũng gọi được mà không văng lỗi thiếu key.
 
@@ -94,21 +115,26 @@
    - Đánh theo `facing_direction` (chuẩn hóa 3 hướng: `down`, `up`, `side` với `flip_h` khi quay trái).
    - Tấn công khóa di chuyển trong thoáng chốc (`velocity = Vector2.ZERO`).
    - Sử dụng `hit_frames: [2]` bắt qua tín hiệu `frame_changed` của `AnimatedSprite2D`.
-3. **Quy tắc Bảng màu & Pixel Art:**
+3. **Cơ chế Đỡ đòn (Guard):**
+   - Bấm giữ `guard`: Tốc độ di chuyển giảm 45%, không hồi Stamina.
+   - Cung đỡ 180 độ phía trước, giảm 75% sát thương, tốn 25 Stamina/hit, cộng +2 điểm `GUARD`. Hết stamina bị vỡ thế đỡ (choáng 0.8s, nhận trọn sát thương).
+4. **Kẻ thù AI:**
+   - Xây dựng trên `BaseEnemy`, phân chia rõ ràng các trạng thái bằng FSM. Luôn có báo hiệu nhấp nháy Đỏ Gạch trước khi kích hoạt hitbox sát thương.
+5. **Quy tắc Bảng màu & Pixel Art:**
    - Tuyệt đối 16 màu cố định trong `Palette.gd`.
    - Viền ngoài `NAU_HAM (#2B1F1A)`. Lọc hình `Nearest`.
-4. **Tách biệt Dữ liệu và Mã nguồn:**
-   - Tất cả thông số sát thương, máu, tốc độ, hồi thể lực... bắt buộc đặt trong `data/stats.json`.
+6. **Tách biệt Dữ liệu và Mã nguồn:**
+   - Tất cả thông số sát thương, máu, tốc độ, hồi thể lực, cự ly và thời gian của Player và Enemy bắt buộc đặt trong `data/stats.json`.
 
 ---
 
 ## 5. BỘ ĐẾM HÀNH VI, AUTOLOAD & INPUT MAP HIỆN CÓ
 
 ### Bộ đếm hành vi ẩn (BehaviorTracker):
-- `GUARD`: +2 khi đỡ đòn thành công; +1 mỗi 10 sát thương cận chiến gây ra (đã tích hợp trong đòn đánh).
-- `DODGE`: +2 khi lăn né tránh đòn trong i-frame (đã tích hợp với đòn đánh của DummyEnemy).
+- `GUARD`: +2 khi đỡ đòn thành công (mỗi đòn tối đa 1 lần); +1 mỗi 10 sát thương cận chiến gây ra.
+- `DODGE`: +2 khi lăn né tránh đòn trong i-frame (mỗi đòn tối đa 1 lần).
 - `MAGIC`: +2 khi đánh trúng bằng phép/tầm xa (chưa có vũ khí phép).
-- `EXPLORE`: +5 khi tìm lối tắt/mở rương (chưa có hầm ngục).
+- `EXPLORE`: +5 khi tìm lối tắt/mở rương, +1 khi nhặt Mảnh Vỏ Vụn.
 - `SUPPORT`: +3 khi dùng hỗ trợ/hồi máu (chưa có item hồi máu).
 
 ### Autoload (Project Settings):
@@ -132,15 +158,11 @@
 
 ## 6. CÁC BƯỚC TIẾP THEO ĐỀ XUẤT (THEO THỨ TỰ)
 
-1. **Hiện thực hóa cơ chế Đỡ đòn (Guard):**
-   - Thêm trạng thái Guard khi giữ nút `guard`.
-   - Tiêu hao stamina khi chặn đòn, giảm sát thương nhận vào, cộng điểm `GUARD` vào `BehaviorTracker`.
-2. **Cơ chế Nhặt lại Mảnh Vỏ Vụn (EXP drop upon death):**
-   - Khi chết để lại node `DeathRune`/`LostShell` tại vị trí chết.
-   - Nhặt lại hồi phục EXP; chết lần 2 trước khi nhặt thì xóa mất.
-3. **Nâng cấp Kẻ thù thường & AI tuần tra / truy đuổi:**
-   - Xây dựng lớp quái cơ bản có AI di chuyển về phía Player khi vào tầm phát hiện.
-4. **Xây dựng Tilemap môi trường Tổ Hoang (Chương 0):**
-   - Tạo tile nền 16×16 px chuẩn 16 màu theo GDD.
-5. **Hiện thực hóa Boss Chương 0: Quạ Gác Tổ (64×64 px):**
-   - Thiết kế logic đòn mổ (`peck`), quét cánh (`sweep`), bay dập (`dive`) kèm bóng đổ cảnh báo.
+1. **Cơ chế Nhặt lại Mảnh Vỏ Vụn khi Chết (Lost Runes mechanic - GDD mục 7):**
+   - Khi chết để lại node `DeathRune` tại chỗ chết chứa số EXP đã tích lũy. Nhặt lại hồi phục; nếu chết lần 2 trước khi nhặt thì mất hẳn.
+2. **Xây dựng Tilemap môi trường Tổ Hoang (Chương 0):**
+   - Tạo tile nền và tường hầm 16×16 px chuẩn 16 màu theo GDD.
+3. **Hiện thực hóa Boss Chương 0: Quạ Gác Tổ (64×64 px):**
+   - Kế thừa `BaseEnemy`, triển khai 3 chiêu: Mổ thẳng (`peck`), quét cánh (`sweep`), dập lao (`dive` kèm bóng đổ báo vị trí).
+4. **Hệ thống Giao diện Menu Tạm dừng (Pause Menu) & Màn Lưu/Tải:**
+   - Kết nối trực tiếp vào `SaveManager.gd`.

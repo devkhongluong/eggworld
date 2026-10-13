@@ -5,18 +5,9 @@
 .editorconfig
 .gitattributes
 .gitignore
-generate_run_roll_sprites.gd
-generate_run_roll_sprites.gd.uid
-generate_run_roll_v2.gd
-generate_run_roll_v2.gd.uid
 icon.svg
 icon.svg.import
-make_hurt_death.py
-make_previews.py
 project.godot
-slice_attack_sheet.py
-slice_hurt_death.py
-slice_spritesheet.py
 assets/
   audio/
     .gitkeep
@@ -62,13 +53,16 @@ data/
 docs/
   .gitkeep
   CHARACTER_SPEC.md
+  COMBAT_SPEC.md
   GDD.md
   PROJECT_STATUS.md
+  project_snapshot.md
 scenes/
   bosses/
     .gitkeep
   enemies/
     .gitkeep
+    common_enemy.tscn
     dummy_enemy.tscn
   levels/
     .gitkeep
@@ -94,10 +88,16 @@ scripts/
     save_manager.gd.uid
   combat/
     .gitkeep
+    base_enemy.gd
+    base_enemy.gd.uid
+    common_enemy_visual.gd
+    common_enemy_visual.gd.uid
     dummy_enemy.gd
     dummy_enemy.gd.uid
     enemy_visual.gd
     enemy_visual.gd.uid
+    shell_shard_pickup.gd
+    shell_shard_pickup.gd.uid
   evolution/
     .gitkeep
   player/
@@ -110,6 +110,18 @@ scripts/
     .gitkeep
     hud.gd
     hud.gd.uid
+tools/
+  README.md
+  generate_run_roll_sprites.gd
+  generate_run_roll_sprites.gd.uid
+  generate_run_roll_v2.gd
+  generate_run_roll_v2.gd.uid
+  make_hurt_death.py
+  make_previews.py
+  slice_attack_sheet.py
+  slice_hurt_death.py
+  slice_spritesheet.py
+  validate_sprites.py
 `
 
 ---
@@ -172,7 +184,12 @@ scripts/
 	"attack_combo_damage": [15, 18, 28],
 	"attack_cooldowns": [0.15, 0.15, 0.45],
 	"combo_window": 0.55,
-	"attack_stamina_costs": [10.0, 12.0, 18.0]
+	"attack_stamina_costs": [10.0, 12.0, 18.0],
+	"guard_damage_reduction": 0.75,
+	"guard_stamina_cost_per_hit": 25.0,
+	"guard_speed_multiplier": 0.45,
+	"guard_break_stun_duration": 0.8,
+	"guard_arc_degrees": 180.0
   },
   "dummy_enemy": {
 	"max_hp": 50,
@@ -181,13 +198,2099 @@ scripts/
 	"attack_interval": 2.2,
 	"attack_radius": 28.0
   },
+  "common_enemy": {
+	"max_hp": 45,
+	"damage": 18,
+	"move_speed": 55.0,
+	"detection_radius": 140.0,
+	"attack_radius": 24.0,
+	"telegraph_duration": 0.35,
+	"attack_active_duration": 0.15,
+	"recovery_duration": 0.4,
+	"stun_duration": 0.25,
+	"exp_drop": 15
+  },
   "debug": {
 	"show_dodge_debug": false
   }
 }
 `
 
-### generate_run_roll_sprites.gd
+### project.godot
+`ini
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Vỡ Vỏ"
+run/main_scene="res://scenes/levels/test_arena.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+
+Palette="*res://scripts/autoload/palette.gd"
+GameData="*res://scripts/autoload/game_data.gd"
+BehaviorTracker="*res://scripts/autoload/behavior_tracker.gd"
+SaveManager="*res://scripts/autoload/save_manager.gd"
+
+[display]
+
+window/size/viewport_width=320
+window/size/viewport_height=180
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="viewport"
+window/stretch/scale_mode="integer"
+
+[input]
+
+move_left={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":65,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194319,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":13,"pressure":0.0,"pressed":false,"script":null)
+, Object(InputEventJoypadMotion,"resource_local_to_scene":false,"resource_name":"","device":0,"axis":0,"axis_value":-1.0,"script":null)
+]
+}
+move_right={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":68,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194321,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":14,"pressure":0.0,"pressed":false,"script":null)
+, Object(InputEventJoypadMotion,"resource_local_to_scene":false,"resource_name":"","device":0,"axis":0,"axis_value":1.0,"script":null)
+]
+}
+move_up={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":87,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194320,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":11,"pressure":0.0,"pressed":false,"script":null)
+, Object(InputEventJoypadMotion,"resource_local_to_scene":false,"resource_name":"","device":0,"axis":1,"axis_value":-1.0,"script":null)
+]
+}
+move_down={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":83,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194322,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":12,"pressure":0.0,"pressed":false,"script":null)
+, Object(InputEventJoypadMotion,"resource_local_to_scene":false,"resource_name":"","device":0,"axis":1,"axis_value":1.0,"script":null)
+]
+}
+attack={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":74,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":32,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":0,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":1,"canceled":false,"pressed":false,"double_click":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":2,"pressure":0.0,"pressed":false,"script":null)
+]
+}
+dodge={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":32,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":75,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":0,"pressure":0.0,"pressed":false,"script":null)
+]
+}
+guard={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":76,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":32,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":0,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":2,"canceled":false,"pressed":false,"double_click":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":9,"pressure":0.0,"pressed":false,"script":null)
+]
+}
+interact={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":69,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":3,"pressure":0.0,"pressed":false,"script":null)
+]
+}
+pause={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194305,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":6,"pressure":0.0,"pressed":false,"script":null)
+]
+}
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+rendering_device/driver.windows="d3d12"
+2d/snap/snap_2d_transforms_to_pixel=true
+2d/snap/snap_2d_vertices_to_pixel=true
+`
+
+### scenes/enemies/common_enemy.tscn
+`ini
+[gd_scene load_steps=5 format=3 uid="uid://cenemy001common"]
+
+[ext_resource type="Script" path="res://scripts/combat/base_enemy.gd" id="1_enemy"]
+[ext_resource type="Script" path="res://scripts/combat/common_enemy_visual.gd" id="2_visual"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
+size = Vector2(20, 20)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_attack"]
+radius = 24.0
+
+[node name="CommonEnemy" type="CharacterBody2D" groups=["enemies"]]
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("1_enemy")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="EnemyVisual" type="Node2D" parent="."]
+script = ExtResource("2_visual")
+
+[node name="AttackArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackArea"]
+shape = SubResource("CircleShape2D_attack")
+
+[node name="Hurtbox" type="Area2D" parent="." groups=["enemy_hurtbox"]]
+collision_layer = 16
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("RectangleShape2D_body")
+`
+
+### scenes/enemies/dummy_enemy.tscn
+`ini
+[gd_scene load_steps=5 format=3 uid="uid://dmmyenemy001"]
+
+[ext_resource type="Script" path="res://scripts/combat/dummy_enemy.gd" id="1_enemy"]
+[ext_resource type="Script" path="res://scripts/combat/enemy_visual.gd" id="2_visual"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
+size = Vector2(20, 20)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_attack"]
+radius = 28.0
+
+[node name="DummyEnemy" type="CharacterBody2D" groups=["enemies"]]
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("1_enemy")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="EnemyVisual" type="Node2D" parent="."]
+script = ExtResource("2_visual")
+
+[node name="AttackArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackArea"]
+shape = SubResource("CircleShape2D_attack")
+
+[node name="Hurtbox" type="Area2D" parent="." groups=["enemy_hurtbox"]]
+collision_layer = 16
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("RectangleShape2D_body")
+`
+
+### scenes/levels/test_arena.gd
+`gdscript
+extends Node2D
+
+# Màn chơi thử nghiệm test_arena:
+# - Nền tối (DEN_THAN)
+# - Tường bao hầm ngục (NAU_HAM)
+# - Player với Camera2D smoothed pixel-snap
+# - Kẻ thù thử nghiệm (DummyEnemy)
+# - HUD hiển thị máu, thể lực và thông báo chết/hồi sinh
+
+@onready var player: CharacterBody2D = $Player
+@onready var hud: CanvasLayer = $HUD
+
+func _ready() -> void:
+	if player != null and hud != null:
+		player.hp_changed.connect(hud.update_hp)
+		player.stamina_changed.connect(hud.update_stamina)
+		player.player_died.connect(func(): hud.show_death_screen(true))
+		player.player_respawned.connect(func(): hud.show_death_screen(false))
+		# Khởi tạo giá trị ban đầu cho HUD
+		hud.update_hp(player.current_hp, player.max_hp)
+		hud.update_stamina(player.current_stamina, player.max_stamina)
+	
+	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD/Mũi tên), Lăn né (Space/K).")
+`
+
+### scenes/levels/test_arena.tscn
+`ini
+[gd_scene format=3 uid="uid://btestarena001"]
+
+[ext_resource type="Script" path="res://scenes/levels/test_arena.gd" id="1_arena"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/dummy_enemy.tscn" id="3_enemy"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/common_enemy.tscn" id="3_common_enemy"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="4_hud"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_horiz"]
+size = Vector2(480, 16)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_vert"]
+size = Vector2(16, 270)
+
+[node name="TestArena" type="Node2D"]
+script = ExtResource("1_arena")
+
+[node name="Floor" type="ColorRect" parent="."]
+offset_right = 480.0
+offset_bottom = 270.0
+color = Color(0.0784314, 0.0666667, 0.0588235, 1)
+
+[node name="Walls" type="StaticBody2D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="TopWallVisual" type="ColorRect" parent="Walls"]
+offset_right = 480.0
+offset_bottom = 16.0
+color = Color(0.168627, 0.121569, 0.101961, 1)
+
+[node name="TopCollision" type="CollisionShape2D" parent="Walls"]
+position = Vector2(240, 8)
+shape = SubResource("RectangleShape2D_horiz")
+
+[node name="BottomWallVisual" type="ColorRect" parent="Walls"]
+offset_top = 254.0
+offset_right = 480.0
+offset_bottom = 270.0
+color = Color(0.168627, 0.121569, 0.101961, 1)
+
+[node name="BottomCollision" type="CollisionShape2D" parent="Walls"]
+position = Vector2(240, 262)
+shape = SubResource("RectangleShape2D_horiz")
+
+[node name="LeftWallVisual" type="ColorRect" parent="Walls"]
+offset_right = 16.0
+offset_bottom = 270.0
+color = Color(0.168627, 0.121569, 0.101961, 1)
+
+[node name="LeftCollision" type="CollisionShape2D" parent="Walls"]
+position = Vector2(8, 135)
+shape = SubResource("RectangleShape2D_vert")
+
+[node name="RightWallVisual" type="ColorRect" parent="Walls"]
+offset_left = 464.0
+offset_right = 480.0
+offset_bottom = 270.0
+color = Color(0.168627, 0.121569, 0.101961, 1)
+
+[node name="RightCollision" type="CollisionShape2D" parent="Walls"]
+position = Vector2(472, 135)
+shape = SubResource("RectangleShape2D_vert")
+
+[node name="DummyEnemy" parent="." instance=ExtResource("3_enemy")]
+position = Vector2(260, 135)
+
+[node name="CommonEnemy" parent="." instance=ExtResource("3_common_enemy")]
+position = Vector2(340, 135)
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+position = Vector2(160, 135)
+
+[node name="Camera2D" type="Camera2D" parent="Player"]
+position_smoothing_enabled = true
+position_smoothing_speed = 6.0
+limit_left = 0
+limit_top = 0
+limit_right = 480
+limit_bottom = 270
+
+[node name="HUD" parent="." instance=ExtResource("4_hud")]
+`
+
+### scenes/player/player.tscn
+`ini
+[gd_scene load_steps=6 format=3 uid="uid://df7xeggplayer01"]
+
+[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/player/egg_visual.gd" id="2_visual"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_col"]
+size = Vector2(10, 6)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_hurt"]
+size = Vector2(10, 14)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_attack"]
+size = Vector2(16, 16)
+
+[node name="Player" type="CharacterBody2D" groups=["player"]]
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("1_player")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -3)
+shape = SubResource("RectangleShape2D_col")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+
+[node name="EggVisual" type="Node2D" parent="."]
+script = ExtResource("2_visual")
+
+[node name="Hurtbox" type="Area2D" parent="."]
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+position = Vector2(0, -10)
+shape = SubResource("RectangleShape2D_hurt")
+
+[node name="AttackHitbox" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 16
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackHitbox"]
+shape = SubResource("RectangleShape2D_attack")
+`
+
+### scenes/ui/hud.tscn
+`ini
+[gd_scene format=3 uid="uid://bvyhud001"]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+offset_left = 6.0
+offset_top = 6.0
+offset_right = 120.0
+offset_bottom = 50.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HPBar" type="Control" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(64, 6)
+layout_mode = 2
+
+[node name="Background" type="ColorRect" parent="MarginContainer/VBoxContainer/HPBar"]
+layout_mode = 0
+offset_right = 64.0
+offset_bottom = 6.0
+color = Color(0.168627, 0.121569, 0.101961, 1)
+
+[node name="Fill" type="ColorRect" parent="MarginContainer/VBoxContainer/HPBar"]
+layout_mode = 0
+offset_right = 64.0
+offset_bottom = 6.0
+color = Color(0.658824, 0.203922, 0.168627, 1)
+
+[node name="StaminaBar" type="Control" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(52, 4)
+layout_mode = 2
+
+[node name="Background" type="ColorRect" parent="MarginContainer/VBoxContainer/StaminaBar"]
+layout_mode = 0
+offset_right = 52.0
+offset_bottom = 4.0
+color = Color(0.168627, 0.121569, 0.101961, 1)
+
+[node name="Fill" type="ColorRect" parent="MarginContainer/VBoxContainer/StaminaBar"]
+layout_mode = 0
+offset_right = 52.0
+offset_bottom = 4.0
+color = Color(0.419608, 0.498039, 0.227451, 1)
+
+[node name="DebugDodgeLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "[DEBUG F3] DODGE: 0"
+
+[node name="DeathOverlay" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CenterContainer" type="CenterContainer" parent="DeathOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="DeathOverlay/CenterContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="PanelBg" type="ColorRect" parent="DeathOverlay/CenterContainer/VBoxContainer"]
+visible = false
+custom_minimum_size = Vector2(160, 40)
+layout_mode = 2
+color = Color(0.168627, 0.121569, 0.101961, 0.9)
+
+[node name="DeathLabel" type="Label" parent="DeathOverlay/CenterContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "VỎ ĐÃ VỠ..."
+horizontal_alignment = 1
+
+[node name="SubLabel" type="Label" parent="DeathOverlay/CenterContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "Đang hồi sinh..."
+horizontal_alignment = 1
+`
+
+### scripts/autoload/behavior_tracker.gd
+`gdscript
+extends Node
+
+# Autoload BehaviorTracker: 5 bộ đếm hành vi ẩn của Trứng (GDD Mục 6.1)
+# GUARD, DODGE, MAGIC, EXPLORE, SUPPORT
+# Dùng để quyết định nhánh tiến hóa tại các mốc mà người chơi không thấy số điểm trực tiếp.
+
+signal points_changed(action_name: String, new_points: int, total_points: int)
+
+const ACTION_GUARD: String = "GUARD"
+const ACTION_DODGE: String = "DODGE"
+const ACTION_MAGIC: String = "MAGIC"
+const ACTION_EXPLORE: String = "EXPLORE"
+const ACTION_SUPPORT: String = "SUPPORT"
+
+const VALID_ACTIONS: Array[String] = [
+	ACTION_GUARD,
+	ACTION_DODGE,
+	ACTION_MAGIC,
+	ACTION_EXPLORE,
+	ACTION_SUPPORT
+]
+
+var _counters: Dictionary = {
+	ACTION_GUARD: 0,
+	ACTION_DODGE: 0,
+	ACTION_MAGIC: 0,
+	ACTION_EXPLORE: 0,
+	ACTION_SUPPORT: 0
+}
+
+func add_points(action_name: String, points: int) -> void:
+	if not _counters.has(action_name):
+		push_warning("BehaviorTracker: Hành động không hợp lệ: " + action_name)
+		return
+	if points <= 0:
+		return
+	_counters[action_name] += points
+	var total: int = get_total_points()
+	points_changed.emit(action_name, _counters[action_name], total)
+	print("[BehaviorTracker] +%d %s (Hiện tại: %d, Tổng: %d)" % [points, action_name, _counters[action_name], total])
+
+func get_points(action_name: String) -> int:
+	return _counters.get(action_name, 0)
+
+func get_total_points() -> int:
+	var total: int = 0
+	for key in _counters:
+		total += int(_counters[key])
+	return total
+
+func get_ratios() -> Dictionary:
+	var total: int = get_total_points()
+	var ratios: Dictionary = {}
+	for key in _counters:
+		if total > 0:
+			ratios[key] = float(_counters[key]) / float(total)
+		else:
+			ratios[key] = 0.0
+	return ratios
+
+func reset() -> void:
+	for key in _counters:
+		_counters[key] = 0
+
+func export_data() -> Dictionary:
+	return _counters.duplicate()
+
+func import_data(data: Dictionary) -> void:
+	for action_name in VALID_ACTIONS:
+		if data.has(action_name):
+			_counters[action_name] = int(data[action_name])
+`
+
+### scripts/autoload/game_data.gd
+`gdscript
+extends Node
+
+# Autoload GameData: Quản lý nạp toàn bộ file cấu hình JSON trong thư mục data/
+# Đảm bảo không hard-code bất kỳ chỉ số cân bằng nào vào mã nguồn.
+
+var stats: Dictionary = {}
+
+func _ready() -> void:
+	load_all_data()
+
+func load_all_data() -> void:
+	stats = load_json_file("res://data/stats.json")
+	if stats.is_empty():
+		push_error("GameData: Không thể nạp dữ liệu từ stats.json!")
+	else:
+		print("GameData: Nạp thành công stats.json.")
+
+func load_json_file(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		push_error("GameData: Không tìm thấy file JSON tại " + path)
+		return {}
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_error("GameData: Không thể mở file " + path)
+		return {}
+	var content := file.get_as_text()
+	var json := JSON.new()
+	var parse_result := json.parse(content)
+	if parse_result != OK:
+		push_error("GameData: Lỗi parse JSON tại %s (dòng %d): %s" % [path, json.get_error_line(), json.get_error_message()])
+		return {}
+	if json.data is Dictionary:
+		return json.data
+	push_warning("GameData: Dữ liệu JSON trong %s không phải là Dictionary!" % path)
+	return {}
+
+func get_stat(category: String, key: String, default_value: Variant = null) -> Variant:
+	if stats.has(category) and stats[category] is Dictionary and stats[category].has(key):
+		return stats[category][key]
+	return default_value
+`
+
+### scripts/autoload/palette.gd
+`gdscript
+extends Node
+
+# Bảng màu trung cổ (16 màu cố định theo GDD Mục 3)
+# Toàn bộ màu sắc trong game bắt buộc phải tham chiếu từ Palette này.
+const DEN_THAN: Color = Color("#14110F")      # 1. Bóng sâu nhất, nền hầm ngục tối, hố đen
+const NAU_HAM: Color = Color("#2B1F1A")       # 2. Viền ngoài mọi sprite, tường hầm
+const XAM_SAT: Color = Color("#4A4A52")       # 3. Giáp, kim loại, đá tối
+const XAM_DA: Color = Color("#7C7C80")        # 4. Đá sáng, vũ khí, lưỡi kiếm
+const NAU_GO: Color = Color("#6B4423")        # 5. Gỗ, cửa, cán vũ khí, đất tối
+const NAU_DA: Color = Color("#A0693B")        # 6. Da thuộc, đất, rơm đậm
+const CAT: Color = Color("#D4A86A")           # 7. Rơm, cát, bóng đổ trên vỏ trứng
+const GIAY_DA: Color = Color("#E8D9B0")       # 8. Vỏ trứng (màu chính), giấy, xương
+const KEM: Color = Color("#F4EBD0")           # 9. Điểm sáng nhất, vùng ánh sáng trên vỏ trứng
+const DO_RUOU: Color = Color("#6E1423")       # 10. Vải quý tộc, máu khô, boss tối
+const DO_GACH: Color = Color("#A8342B")       # 11. Lửa nhẹ, cờ hiệu, cảnh báo sát thương, thanh HP
+const XANH_REU: Color = Color("#3B4A2A")      # 12. Cỏ, lá, đầm lầy, rừng
+const XANH_LA_UA: Color = Color("#6B7F3A")    # 13. Cỏ sáng, độc nhẹ, đồ vật tự nhiên, thanh Stamina
+const VANG_CO: Color = Color("#C79A2E")       # 14. Vàng đồng, chữ khắc, vật phẩm hiếm, Mảnh Vỏ
+const XANH_THEP: Color = Color("#2F4A63")     # 15. Nước, sương, đêm, phép băng/lòng trắng
+const TIM_MUC: Color = Color("#5A3A5E")       # 16. Mục Rữa, phép hắc ám
+`
+
+### scripts/autoload/save_manager.gd
+`gdscript
+extends Node
+
+# Autoload SaveManager: Nơi DUY NHẤT được ghi file save vào user://
+# Đảm bảo lưu/tải an toàn toàn bộ tiến trình người chơi và 5 bộ đếm hành vi dưới dạng JSON.
+
+const SAVE_PATH: String = "user://savegame.json"
+
+func has_save() -> bool:
+	return FileAccess.file_exists(SAVE_PATH)
+
+func save_game(extra_data: Dictionary = {}) -> bool:
+	var save_dict: Dictionary = {
+		"version": 1,
+		"timestamp": Time.get_unix_time_from_system(),
+		"behavior_counters": BehaviorTracker.export_data(),
+		"extra": extra_data
+	}
+	
+	var json_str := JSON.stringify(save_dict, "\t")
+	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	if file == null:
+		var err := FileAccess.get_open_error()
+		push_error("SaveManager: Lỗi khi mở file save để ghi: %d" % err)
+		return false
+	
+	file.store_string(json_str)
+	file.close()
+	print("SaveManager: Đã lưu game thành công vào " + SAVE_PATH)
+	return true
+
+func load_game() -> Dictionary:
+	if not has_save():
+		print("SaveManager: Chưa có file save tại " + SAVE_PATH)
+		return {}
+	
+	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if file == null:
+		push_error("SaveManager: Không thể mở file save để đọc")
+		return {}
+	
+	var content := file.get_as_text()
+	file.close()
+	
+	var json := JSON.new()
+	var err := json.parse(content)
+	if err != OK:
+		push_error("SaveManager: Lỗi parse file save: %s" % json.get_error_message())
+		return {}
+	
+	var data = json.data
+	if not data is Dictionary:
+		push_error("SaveManager: Nội dung file save không hợp lệ")
+		return {}
+	
+	if data.has("behavior_counters") and data["behavior_counters"] is Dictionary:
+		BehaviorTracker.import_data(data["behavior_counters"])
+	
+	print("SaveManager: Đã nạp dữ liệu save thành công.")
+	return data
+
+func delete_save() -> bool:
+	if has_save():
+		var err := DirAccess.remove_absolute(SAVE_PATH)
+		return err == OK
+	return true
+`
+
+### scripts/combat/base_enemy.gd
+`gdscript
+extends CharacterBody2D
+class_name BaseEnemy
+
+# BaseEnemy: Lớp cơ sở cho toàn bộ kẻ thù trong "Vỡ Vỏ" (bao gồm Quạ Gác Tổ sau này)
+# Các trạng thái:
+# - IDLE: Chờ / quan sát
+# - CHASE: Đuổi theo người chơi khi trong bán kính phát hiện
+# - TELEGRAPH: Dừng lại, nhấp nháy Đỏ Gạch (DO_GACH) báo trước đòn đánh
+# - ATTACK: Kích hoạt vùng sát thương
+# - RECOVERY: Hồi chiêu sau đòn đánh
+# - STUNNED: Choáng khi bị Player tấn công trúng
+# - DEAD: Chết, rơi Mảnh Vỏ Vụn (EXP) và biến mất
+
+enum State { IDLE, CHASE, TELEGRAPH, ATTACK, RECOVERY, STUNNED, DEAD }
+
+@export var enemy_id: String = "common_enemy"
+
+@onready var visual_node: Node2D = $EnemyVisual
+@onready var attack_area: Area2D = $AttackArea
+@onready var hurtbox_area: Area2D = $Hurtbox
+
+var max_hp: int = 45
+var current_hp: int = 45
+var damage: int = 18
+var move_speed: float = 55.0
+var detection_radius: float = 140.0
+var attack_radius: float = 24.0
+
+var telegraph_duration: float = 0.35
+var attack_active_duration: float = 0.15
+var recovery_duration: float = 0.4
+var stun_duration: float = 0.25
+var exp_drop: int = 15
+
+var current_state: State = State.IDLE
+var state_timer: float = 0.0
+var flash_timer: float = 0.0
+var hurt_flash_timer: float = 0.0
+var is_flashing_red: bool = false
+var has_resolved_player_this_attack: bool = false
+
+var target_player: CharacterBody2D = null
+
+func _ready() -> void:
+	load_stats()
+	current_hp = max_hp
+	current_state = State.IDLE
+	state_timer = 0.5
+	find_player()
+
+func load_stats() -> void:
+	max_hp = int(GameData.get_stat(enemy_id, "max_hp", 45))
+	damage = int(GameData.get_stat(enemy_id, "damage", 18))
+	move_speed = float(GameData.get_stat(enemy_id, "move_speed", 55.0))
+	detection_radius = float(GameData.get_stat(enemy_id, "detection_radius", 140.0))
+	attack_radius = float(GameData.get_stat(enemy_id, "attack_radius", 24.0))
+	telegraph_duration = float(GameData.get_stat(enemy_id, "telegraph_duration", 0.35))
+	attack_active_duration = float(GameData.get_stat(enemy_id, "attack_active_duration", 0.15))
+	recovery_duration = float(GameData.get_stat(enemy_id, "recovery_duration", 0.4))
+	stun_duration = float(GameData.get_stat(enemy_id, "stun_duration", 0.25))
+	exp_drop = int(GameData.get_stat(enemy_id, "exp_drop", 15))
+
+func find_player() -> void:
+	var players = get_tree().get_nodes_in_group("player")
+	if not players.is_empty():
+		target_player = players[0]
+
+func _physics_process(delta: float) -> void:
+	if current_state == State.DEAD:
+		return
+	
+	if target_player == null or not is_instance_valid(target_player):
+		find_player()
+	
+	state_timer -= delta
+	
+	if hurt_flash_timer > 0.0:
+		hurt_flash_timer -= delta
+		if hurt_flash_timer <= 0.0:
+			modulate = Color.WHITE
+	
+	match current_state:
+		State.IDLE:
+			velocity = Vector2.ZERO
+			move_and_slide()
+			if target_player != null:
+				var dist: float = global_position.distance_to(target_player.global_position)
+				if dist <= detection_radius:
+					start_chase()
+		
+		State.CHASE:
+			if target_player == null:
+				start_idle()
+				return
+			
+			var dist: float = global_position.distance_to(target_player.global_position)
+			if dist <= attack_radius:
+				start_telegraph()
+			elif dist > detection_radius * 1.3:
+				start_idle()
+			else:
+				var dir: Vector2 = (target_player.global_position - global_position).normalized()
+				velocity = dir * move_speed
+				move_and_slide()
+		
+		State.TELEGRAPH:
+			velocity = Vector2.ZERO
+			move_and_slide()
+			process_telegraph_flash(delta)
+			if state_timer <= 0.0:
+				execute_attack()
+		
+		State.ATTACK:
+			velocity = Vector2.ZERO
+			move_and_slide()
+			check_attack_hitbox()
+			if state_timer <= 0.0:
+				end_attack()
+		
+		State.RECOVERY:
+			velocity = Vector2.ZERO
+			move_and_slide()
+			if state_timer <= 0.0:
+				start_chase()
+		
+		State.STUNNED:
+			velocity = Vector2.ZERO
+			move_and_slide()
+			if state_timer <= 0.0:
+				start_chase()
+
+func start_idle() -> void:
+	current_state = State.IDLE
+	state_timer = 0.5
+	is_flashing_red = false
+	if visual_node != null:
+		visual_node.queue_redraw()
+
+func start_chase() -> void:
+	current_state = State.CHASE
+	is_flashing_red = false
+	if visual_node != null:
+		visual_node.queue_redraw()
+
+func start_telegraph() -> void:
+	current_state = State.TELEGRAPH
+	state_timer = telegraph_duration
+	flash_timer = 0.0
+	is_flashing_red = true
+	if visual_node != null:
+		visual_node.queue_redraw()
+
+func process_telegraph_flash(delta: float) -> void:
+	flash_timer += delta
+	if flash_timer >= 0.07:
+		flash_timer = 0.0
+		is_flashing_red = not is_flashing_red
+		if visual_node != null:
+			visual_node.queue_redraw()
+
+func execute_attack() -> void:
+	current_state = State.ATTACK
+	state_timer = attack_active_duration
+	has_resolved_player_this_attack = false
+	is_flashing_red = true
+	if visual_node != null:
+		visual_node.queue_redraw()
+	print("[%s] Tung đòn tấn công! Sát thương: %d" % [name, damage])
+	check_attack_hitbox()
+
+func check_attack_hitbox() -> void:
+	if has_resolved_player_this_attack:
+		return
+	
+	if attack_area == null:
+		return
+	
+	var overlapping_areas := attack_area.get_overlapping_areas()
+	for area in overlapping_areas:
+		if area.name == "Hurtbox":
+			var parent: Node = area.get_parent()
+			if parent != null and parent.has_method("receive_hit") and parent != self:
+				has_resolved_player_this_attack = true
+				parent.receive_hit(damage, self)
+				break
+
+func end_attack() -> void:
+	current_state = State.RECOVERY
+	state_timer = recovery_duration
+	is_flashing_red = false
+	if visual_node != null:
+		visual_node.queue_redraw()
+
+func receive_hit(amount: int, attack_source: Node) -> Dictionary:
+	if current_state == State.DEAD:
+		return {"hit": false, "damage": 0}
+	
+	current_hp = maxi(0, current_hp - amount)
+	print("[%s] Bị đánh trúng! Nhận %d sát thương (HP còn: %d/%d)" % [name, amount, current_hp, max_hp])
+	
+	modulate = Palette.KEM
+	hurt_flash_timer = 0.15
+	
+	# Bị đẩy lùi nhẹ nếu có hướng nguồn đánh
+	if attack_source != null and "global_position" in attack_source:
+		var knockback_dir: Vector2 = (global_position - attack_source.global_position).normalized()
+		velocity = knockback_dir * 80.0
+		move_and_slide()
+	
+	if current_hp <= 0:
+		die()
+		return {"hit": true, "damage": amount, "killed": true}
+	else:
+		# Choáng ngắn (Stun) khi bị trúng đòn
+		current_state = State.STUNNED
+		state_timer = stun_duration
+		is_flashing_red = false
+		if visual_node != null:
+			visual_node.queue_redraw()
+	
+	return {"hit": true, "damage": amount, "killed": false}
+
+func die() -> void:
+	current_state = State.DEAD
+	velocity = Vector2.ZERO
+	is_flashing_red = false
+	print("[%s] Đã bị tiêu diệt! Rơi %d Mảnh Vỏ Vụn." % [name, exp_drop])
+	
+	# Tạo vật phẩm nhặt EXP tại chỗ chết
+	spawn_exp_drop()
+	queue_free()
+
+func spawn_exp_drop() -> void:
+	var pickup := Area2D.new()
+	pickup.set_script(load("res://scripts/combat/shell_shard_pickup.gd"))
+	pickup.set("shard_amount", exp_drop)
+	pickup.global_position = global_position
+	
+	var col := CollisionShape2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = 8.0
+	col.shape = circle
+	pickup.add_child(col)
+	
+	get_parent().call_deferred("add_child", pickup)
+`
+
+### scripts/combat/common_enemy_visual.gd
+`gdscript
+extends Node2D
+
+# Vẽ hình khối tạm của Kẻ thù thường (Common Enemy)
+# Màu sắc theo GDD:
+# - Vỏ/thân: Nâu Da (NAU_DA), Cát (CAT), điểm mảng Tím Mục (TIM_MUC - dấu hiệu ăn mòn)
+# - Viền: Nâu Hầm (NAU_HAM)
+# - Báo hiệu tấn công: Đỏ Gạch (DO_GACH)
+# - Mắt: Đỏ Rượu (DO_RUOU)
+
+@onready var enemy: Node2D = get_parent()
+
+func _draw() -> void:
+	if enemy == null:
+		return
+	
+	var radius: float = enemy.get("attack_radius")
+	var state_val = enemy.get("current_state")
+	var is_flashing: bool = enemy.get("is_flashing_red")
+	
+	# Kiểm tra state theo BaseEnemy.State
+	# State: IDLE=0, CHASE=1, TELEGRAPH=2, ATTACK=3, RECOVERY=4, STUNNED=5, DEAD=6
+	
+	# 1. Vẽ vòng bán kính cảnh báo / đòn đánh
+	if state_val == 2: # TELEGRAPH
+		if is_flashing:
+			draw_arc(Vector2.ZERO, radius, 0, TAU, 32, Palette.DO_GACH, 1.5)
+		else:
+			draw_arc(Vector2.ZERO, radius, 0, TAU, 32, Palette.DO_RUOU, 1.0)
+	elif state_val == 3: # ATTACK
+		draw_circle(Vector2.ZERO, radius, Color(Palette.DO_GACH.r, Palette.DO_GACH.g, Palette.DO_GACH.b, 0.35))
+		draw_arc(Vector2.ZERO, radius, 0, TAU, 32, Palette.DO_GACH, 2.0)
+	elif state_val == 1: # CHASE
+		# Vẽ chấm nhỏ hướng về mục tiêu
+		draw_arc(Vector2.ZERO, radius, 0, TAU, 16, Palette.TIM_MUC, 0.5)
+	
+	# 2. Thân khối quái vật (hình hộp 20x20 px)
+	var body_rect := Rect2(-10, -10, 20, 20)
+	var outline_rect := Rect2(-11, -11, 22, 22)
+	
+	draw_rect(outline_rect, Palette.NAU_HAM)
+	
+	if state_val == 2 and is_flashing: # TELEGRAPH
+		draw_rect(body_rect, Palette.DO_GACH)
+	elif state_val == 3: # ATTACK
+		draw_rect(body_rect, Palette.DO_GACH)
+	elif state_val == 5: # STUNNED
+		draw_rect(body_rect, Palette.XAM_SAT) # Choáng nhạt màu sắt
+	else:
+		draw_rect(body_rect, Palette.NAU_DA)
+		# Mảng Tím Mục (ăn mòn) ở góc dưới-trái
+		draw_rect(Rect2(-10, 0, 8, 10), Palette.TIM_MUC)
+		# Mảng Cát sáng ở góc trên-phải
+		draw_rect(Rect2(2, -10, 8, 6), Palette.CAT)
+	
+	# Mắt đỏ quái vật
+	if state_val == 5: # STUNNED: mắt nhắm (dấu gạch)
+		draw_line(Vector2(-6, -4), Vector2(-3, -4), Palette.NAU_HAM, 1.0)
+		draw_line(Vector2(3, -4), Vector2(6, -4), Palette.NAU_HAM, 1.0)
+	else:
+		draw_rect(Rect2(-6, -5, 3, 3), Palette.DO_RUOU)
+		draw_rect(Rect2(3, -5, 3, 3), Palette.DO_RUOU)
+`
+
+### scripts/combat/dummy_enemy.gd
+`gdscript
+extends CharacterBody2D
+
+# Kẻ thù giả để kiểm tra né đòn và nhận sát thương.
+# Tuân thủ:
+# - Báo hiệu nhấp nháy Đỏ Gạch (DO_GACH) đúng 0.3 giây trước khi gây sát thương (GDD Mục 3 & 7)
+# - Chỉ cộng DODGE tối đa 1 lần cho mỗi lượt tung đòn (Quy tắc điều chỉnh #3)
+# - Số liệu cân bằng lấy từ data/stats.json
+# - Màu sắc 100% từ Palette
+
+enum State { IDLE, TELEGRAPH, ATTACK, RECOVERY }
+
+@onready var visual_node: Node2D = $EnemyVisual
+@onready var attack_area: Area2D = $AttackArea
+
+var max_hp: int = 50
+var current_hp: int = 50
+var damage: int = 20
+var telegraph_duration: float = 0.3
+var attack_interval: float = 2.2
+var attack_radius: float = 28.0
+
+var current_state: State = State.IDLE
+var state_timer: float = 0.0
+var flash_timer: float = 0.0
+var hurt_flash_timer: float = 0.0
+var is_flashing_red: bool = false
+
+# Đảm bảo mỗi lượt vung đòn chỉ tương tác với người chơi đúng 1 lần (Quy tắc điều chỉnh #3)
+var has_resolved_player_this_attack: bool = false
+var attack_active_duration: float = 0.15
+
+func _ready() -> void:
+	load_stats()
+	current_hp = max_hp
+	state_timer = attack_interval - telegraph_duration
+	current_state = State.IDLE
+
+func load_stats() -> void:
+	max_hp = int(GameData.get_stat("dummy_enemy", "max_hp", 50))
+	damage = int(GameData.get_stat("dummy_enemy", "damage", 20))
+	telegraph_duration = float(GameData.get_stat("dummy_enemy", "telegraph_duration", 0.3))
+	attack_interval = float(GameData.get_stat("dummy_enemy", "attack_interval", 2.2))
+	attack_radius = float(GameData.get_stat("dummy_enemy", "attack_radius", 28.0))
+
+func _physics_process(delta: float) -> void:
+	state_timer -= delta
+	
+	if hurt_flash_timer > 0.0:
+		hurt_flash_timer -= delta
+		if hurt_flash_timer <= 0.0:
+			modulate = Color.WHITE
+	
+	match current_state:
+		State.IDLE:
+			if state_timer <= 0.0:
+				start_telegraph()
+		
+		State.TELEGRAPH:
+			process_telegraph_flash(delta)
+			if state_timer <= 0.0:
+				execute_attack()
+		
+		State.ATTACK:
+			check_attack_hitbox()
+			if state_timer <= 0.0:
+				end_attack()
+		
+		State.RECOVERY:
+			if state_timer <= 0.0:
+				start_idle()
+
+func start_telegraph() -> void:
+	current_state = State.TELEGRAPH
+	state_timer = telegraph_duration
+	flash_timer = 0.0
+	is_flashing_red = true
+	visual_node.queue_redraw()
+
+func process_telegraph_flash(delta: float) -> void:
+	flash_timer += delta
+	# Nhấp nháy tần số nhanh (0.07s) bằng màu Đỏ Gạch
+	if flash_timer >= 0.07:
+		flash_timer = 0.0
+		is_flashing_red = not is_flashing_red
+		visual_node.queue_redraw()
+
+func execute_attack() -> void:
+	current_state = State.ATTACK
+	state_timer = attack_active_duration
+	has_resolved_player_this_attack = false
+	is_flashing_red = true
+	visual_node.queue_redraw()
+	print("[ENEMY] Tung đòn tấn công! (Sát thương: %d, Bán kính: %.1f)" % [damage, attack_radius])
+	check_attack_hitbox()
+
+func check_attack_hitbox() -> void:
+	# Nếu đợt vung đòn này đã giải quyết với Player rồi thì bỏ qua (Quy tắc #3)
+	if has_resolved_player_this_attack:
+		return
+	
+	var overlapping_areas := attack_area.get_overlapping_areas()
+	for area in overlapping_areas:
+		# Chỉ kiểm tra va chạm với Hurtbox, không tương tác với thân vật lý
+		if area.name == "Hurtbox":
+			var parent: Node = area.get_parent()
+			if parent != null and parent.has_method("receive_hit"):
+				has_resolved_player_this_attack = true
+				parent.receive_hit(damage, self)
+				break
+
+func end_attack() -> void:
+	current_state = State.RECOVERY
+	state_timer = 0.3
+	is_flashing_red = false
+	visual_node.queue_redraw()
+
+func start_idle() -> void:
+	current_state = State.IDLE
+	state_timer = maxf(0.5, attack_interval - telegraph_duration - 0.3)
+	is_flashing_red = false
+	visual_node.queue_redraw()
+
+func receive_hit(amount: int, _attack_source: Node) -> Dictionary:
+	current_hp = maxi(0, current_hp - amount)
+	print("[ENEMY] Nhận %d sát thương từ Player! HP còn: %d/%d" % [amount, current_hp, max_hp])
+	modulate = Palette.KEM
+	hurt_flash_timer = 0.15
+	if current_hp <= 0:
+		print("[ENEMY] Kẻ thù bị tiêu diệt! Tự động hồi phục sau 1.5 giây.")
+		current_hp = max_hp
+	return {"hit": true, "damage": amount}
+`
+
+### scripts/combat/enemy_visual.gd
+`gdscript
+extends Node2D
+
+# Vẽ hình khối tạm của Kẻ thù thử nghiệm
+# Màu sắc: Đỏ Rượu (DO_RUOU), viền Nâu Hầm (NAU_HAM), cảnh báo Đỏ Gạch (DO_GACH)
+
+const DummyEnemyScript = preload("res://scripts/combat/dummy_enemy.gd")
+
+@onready var enemy: Node2D = get_parent()
+
+func _draw() -> void:
+	if enemy == null:
+		return
+	
+	var radius: float = enemy.get("attack_radius")
+	var state_val = enemy.get("current_state")
+	var is_flashing: bool = enemy.get("is_flashing_red")
+	
+	# 1. Vẽ vòng bán kính cảnh báo / đòn đánh
+	match state_val:
+		DummyEnemyScript.State.TELEGRAPH:
+			if is_flashing:
+				draw_arc(Vector2.ZERO, radius, 0, TAU, 32, Palette.DO_GACH, 1.5)
+			else:
+				draw_arc(Vector2.ZERO, radius, 0, TAU, 32, Palette.DO_RUOU, 1.0)
+		DummyEnemyScript.State.ATTACK:
+			# Vùng sát thương khi đang vung đòn
+			draw_circle(Vector2.ZERO, radius, Color(Palette.DO_GACH.r, Palette.DO_GACH.g, Palette.DO_GACH.b, 0.35))
+			draw_arc(Vector2.ZERO, radius, 0, TAU, 32, Palette.DO_GACH, 2.0)
+		_:
+			# Hiển thị đường nét mờ bán kính khi nhàn rỗi
+			draw_arc(Vector2.ZERO, radius, 0, TAU, 24, Palette.XAM_SAT, 0.75)
+	
+	# 2. Thân khối quái vật (hình hộp 20x20 px)
+	var body_rect := Rect2(-10, -10, 20, 20)
+	var outline_rect := Rect2(-11, -11, 22, 22)
+	
+	draw_rect(outline_rect, Palette.NAU_HAM)
+	
+	if state_val == DummyEnemyScript.State.TELEGRAPH and is_flashing:
+		draw_rect(body_rect, Palette.DO_GACH)
+	elif state_val == DummyEnemyScript.State.ATTACK:
+		draw_rect(body_rect, Palette.DO_GACH)
+	else:
+		draw_rect(body_rect, Palette.DO_RUOU)
+	
+	# Mắt đỏ gạch quái vật
+	draw_rect(Rect2(-6, -4, 3, 3), Palette.DO_GACH)
+	draw_rect(Rect2(3, -4, 3, 3), Palette.DO_GACH)
+`
+
+### scripts/combat/shell_shard_pickup.gd
+`gdscript
+extends Area2D
+class_name ShellShardPickup
+
+# Mảnh Vỏ Vụn (EXP) rơi ra khi kẻ thù bị tiêu diệt
+# - Màu sắc: Vàng Cổ (VANG_CO) theo GDD Mục 3
+# - Tự bay nhẹ / nhấp nháy
+# - Khi Player chạm vào: tăng Mảnh Vỏ Vụn và tự giải phóng
+
+@export var shard_amount: int = 15
+
+var time_passed: float = 0.0
+
+func _ready() -> void:
+	collision_layer = 0
+	collision_mask = 2 # Hurtbox hoặc Layer Player
+	area_entered.connect(_on_area_entered)
+	body_entered.connect(_on_body_entered)
+
+func _process(delta: float) -> void:
+	time_passed += delta * 5.0
+	queue_redraw()
+
+func _draw() -> void:
+	# Vẽ hạt tinh thể Mảnh Vỏ Vụn (hình thoi 6x6 px)
+	var bobbing: float = sin(time_passed) * 2.0
+	var center := Vector2(0, bobbing)
+	
+	var pts := PackedVector2Array([
+		center + Vector2(0, -3),
+		center + Vector2(3, 0),
+		center + Vector2(0, 3),
+		center + Vector2(-3, 0)
+	])
+	draw_colored_polygon(pts, Palette.VANG_CO)
+	
+	# Điểm sáng Kem ở đỉnh
+	draw_rect(Rect2(center.x - 1, center.y - 2, 2, 2), Palette.KEM)
+	# Viền Nâu Hầm
+	draw_polyline(pts, Palette.NAU_HAM, 1.0)
+
+func _on_area_entered(area: Area2D) -> void:
+	if area.name == "Hurtbox" or area.get_parent() is Player:
+		_collect(area.get_parent())
+
+func _on_body_entered(body: Node2D) -> void:
+	if body is Player:
+		_collect(body)
+
+func _collect(player_node: Node) -> void:
+	print("[PICKUP] Player đã nhặt được %d Mảnh Vỏ Vụn (EXP)!" % shard_amount)
+	# Tích lũy hành vi EXPLORE nhẹ nếu nhặt đồ
+	BehaviorTracker.add_points(BehaviorTracker.ACTION_EXPLORE, 1)
+	queue_free()
+`
+
+### scripts/player/egg_visual.gd
+`gdscript
+extends Node2D
+
+# EggVisual: Quản lý hiệu ứng hình ảnh mở rộng trên người chơi
+# 1. Vết nứt trên vỏ trứng (to dần theo lượng máu giảm)
+# 2. Hiệu ứng văng mảnh vỏ (egg shell debris particles) khi trúng đòn
+# 3. Vệt chém combo cận chiến
+
+var attack_slash_timer: float = 0.0
+var attack_slash_dir: Vector2 = Vector2.DOWN
+var attack_slash_step: int = 0
+var show_placeholder_body: bool = false
+
+# Dữ liệu vết nứt vỏ trứng (tính theo tỉ lệ hp: 1.0 -> 0.0)
+var current_hp_ratio: float = 1.0
+
+# Danh sách mảnh vỏ đang văng: { pos: Vector2, vel: Vector2, color: Color, size: Vector2, life: float, max_life: float }
+var shell_shards: Array[Dictionary] = []
+
+# Trạng thái đỡ đòn
+var is_guarding: bool = false
+var guard_dir: Vector2 = Vector2.DOWN
+
+func _ready() -> void:
+	set_process(true)
+
+func set_guarding(guarding: bool, dir: Vector2) -> void:
+	if is_guarding != guarding or guard_dir != dir:
+		is_guarding = guarding
+		guard_dir = dir
+		queue_redraw()
+
+func set_hp_ratio(ratio: float) -> void:
+	current_hp_ratio = clampf(ratio, 0.0, 1.0)
+	queue_redraw()
+
+func spawn_shell_burst(amount: int = 6) -> void:
+	# Bắn các mảnh vỏ trứng từ tâm thân nhân vật (y ~ -14)
+	for i in range(amount):
+		var angle := randf_range(0.0, TAU)
+		var speed := randf_range(40.0, 110.0)
+		var vel := Vector2(cos(angle), sin(angle)) * speed
+		vel.y -= randf_range(20.0, 50.0) # Văng hướng lên trên nhẹ
+		
+		var colors := [Palette.GIAY_DA, Palette.CAT, Palette.NAU_HAM, Palette.KEM]
+		var col: Color = colors[randi() % colors.size()]
+		var sz := Vector2(randf_range(1.5, 3.0), randf_range(1.5, 3.0))
+		var life := randf_range(0.3, 0.55)
+		
+		shell_shards.append({
+			"pos": Vector2(randf_range(-4.0, 4.0), randf_range(-18.0, -10.0)),
+			"vel": vel,
+			"color": col,
+			"size": sz,
+			"life": life,
+			"max_life": life
+		})
+	queue_redraw()
+
+func start_attack_visual(dir: Vector2, step: int) -> void:
+	attack_slash_dir = dir
+	attack_slash_step = step
+	attack_slash_timer = 0.18
+	queue_redraw()
+
+func _process(delta: float) -> void:
+	var needs_redraw: bool = false
+	
+	if attack_slash_timer > 0.0:
+		attack_slash_timer -= delta
+		needs_redraw = true
+	
+	if not shell_shards.is_empty():
+		var idx := shell_shards.size() - 1
+		while idx >= 0:
+			var shard: Dictionary = shell_shards[idx]
+			shard["life"] -= delta
+			if shard["life"] <= 0.0:
+				shell_shards.remove_at(idx)
+			else:
+				shard["pos"] += shard["vel"] * delta
+				shard["vel"].y += 220.0 * delta # Trọng lực rơi xuống
+			idx -= 1
+		needs_redraw = true
+	
+	if needs_redraw:
+		queue_redraw()
+
+func _draw() -> void:
+	# 1. Vẽ các vết nứt trên vỏ theo mức độ mất máu
+	# Nhân vật cao từ y = -22 đến y = -2, tâm khoảng x=0, y=-12
+	# Khi HP < 80%: Bắt đầu có vết rạn nhỏ ở đỉnh
+	# Khi HP < 50%: Nứt to và rẽ nhánh
+	# Khi HP < 25%: Nứt chằng chịt, lộ lòng vàng nhẹ
+	if current_hp_ratio < 0.8:
+		# Vết nứt đỉnh đầu (giai đoạn 1)
+		draw_line(Vector2(-1, -22), Vector2(1, -19), Palette.NAU_HAM, 1.0)
+		draw_line(Vector2(1, -19), Vector2(0, -17), Palette.NAU_HAM, 1.0)
+	
+	if current_hp_ratio < 0.6:
+		# Nhánh nứt kéo dài qua thân trên (giai đoạn 2)
+		draw_line(Vector2(0, -17), Vector2(3, -14), Palette.NAU_HAM, 1.0)
+		draw_line(Vector2(3, -14), Vector2(2, -11), Palette.NAU_HAM, 1.0)
+		# Vết nứt sườn trái
+		draw_line(Vector2(-5, -17), Vector2(-2, -15), Palette.NAU_HAM, 1.0)
+		draw_line(Vector2(-2, -15), Vector2(-4, -12), Palette.NAU_HAM, 1.0)
+	
+	if current_hp_ratio < 0.35:
+		# Vết nứt to toác (giai đoạn 3)
+		draw_line(Vector2(2, -11), Vector2(5, -8), Palette.NAU_HAM, 1.2)
+		draw_line(Vector2(-4, -12), Vector2(-2, -8), Palette.NAU_HAM, 1.2)
+		draw_line(Vector2(0, -17), Vector2(-2, -14), Palette.CAT, 1.0)
+		# Chấm vàng lộ lòng trứng bên trong kẽ nứt
+		draw_rect(Rect2(0, -15, 2, 2), Palette.VANG_CO)
+		draw_rect(Rect2(2, -12, 1, 2), Palette.VANG_CO)
+	
+	# 2. Vẽ các mảnh vỏ trứng đang văng khi dính đòn
+	for shard in shell_shards:
+		var alpha: float = clampf(shard["life"] / shard["max_life"], 0.0, 1.0)
+		var c: Color = shard["color"]
+		c.a = alpha
+		var sz: Vector2 = shard["size"]
+		var p: Vector2 = shard["pos"]
+		draw_rect(Rect2(p.x - sz.x * 0.5, p.y - sz.y * 0.5, sz.x, sz.y), c)
+	
+	# 3. Vệt chém combo đòn đánh cận chiến
+	if attack_slash_timer > 0.0:
+		var slash_center := Vector2(0, -10) + attack_slash_dir.normalized() * 14.0
+		var slash_color: Color = Palette.KEM if attack_slash_step == 2 else Palette.XAM_DA
+		var arc_radius: float = 12.0 if attack_slash_step == 2 else 9.0
+		var base_angle: float = attack_slash_dir.angle()
+		var start_ang: float = base_angle - PI * 0.45
+		var end_ang: float = base_angle + PI * 0.45
+		draw_arc(slash_center, arc_radius, start_ang, end_ang, 12, slash_color, 2.0)
+		draw_arc(slash_center, arc_radius - 2.0, start_ang, end_ang, 12, Palette.NAU_HAM, 1.0)
+	
+	# 4. Hình khối tạm thời biểu diễn thế Đỡ Đòn (Guard)
+	if is_guarding:
+		var shield_center := Vector2(0, -10) + guard_dir.normalized() * 11.0
+		var guard_angle: float = guard_dir.angle()
+		var g_start: float = guard_angle - PI * 0.40
+		var g_end: float = guard_angle + PI * 0.40
+		# Vòng vòng cung khiên Xám Sắt với viền Nâu Hầm
+		draw_arc(shield_center, 9.0, g_start, g_end, 10, Palette.NAU_HAM, 3.5)
+		draw_arc(shield_center, 9.0, g_start, g_end, 10, Palette.XAM_SAT, 2.0)
+		# Điểm tâm khiên Vàng Cổ
+		draw_circle(shield_center, 2.0, Palette.VANG_CO)
+`
+
+### scripts/player/player.gd
+`gdscript
+extends CharacterBody2D
+class_name Player
+
+# Player: Nhân vật Trứng trong game "Vỡ Vỏ"
+# Đầy đủ cơ chế:
+# - Di chuyển 8 hướng theo tốc độ từ stats.json
+# - Lăn né tiêu hao Stamina, i-frame 0.25s, chặn né khi thiếu thể lực
+# - Hệ thống tấn công cận chiến Combo 3 đòn theo facing_direction (Điểm 2, 3)
+# - AnimatedSprite2D nạp SpriteFrames từ animations.json, bật/tắt Hitbox qua frame_changed (Điểm 4)
+# - Kích thước Collision 10x6 sát chân, Hurtbox 10x14 giữa thân từ stats.json (Điểm 5)
+
+signal hp_changed(new_hp: int, max_hp: int)
+signal stamina_changed(new_stamina: float, max_stamina: float)
+signal player_died()
+signal player_respawned()
+signal combo_stepped(current_step: int)
+
+@onready var visual_node: Node2D = $EggVisual
+@onready var collision_shape: CollisionShape2D = $CollisionShape2D
+@onready var hurtbox: Area2D = $Hurtbox
+@onready var attack_hitbox: Area2D = $AttackHitbox
+@onready var attack_hitbox_shape: CollisionShape2D = $AttackHitbox/CollisionShape2D
+@onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
+
+# Chỉ số từ stats.json
+var max_hp: int = 100
+var current_hp: int = 100
+var max_stamina: float = 100.0
+var current_stamina: float = 100.0
+
+var move_speed: float = 95.0
+var dodge_speed_multiplier: float = 1.85
+var dodge_duration: float = 0.25
+var dodge_cooldown: float = 0.2
+var dodge_stamina_cost: float = 20.0
+var stamina_recovery_rate: float = 30.0
+var stamina_recovery_delay: float = 0.35
+
+# Thông số combo cận chiến từ stats.json
+var attack_combo_damage: Array = [15, 18, 28]
+var attack_cooldowns: Array = [0.15, 0.15, 0.45]
+var combo_window: float = 0.55
+var attack_stamina_costs: Array = [10.0, 12.0, 18.0]
+
+# Trạng thái di chuyển & né
+var facing_direction: Vector2 = Vector2.DOWN
+var is_dodging: bool = false
+var is_invulnerable: bool = false
+var can_dodge: bool = true
+var is_dead: bool = false
+
+var dodge_timer: float = 0.0
+var dodge_cooldown_timer: float = 0.0
+var stamina_delay_timer: float = 0.0
+var dodge_direction: Vector2 = Vector2.ZERO
+
+# Trạng thái combo tấn công
+var is_attacking: bool = false
+var can_attack: bool = true
+var combo_step: int = 0 # 0, 1, 2 tương ứng 3 đòn
+var attack_cooldown_timer: float = 0.0
+var combo_window_timer: float = 0.0
+var already_hit_enemies: Array[Node] = []
+var accumulated_melee_damage: int = 0
+
+# Trạng thái đỡ đòn (Guard)
+var is_guarding: bool = false
+var is_stunned: bool = false
+var stun_timer: float = 0.0
+var guard_damage_reduction: float = 0.75
+var guard_stamina_cost_per_hit: float = 25.0
+var guard_speed_multiplier: float = 0.45
+var guard_break_stun_duration: float = 0.8
+var guard_arc_degrees: float = 180.0
+
+# Hoạt ảnh và hit_frames
+var animations_config: Dictionary = {}
+var current_hit_frames: Array = []
+var is_in_hit_frame: bool = false
+var is_hurt: bool = false   # đang phát hurt animation → block update_animations
+
+var spawn_position: Vector2 = Vector2.ZERO
+var respawn_timer: float = 0.0
+var flash_timer: float = 0.0
+
+func _ready() -> void:
+	load_stats_from_data()
+	setup_animations()
+	spawn_position = global_position
+	current_hp = max_hp
+	current_stamina = max_stamina
+	hp_changed.emit(current_hp, max_hp)
+	stamina_changed.emit(current_stamina, max_stamina)
+	
+	if attack_hitbox != null:
+		attack_hitbox.monitoring = true
+		attack_hitbox.monitorable = false
+		attack_hitbox.area_entered.connect(_on_attack_hitbox_area_entered)
+	
+	if animated_sprite != null:
+		animated_sprite.frame_changed.connect(_on_sprite_frame_changed)
+		animated_sprite.animation_finished.connect(_on_sprite_animation_finished)
+	
+	update_animations()
+
+func load_stats_from_data() -> void:
+	max_hp = int(GameData.get_stat("player", "max_hp", 100))
+	max_stamina = float(GameData.get_stat("player", "max_stamina", 100.0))
+	move_speed = float(GameData.get_stat("player", "move_speed", 95.0))
+	dodge_speed_multiplier = float(GameData.get_stat("player", "dodge_speed_multiplier", 1.85))
+	dodge_duration = float(GameData.get_stat("player", "dodge_duration", 0.25))
+	dodge_cooldown = float(GameData.get_stat("player", "dodge_cooldown", 0.2))
+	dodge_stamina_cost = float(GameData.get_stat("player", "dodge_stamina_cost", 20.0))
+	stamina_recovery_rate = float(GameData.get_stat("player", "stamina_recovery_rate", 30.0))
+	stamina_recovery_delay = float(GameData.get_stat("player", "stamina_recovery_delay", 0.35))
+	
+	attack_combo_damage = GameData.get_stat("player", "attack_combo_damage", [15, 18, 28])
+	attack_cooldowns = GameData.get_stat("player", "attack_cooldowns", [0.15, 0.15, 0.45])
+	combo_window = float(GameData.get_stat("player", "combo_window", 0.55))
+	attack_stamina_costs = GameData.get_stat("player", "attack_stamina_costs", [10.0, 12.0, 18.0])
+	
+	guard_damage_reduction = float(GameData.get_stat("player", "guard_damage_reduction", 0.75))
+	guard_stamina_cost_per_hit = float(GameData.get_stat("player", "guard_stamina_cost_per_hit", 25.0))
+	guard_speed_multiplier = float(GameData.get_stat("player", "guard_speed_multiplier", 0.45))
+	guard_break_stun_duration = float(GameData.get_stat("player", "guard_break_stun_duration", 0.8))
+	guard_arc_degrees = float(GameData.get_stat("player", "guard_arc_degrees", 180.0))
+	
+	# Nạp kích thước Collision & Hurtbox từ stats.json (Điểm 5)
+	var col_size: Array = GameData.get_stat("player", "collision_size", [10.0, 6.0])
+	var col_offset: Array = GameData.get_stat("player", "collision_offset", [0.0, -3.0])
+	var hurt_size: Array = GameData.get_stat("player", "hurtbox_size", [10.0, 14.0])
+	var hurt_offset: Array = GameData.get_stat("player", "hurtbox_offset", [0.0, -10.0])
+	
+	if collision_shape != null:
+		var col_rect := RectangleShape2D.new()
+		col_rect.size = Vector2(col_size[0], col_size[1])
+		collision_shape.shape = col_rect
+		collision_shape.position = Vector2(col_offset[0], col_offset[1])
+	
+	if hurtbox != null:
+		var hurt_col: CollisionShape2D = hurtbox.get_node_or_null("CollisionShape2D")
+		if hurt_col != null:
+			var hurt_rect := RectangleShape2D.new()
+			hurt_rect.size = Vector2(hurt_size[0], hurt_size[1])
+			hurt_col.shape = hurt_rect
+			hurt_col.position = Vector2(hurt_offset[0], hurt_offset[1])
+
+func setup_animations() -> void:
+	var anim_path := "res://assets/sprites/player/animations.json"
+	if FileAccess.file_exists(anim_path):
+		var file := FileAccess.open(anim_path, FileAccess.READ)
+		if file != null:
+			var json := JSON.new()
+			if json.parse(file.get_as_text()) == OK and json.data is Dictionary:
+				if json.data.has("player_egg") and json.data["player_egg"].has("animations"):
+					animations_config = json.data["player_egg"]["animations"]
+	
+	var sprite_frames := SpriteFrames.new()
+	for anim_name in animations_config:
+		var cfg: Dictionary = animations_config[anim_name]
+		var frame_count: int = int(cfg.get("frames", 4))
+		var fps: float = float(cfg.get("fps", 12))
+		var loop: bool = bool(cfg.get("loop", true))
+		
+		sprite_frames.add_animation(anim_name)
+		sprite_frames.set_animation_speed(anim_name, fps)
+		sprite_frames.set_animation_loop(anim_name, loop)
+		
+		var file_name: String = str(cfg.get("file", ""))
+		var full_img_path := "res://assets/sprites/player/" + file_name
+		
+		if ResourceLoader.exists(full_img_path):
+			var texture: Texture2D = load(full_img_path)
+			for i in range(frame_count):
+				var atlas := AtlasTexture.new()
+				atlas.atlas = texture
+				atlas.region = Rect2(i * 32, 0, 32, 32)
+				sprite_frames.add_frame(anim_name, atlas)
+		else:
+			var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+			var placeholder_tex := ImageTexture.create_from_image(img)
+			for i in range(frame_count):
+				sprite_frames.add_frame(anim_name, placeholder_tex)
+	
+	animated_sprite.sprite_frames = sprite_frames
+	animated_sprite.offset = Vector2(0, -16)
+
+func _physics_process(delta: float) -> void:
+	if is_dead:
+		process_death(delta)
+		return
+	
+	process_cooldowns(delta)
+	process_input_and_movement(delta)
+	process_stamina(delta)
+	process_visual_effects(delta)
+	update_animations()
+	
+	if is_attacking and is_in_hit_frame:
+		check_melee_overlaps()
+
+func update_animations() -> void:
+	if is_dead:
+		return
+	
+	# Ẩn hoàn toàn hình khối tạm – sprite đã đủ
+	if visual_node != null and "show_placeholder_body" in visual_node:
+		visual_node.show_placeholder_body = false
+	animated_sprite.visible = true
+	
+	if is_attacking:
+		return  # hoạt ảnh attack đã được bật trong try_attack()
+	
+	var dir_suffix := get_direction_suffix(facing_direction)
+	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
+	animated_sprite.flip_h = flip_left
+	
+	if is_dodging:
+		var roll_anim := "roll_" + dir_suffix
+		if animated_sprite.animation != roll_anim or not animated_sprite.is_playing():
+			animated_sprite.play(roll_anim)
+		return
+	
+	if velocity == Vector2.ZERO:
+		var anim_name := "idle_" + dir_suffix
+		if animated_sprite.animation != anim_name or not animated_sprite.is_playing():
+			animated_sprite.play(anim_name)
+	else:
+		var run_anim := "run_" + dir_suffix
+		if animated_sprite.animation != run_anim or not animated_sprite.is_playing():
+			animated_sprite.play(run_anim)
+
+func process_cooldowns(delta: float) -> void:
+	if dodge_cooldown_timer > 0.0:
+		dodge_cooldown_timer -= delta
+		if dodge_cooldown_timer <= 0.0:
+			can_dodge = true
+	
+	if attack_cooldown_timer > 0.0:
+		attack_cooldown_timer -= delta
+		if attack_cooldown_timer <= 0.0:
+			can_attack = true
+	
+	if combo_window_timer > 0.0:
+		combo_window_timer -= delta
+		if combo_window_timer <= 0.0 and not is_attacking:
+			combo_step = 0
+	
+	if stun_timer > 0.0:
+		stun_timer -= delta
+		if stun_timer <= 0.0:
+			is_stunned = false
+	
+	if stamina_delay_timer > 0.0:
+		stamina_delay_timer -= delta
+
+func process_input_and_movement(delta: float) -> void:
+	if is_stunned:
+		is_guarding = false
+		if visual_node != null and visual_node.has_method("set_guarding"):
+			visual_node.set_guarding(false, facing_direction)
+		velocity = Vector2.ZERO
+		move_and_slide()
+		return
+	
+	if is_dodging:
+		is_guarding = false
+		if visual_node != null and visual_node.has_method("set_guarding"):
+			visual_node.set_guarding(false, facing_direction)
+		dodge_timer -= delta
+		velocity = dodge_direction * (move_speed * dodge_speed_multiplier)
+		move_and_slide()
+		if dodge_timer <= 0.0:
+			end_dodge()
+		return
+	
+	if is_attacking:
+		is_guarding = false
+		if visual_node != null and visual_node.has_method("set_guarding"):
+			visual_node.set_guarding(false, facing_direction)
+		velocity = Vector2.ZERO
+		move_and_slide()
+		return
+	
+	# Kiểm tra trạng thái Giữ Guard
+	var wants_guard: bool = Input.is_action_pressed("guard") and current_stamina > 0.0
+	is_guarding = wants_guard
+	if visual_node != null and visual_node.has_method("set_guarding"):
+		visual_node.set_guarding(is_guarding, facing_direction)
+	
+	var input_vector: Vector2 = Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	if input_vector != Vector2.ZERO:
+		facing_direction = input_vector.normalized()
+		var speed: float = move_speed
+		if is_guarding:
+			speed *= guard_speed_multiplier
+		velocity = input_vector * speed
+		stamina_delay_timer = maxf(stamina_delay_timer, stamina_recovery_delay)
+	else:
+		velocity = Vector2.ZERO
+	
+	if not is_guarding:
+		if Input.is_action_just_pressed("attack"):
+			try_attack()
+	
+	if Input.is_action_just_pressed("dodge"):
+		try_dodge(input_vector)
+	
+	move_and_slide()
+
+func try_attack() -> void:
+	if is_attacking or is_dodging or not can_attack:
+		return
+	
+	var cost: float = float(attack_stamina_costs[combo_step])
+	if current_stamina < cost:
+		print("[PLAYER] Không đủ Stamina để tấn công đòn %d! (Cần %.1f, có %.1f)" % [combo_step + 1, cost, current_stamina])
+		return
+	
+	current_stamina -= cost
+	stamina_changed.emit(current_stamina, max_stamina)
+	stamina_delay_timer = stamina_recovery_delay
+	
+	is_attacking = true
+	can_attack = false
+	already_hit_enemies.clear()
+	combo_stepped.emit(combo_step)
+	
+	var dir_suffix := get_direction_suffix(facing_direction)
+	var anim_name := "attack_" + dir_suffix
+	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
+	
+	animated_sprite.flip_h = flip_left
+	update_attack_hitbox_transform(dir_suffix, flip_left)
+	
+	if animations_config.has(anim_name):
+		current_hit_frames = animations_config[anim_name].get("hit_frames", [2])
+	else:
+		current_hit_frames = [2]
+	
+	is_in_hit_frame = false
+	animated_sprite.play(anim_name)
+	print("[PLAYER] Tung đòn combo %d/3! Sát thương: %d, Hướng: %s, Tiêu hao: %.1f Stamina" % [
+		combo_step + 1, attack_combo_damage[combo_step], dir_suffix, cost
+	])
+	
+	if visual_node != null and visual_node.has_method("start_attack_visual"):
+		visual_node.start_attack_visual(facing_direction, combo_step)
+
+func _on_sprite_frame_changed() -> void:
+	if not is_attacking:
+		return
+	
+	var cur_frame: int = animated_sprite.frame
+	if cur_frame in current_hit_frames:
+		is_in_hit_frame = true
+		check_melee_overlaps()
+	else:
+		is_in_hit_frame = false
+
+func _on_sprite_animation_finished() -> void:
+	if is_attacking:
+		end_attack()
+
+func end_attack() -> void:
+	is_attacking = false
+	is_in_hit_frame = false
+	
+	attack_cooldown_timer = float(attack_cooldowns[combo_step])
+	
+	if combo_step < 2:
+		combo_step += 1
+		combo_window_timer = combo_window
+	else:
+		combo_step = 0
+		combo_window_timer = 0.0
+
+func update_attack_hitbox_transform(dir_suffix: String, flip_left: bool) -> void:
+	match dir_suffix:
+		"down":
+			attack_hitbox.position = Vector2(0, 6)
+		"up":
+			attack_hitbox.position = Vector2(0, -24)
+		"side":
+			if flip_left:
+				attack_hitbox.position = Vector2(-16, -10)
+			else:
+				attack_hitbox.position = Vector2(16, -10)
+
+func check_melee_overlaps() -> void:
+	var areas := attack_hitbox.get_overlapping_areas()
+	for area in areas:
+		_process_hit_target(area)
+
+func _on_attack_hitbox_area_entered(area: Area2D) -> void:
+	if is_in_hit_frame:
+		_process_hit_target(area)
+
+func _process_hit_target(area: Area2D) -> void:
+	var target: Node = area.get_parent()
+	if target != null and target != self and not target in already_hit_enemies:
+		if target.has_method("receive_hit"):
+			already_hit_enemies.append(target)
+			var dmg: int = int(attack_combo_damage[combo_step])
+			target.receive_hit(dmg, self)
+			print("[COMBAT] Đòn %d đánh trúng kẻ thù! Gây %d sát thương." % [combo_step + 1, dmg])
+			
+			accumulated_melee_damage += dmg
+			if accumulated_melee_damage >= 10:
+				var guard_pts := accumulated_melee_damage / 10
+				accumulated_melee_damage = accumulated_melee_damage % 10
+				BehaviorTracker.add_points(BehaviorTracker.ACTION_GUARD, guard_pts)
+
+func get_direction_suffix(dir: Vector2) -> String:
+	if abs(dir.x) >= abs(dir.y):
+		return "side"
+	elif dir.y > 0:
+		return "down"
+	else:
+		return "up"
+
+func try_dodge(input_vector: Vector2) -> void:
+	if not can_dodge or is_dodging or is_attacking:
+		return
+	
+	if current_stamina < dodge_stamina_cost:
+		print("[PLAYER] Không đủ Stamina để lăn né! (Cần %.1f, có %.1f)" % [dodge_stamina_cost, current_stamina])
+		return
+	
+	current_stamina -= dodge_stamina_cost
+	stamina_changed.emit(current_stamina, max_stamina)
+	stamina_delay_timer = stamina_recovery_delay
+	
+	is_dodging = true
+	is_invulnerable = true
+	can_dodge = false
+	dodge_timer = dodge_duration
+	
+	if input_vector != Vector2.ZERO:
+		dodge_direction = input_vector.normalized()
+	else:
+		dodge_direction = facing_direction
+	
+	print("[PLAYER] Lăn né! Khung bất tử: %.2fs, tốn %.1f Stamina" % [dodge_duration, dodge_stamina_cost])
+
+func end_dodge() -> void:
+	is_dodging = false
+	is_invulnerable = false
+	dodge_cooldown_timer = dodge_cooldown
+
+func process_stamina(delta: float) -> void:
+	if not is_dodging and not is_attacking and not is_guarding and not is_stunned and velocity == Vector2.ZERO and stamina_delay_timer <= 0.0:
+		if current_stamina < max_stamina:
+			current_stamina = minf(max_stamina, current_stamina + stamina_recovery_rate * delta)
+			stamina_changed.emit(current_stamina, max_stamina)
+
+var hurt_invulnerable_timer: float = 0.0
+
+func process_visual_effects(delta: float) -> void:
+	if hurt_invulnerable_timer > 0.0:
+		hurt_invulnerable_timer -= delta
+		if hurt_invulnerable_timer <= 0.0:
+			is_invulnerable = false
+	
+	if flash_timer > 0.0:
+		flash_timer -= delta
+		if flash_timer <= 0.0:
+			modulate = Color.WHITE
+
+func receive_hit(damage: int, attack_source: Node) -> Dictionary:
+	if is_dead:
+		return {"hit": false, "dodged": false, "guarded": false}
+	
+	if is_invulnerable:
+		if is_dodging:
+			print("[COMBAT] Né thành công đòn đánh! +2 điểm DODGE")
+			BehaviorTracker.add_points(BehaviorTracker.ACTION_DODGE, 2)
+			return {"hit": false, "dodged": true, "guarded": false}
+		else:
+			# Đang trong thời gian chớp miễn nhiễm sau khi bị thương (i-frame)
+			return {"hit": false, "dodged": false, "guarded": false}
+	
+	# Kiểm tra cơ chế Đỡ Đòn (Guard)
+	var guarded_successfully: bool = false
+	var final_damage: int = damage
+	
+	if is_guarding and not is_stunned:
+		# Xác định hướng từ Player tới nguồn tấn công
+		var incoming_dir := facing_direction
+		if attack_source != null and "global_position" in attack_source:
+			var diff: Vector2 = (attack_source.global_position - global_position)
+			if diff != Vector2.ZERO:
+				incoming_dir = diff.normalized()
+		
+		# Tính góc giữa hướng nhìn của Player và hướng của đòn tấn công
+		var angle_diff_rad: float = abs(facing_direction.angle_to(incoming_dir))
+		var max_allowed_rad: float = deg_to_rad(guard_arc_degrees * 0.5)
+		
+		if angle_diff_rad <= max_allowed_rad:
+			# Đòn đánh nằm trong cung đỡ phía trước!
+			if current_stamina >= guard_stamina_cost_per_hit:
+				# Đỡ thành công
+				current_stamina -= guard_stamina_cost_per_hit
+				stamina_changed.emit(current_stamina, max_stamina)
+				stamina_delay_timer = stamina_recovery_delay
+				
+				final_damage = int(round(float(damage) * (1.0 - guard_damage_reduction)))
+				guarded_successfully = true
+				
+				BehaviorTracker.add_points(BehaviorTracker.ACTION_GUARD, 2)
+				print("[COMBAT] Đỡ đòn thành công! Giảm sát thương từ %d xuống %d (-%.1f Stamina, +2 GUARD)" % [
+					damage, final_damage, guard_stamina_cost_per_hit
+				])
+				
+				# Hiệu ứng nảy lùi nhẹ & nháy sáng Xám Sắt
+				modulate = Palette.XAM_SAT
+				flash_timer = 0.12
+			else:
+				# Vỡ thế đỡ (Guard Break): Hết stamina khi đỡ
+				current_stamina = 0.0
+				stamina_changed.emit(current_stamina, max_stamina)
+				stamina_delay_timer = stamina_recovery_delay * 1.5
+				
+				is_guarding = false
+				is_stunned = true
+				stun_timer = guard_break_stun_duration
+				final_damage = damage # Nhận trọn sát thương
+				
+				if visual_node != null and visual_node.has_method("set_guarding"):
+					visual_node.set_guarding(false, facing_direction)
+				
+				print("[COMBAT] VỠ THẾ ĐỠ (Guard Break)! Choáng trong %.2fs và nhận trọn %d sát thương!" % [
+					guard_break_stun_duration, final_damage
+				])
+		else:
+			print("[COMBAT] Bị đánh từ phía sau / ngoài cung đỡ (góc: %.1f độ)! Không thể đỡ đòn." % rad_to_deg(angle_diff_rad))
+	
+	current_hp = maxi(0, current_hp - final_damage)
+	hp_changed.emit(current_hp, max_hp)
+	print("[COMBAT] Player nhận %d sát thương! HP còn: %d/%d" % [final_damage, current_hp, max_hp])
+	
+	# Cập nhật tỉ lệ máu cho EggVisual để vẽ vết nứt to dần
+	if visual_node != null and visual_node.has_method("set_hp_ratio"):
+		visual_node.set_hp_ratio(float(current_hp) / float(maxi(1, max_hp)))
+	
+	# Bắn hiệu ứng mảnh vỏ văng tung tóe (nếu đỡ thành công văng ít hơn)
+	if visual_node != null and visual_node.has_method("spawn_shell_burst"):
+		visual_node.spawn_shell_burst(3 if guarded_successfully else 7)
+	
+	if current_hp <= 0:
+		die()
+		return {"hit": true, "dodged": false, "guarded": guarded_successfully}
+	
+	if not guarded_successfully:
+		# Khung bất tử ngắn (i-frame 0.25s) và chớp đỏ phản hồi trúng đòn
+		is_invulnerable = true
+		hurt_invulnerable_timer = 0.25
+		flash_timer = 0.18
+		modulate = Palette.DO_GACH
+	
+	return {"hit": true, "dodged": false, "guarded": guarded_successfully}
+
+func die() -> void:
+	is_dead = true
+	is_hurt = false
+	is_guarding = false
+	is_stunned = false
+	stun_timer = 0.0
+	velocity = Vector2.ZERO
+	is_dodging = false
+	is_invulnerable = false
+	is_attacking = false
+	combo_step = 0
+	respawn_timer = 1.5
+	modulate = Color.WHITE
+	if visual_node != null and visual_node.has_method("set_guarding"):
+		visual_node.set_guarding(false, facing_direction)
+	print("[PLAYER] VỎ ĐÃ VỠ... Bắt đầu chuẩn bị hồi sinh.")
+	
+	# Phát death animation
+	var dir_suffix := get_direction_suffix(facing_direction)
+	var death_anim := "death_" + dir_suffix
+	if animated_sprite != null and animations_config.has(death_anim):
+		animated_sprite.play(death_anim)
+	
+	player_died.emit()
+
+func process_death(delta: float) -> void:
+	respawn_timer -= delta
+	if respawn_timer <= 0.0:
+		respawn()
+
+func respawn() -> void:
+	global_position = spawn_position
+	current_hp = max_hp
+	current_stamina = max_stamina
+	is_dead = false
+	is_hurt = false
+	is_guarding = false
+	is_stunned = false
+	stun_timer = 0.0
+	is_dodging = false
+	is_invulnerable = false
+	hurt_invulnerable_timer = 0.0
+	is_attacking = false
+	can_dodge = true
+	can_attack = true
+	combo_step = 0
+	dodge_cooldown_timer = 0.0
+	attack_cooldown_timer = 0.0
+	modulate = Color.WHITE
+	if visual_node != null and visual_node.has_method("set_guarding"):
+		visual_node.set_guarding(false, facing_direction)
+	if visual_node != null and visual_node.has_method("set_hp_ratio"):
+		visual_node.set_hp_ratio(1.0)
+	hp_changed.emit(current_hp, max_hp)
+	stamina_changed.emit(current_stamina, max_stamina)
+	print("[PLAYER] Trứng đã hồi sinh tại điểm bắt đầu!")
+	player_respawned.emit()
+`
+
+### scripts/ui/hud.gd
+`gdscript
+extends CanvasLayer
+
+# HUD hiển thị máu, thể lực và thông báo tạm thời.
+# Toàn bộ màu sắc lấy trực tiếp từ Palette (GDD Mục 3).
+
+@onready var hp_bar_fill: ColorRect = $MarginContainer/VBoxContainer/HPBar/Fill
+@onready var hp_bar_bg: ColorRect = $MarginContainer/VBoxContainer/HPBar/Background
+@onready var stamina_bar_fill: ColorRect = $MarginContainer/VBoxContainer/StaminaBar/Fill
+@onready var stamina_bar_bg: ColorRect = $MarginContainer/VBoxContainer/StaminaBar/Background
+@onready var debug_label: Label = $MarginContainer/VBoxContainer/DebugDodgeLabel
+@onready var death_overlay: Control = $DeathOverlay
+
+var max_hp: int = 100
+var current_hp: int = 100
+var max_stamina: float = 100.0
+var current_stamina: float = 100.0
+
+var hp_bar_max_width: float = 64.0
+var stamina_bar_max_width: float = 52.0
+
+var show_debug_dodge: bool = false
+
+func _ready() -> void:
+	apply_palette()
+	# Nạp cờ debug từ stats.json
+	show_debug_dodge = bool(GameData.get_stat("debug", "show_dodge_debug", false))
+	update_debug_display()
+	death_overlay.visible = false
+	
+	BehaviorTracker.points_changed.connect(_on_behavior_points_changed)
+
+func apply_palette() -> void:
+	# Màu sắc chuẩn GDD Mục 3
+	hp_bar_bg.color = Palette.NAU_HAM
+	hp_bar_fill.color = Palette.DO_GACH
+	
+	stamina_bar_bg.color = Palette.NAU_HAM
+	stamina_bar_fill.color = Palette.XANH_LA_UA
+	
+	debug_label.add_theme_color_override("font_color", Palette.KEM)
+	
+	var death_label: Label = $DeathOverlay/CenterContainer/VBoxContainer/DeathLabel
+	death_label.add_theme_color_override("font_color", Palette.DO_GACH)
+	var death_sub: Label = $DeathOverlay/CenterContainer/VBoxContainer/SubLabel
+	death_sub.add_theme_color_override("font_color", Palette.KEM)
+	var death_panel: ColorRect = $DeathOverlay/CenterContainer/VBoxContainer/PanelBg
+	death_panel.color = Palette.NAU_HAM
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	# Bật/tắt nhãn debug DODGE bằng phím F3
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_F3:
+			show_debug_dodge = not show_debug_dodge
+			update_debug_display()
+
+func update_hp(new_hp: int, new_max_hp: int) -> void:
+	current_hp = new_hp
+	max_hp = new_max_hp
+	var ratio: float = clampf(float(current_hp) / float(maxi(1, max_hp)), 0.0, 1.0)
+	hp_bar_fill.size.x = hp_bar_max_width * ratio
+
+func update_stamina(new_stamina: float, new_max_stamina: float) -> void:
+	current_stamina = new_stamina
+	max_stamina = new_max_stamina
+	var ratio: float = clampf(current_stamina / maxf(1.0, max_stamina), 0.0, 1.0)
+	stamina_bar_fill.size.x = stamina_bar_max_width * ratio
+
+func _on_behavior_points_changed(action_name: String, _new_points: int, _total: int) -> void:
+	if action_name == BehaviorTracker.ACTION_DODGE:
+		update_debug_display()
+
+func update_debug_display() -> void:
+	debug_label.visible = show_debug_dodge
+	if show_debug_dodge:
+		debug_label.text = "[DEBUG F3] DODGE: %d" % BehaviorTracker.get_points(BehaviorTracker.ACTION_DODGE)
+
+func show_death_screen(show_it: bool) -> void:
+	death_overlay.visible = show_it
+`
+
+### tools/generate_run_roll_sprites.gd
 `gdscript
 extends SceneTree
 
@@ -659,7 +2762,7 @@ func _init() -> void:
 	quit(0)
 `
 
-### generate_run_roll_v2.gd
+### tools/generate_run_roll_v2.gd
 `gdscript
 extends SceneTree
 
@@ -1093,1531 +3196,4 @@ func _init() -> void:
 
 	print("=== Xong ===")
 	quit(0)
-`
-
-### project.godot
-`ini
-; Engine configuration file.
-; It's best edited using the editor UI and not directly,
-; since the parameters that go here are not all obvious.
-;
-; Format:
-;   [section] ; section goes between []
-;   param=value ; assign values to parameters
-
-config_version=5
-
-[application]
-
-config/name="Vỡ Vỏ"
-run/main_scene="res://scenes/levels/test_arena.tscn"
-config/features=PackedStringArray("4.7", "Forward Plus")
-config/icon="res://icon.svg"
-
-[autoload]
-
-Palette="*res://scripts/autoload/palette.gd"
-GameData="*res://scripts/autoload/game_data.gd"
-BehaviorTracker="*res://scripts/autoload/behavior_tracker.gd"
-SaveManager="*res://scripts/autoload/save_manager.gd"
-
-[display]
-
-window/size/viewport_width=320
-window/size/viewport_height=180
-window/size/window_width_override=1280
-window/size/window_height_override=720
-window/stretch/mode="viewport"
-window/stretch/scale_mode="integer"
-
-[input]
-
-move_left={
-"deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":65,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194319,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":13,"pressure":0.0,"pressed":false,"script":null)
-, Object(InputEventJoypadMotion,"resource_local_to_scene":false,"resource_name":"","device":0,"axis":0,"axis_value":-1.0,"script":null)
-]
-}
-move_right={
-"deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":68,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194321,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":14,"pressure":0.0,"pressed":false,"script":null)
-, Object(InputEventJoypadMotion,"resource_local_to_scene":false,"resource_name":"","device":0,"axis":0,"axis_value":1.0,"script":null)
-]
-}
-move_up={
-"deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":87,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194320,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":11,"pressure":0.0,"pressed":false,"script":null)
-, Object(InputEventJoypadMotion,"resource_local_to_scene":false,"resource_name":"","device":0,"axis":1,"axis_value":-1.0,"script":null)
-]
-}
-move_down={
-"deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":83,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194322,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":12,"pressure":0.0,"pressed":false,"script":null)
-, Object(InputEventJoypadMotion,"resource_local_to_scene":false,"resource_name":"","device":0,"axis":1,"axis_value":1.0,"script":null)
-]
-}
-attack={
-"deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":74,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":32,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":0,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":1,"canceled":false,"pressed":false,"double_click":false,"script":null)
-, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":2,"pressure":0.0,"pressed":false,"script":null)
-]
-}
-dodge={
-"deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":32,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":75,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":0,"pressure":0.0,"pressed":false,"script":null)
-]
-}
-guard={
-"deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":76,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":32,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":0,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":2,"canceled":false,"pressed":false,"double_click":false,"script":null)
-, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":9,"pressure":0.0,"pressed":false,"script":null)
-]
-}
-interact={
-"deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":69,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":3,"pressure":0.0,"pressed":false,"script":null)
-]
-}
-pause={
-"deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194305,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":6,"pressure":0.0,"pressed":false,"script":null)
-]
-}
-
-[physics]
-
-3d/physics_engine="Jolt Physics"
-
-[rendering]
-
-textures/canvas_textures/default_texture_filter=0
-rendering_device/driver.windows="d3d12"
-2d/snap/snap_2d_transforms_to_pixel=true
-2d/snap/snap_2d_vertices_to_pixel=true
-`
-
-### scenes/enemies/dummy_enemy.tscn
-`ini
-[gd_scene load_steps=5 format=3 uid="uid://dmmyenemy001"]
-
-[ext_resource type="Script" path="res://scripts/combat/dummy_enemy.gd" id="1_enemy"]
-[ext_resource type="Script" path="res://scripts/combat/enemy_visual.gd" id="2_visual"]
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
-size = Vector2(20, 20)
-
-[sub_resource type="CircleShape2D" id="CircleShape2D_attack"]
-radius = 28.0
-
-[node name="DummyEnemy" type="CharacterBody2D" groups=["enemies"]]
-collision_layer = 1
-collision_mask = 1
-script = ExtResource("1_enemy")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-shape = SubResource("RectangleShape2D_body")
-
-[node name="EnemyVisual" type="Node2D" parent="."]
-script = ExtResource("2_visual")
-
-[node name="AttackArea" type="Area2D" parent="."]
-collision_layer = 0
-collision_mask = 2
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackArea"]
-shape = SubResource("CircleShape2D_attack")
-
-[node name="Hurtbox" type="Area2D" parent="." groups=["enemy_hurtbox"]]
-collision_layer = 16
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
-shape = SubResource("RectangleShape2D_body")
-`
-
-### scenes/levels/test_arena.gd
-`gdscript
-extends Node2D
-
-# Màn chơi thử nghiệm test_arena:
-# - Nền tối (DEN_THAN)
-# - Tường bao hầm ngục (NAU_HAM)
-# - Player với Camera2D smoothed pixel-snap
-# - Kẻ thù thử nghiệm (DummyEnemy)
-# - HUD hiển thị máu, thể lực và thông báo chết/hồi sinh
-
-@onready var player: CharacterBody2D = $Player
-@onready var hud: CanvasLayer = $HUD
-
-func _ready() -> void:
-	if player != null and hud != null:
-		player.hp_changed.connect(hud.update_hp)
-		player.stamina_changed.connect(hud.update_stamina)
-		player.player_died.connect(func(): hud.show_death_screen(true))
-		player.player_respawned.connect(func(): hud.show_death_screen(false))
-		# Khởi tạo giá trị ban đầu cho HUD
-		hud.update_hp(player.current_hp, player.max_hp)
-		hud.update_stamina(player.current_stamina, player.max_stamina)
-	
-	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD/Mũi tên), Lăn né (Space/K).")
-`
-
-### scenes/levels/test_arena.tscn
-`ini
-[gd_scene format=3 uid="uid://btestarena001"]
-
-[ext_resource type="Script" path="res://scenes/levels/test_arena.gd" id="1_arena"]
-[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/dummy_enemy.tscn" id="3_enemy"]
-[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="4_hud"]
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_horiz"]
-size = Vector2(480, 16)
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_vert"]
-size = Vector2(16, 270)
-
-[node name="TestArena" type="Node2D"]
-script = ExtResource("1_arena")
-
-[node name="Floor" type="ColorRect" parent="."]
-offset_right = 480.0
-offset_bottom = 270.0
-color = Color(0.0784314, 0.0666667, 0.0588235, 1)
-
-[node name="Walls" type="StaticBody2D" parent="."]
-collision_layer = 1
-collision_mask = 0
-
-[node name="TopWallVisual" type="ColorRect" parent="Walls"]
-offset_right = 480.0
-offset_bottom = 16.0
-color = Color(0.168627, 0.121569, 0.101961, 1)
-
-[node name="TopCollision" type="CollisionShape2D" parent="Walls"]
-position = Vector2(240, 8)
-shape = SubResource("RectangleShape2D_horiz")
-
-[node name="BottomWallVisual" type="ColorRect" parent="Walls"]
-offset_top = 254.0
-offset_right = 480.0
-offset_bottom = 270.0
-color = Color(0.168627, 0.121569, 0.101961, 1)
-
-[node name="BottomCollision" type="CollisionShape2D" parent="Walls"]
-position = Vector2(240, 262)
-shape = SubResource("RectangleShape2D_horiz")
-
-[node name="LeftWallVisual" type="ColorRect" parent="Walls"]
-offset_right = 16.0
-offset_bottom = 270.0
-color = Color(0.168627, 0.121569, 0.101961, 1)
-
-[node name="LeftCollision" type="CollisionShape2D" parent="Walls"]
-position = Vector2(8, 135)
-shape = SubResource("RectangleShape2D_vert")
-
-[node name="RightWallVisual" type="ColorRect" parent="Walls"]
-offset_left = 464.0
-offset_right = 480.0
-offset_bottom = 270.0
-color = Color(0.168627, 0.121569, 0.101961, 1)
-
-[node name="RightCollision" type="CollisionShape2D" parent="Walls"]
-position = Vector2(472, 135)
-shape = SubResource("RectangleShape2D_vert")
-
-[node name="DummyEnemy" parent="." instance=ExtResource("3_enemy")]
-position = Vector2(260, 135)
-
-[node name="Player" parent="." instance=ExtResource("2_player")]
-position = Vector2(160, 135)
-
-[node name="Camera2D" type="Camera2D" parent="Player"]
-position_smoothing_enabled = true
-position_smoothing_speed = 6.0
-limit_left = 0
-limit_top = 0
-limit_right = 480
-limit_bottom = 270
-
-[node name="HUD" parent="." instance=ExtResource("4_hud")]
-`
-
-### scenes/player/player.tscn
-`ini
-[gd_scene load_steps=6 format=3 uid="uid://df7xeggplayer01"]
-
-[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
-[ext_resource type="Script" path="res://scripts/player/egg_visual.gd" id="2_visual"]
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_col"]
-size = Vector2(10, 6)
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_hurt"]
-size = Vector2(10, 14)
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_attack"]
-size = Vector2(16, 16)
-
-[node name="Player" type="CharacterBody2D" groups=["player"]]
-collision_layer = 1
-collision_mask = 1
-script = ExtResource("1_player")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0, -3)
-shape = SubResource("RectangleShape2D_col")
-
-[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
-
-[node name="EggVisual" type="Node2D" parent="."]
-script = ExtResource("2_visual")
-
-[node name="Hurtbox" type="Area2D" parent="."]
-collision_layer = 2
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
-position = Vector2(0, -10)
-shape = SubResource("RectangleShape2D_hurt")
-
-[node name="AttackHitbox" type="Area2D" parent="."]
-collision_layer = 0
-collision_mask = 16
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackHitbox"]
-shape = SubResource("RectangleShape2D_attack")
-`
-
-### scenes/ui/hud.tscn
-`ini
-[gd_scene format=3 uid="uid://bvyhud001"]
-
-[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
-
-[node name="HUD" type="CanvasLayer"]
-script = ExtResource("1_hud")
-
-[node name="MarginContainer" type="MarginContainer" parent="."]
-offset_left = 6.0
-offset_top = 6.0
-offset_right = 120.0
-offset_bottom = 50.0
-
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
-layout_mode = 2
-theme_override_constants/separation = 2
-
-[node name="HPBar" type="Control" parent="MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(64, 6)
-layout_mode = 2
-
-[node name="Background" type="ColorRect" parent="MarginContainer/VBoxContainer/HPBar"]
-layout_mode = 0
-offset_right = 64.0
-offset_bottom = 6.0
-color = Color(0.168627, 0.121569, 0.101961, 1)
-
-[node name="Fill" type="ColorRect" parent="MarginContainer/VBoxContainer/HPBar"]
-layout_mode = 0
-offset_right = 64.0
-offset_bottom = 6.0
-color = Color(0.658824, 0.203922, 0.168627, 1)
-
-[node name="StaminaBar" type="Control" parent="MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(52, 4)
-layout_mode = 2
-
-[node name="Background" type="ColorRect" parent="MarginContainer/VBoxContainer/StaminaBar"]
-layout_mode = 0
-offset_right = 52.0
-offset_bottom = 4.0
-color = Color(0.168627, 0.121569, 0.101961, 1)
-
-[node name="Fill" type="ColorRect" parent="MarginContainer/VBoxContainer/StaminaBar"]
-layout_mode = 0
-offset_right = 52.0
-offset_bottom = 4.0
-color = Color(0.419608, 0.498039, 0.227451, 1)
-
-[node name="DebugDodgeLabel" type="Label" parent="MarginContainer/VBoxContainer"]
-visible = false
-layout_mode = 2
-theme_override_font_sizes/font_size = 8
-text = "[DEBUG F3] DODGE: 0"
-
-[node name="DeathOverlay" type="Control" parent="."]
-visible = false
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="CenterContainer" type="CenterContainer" parent="DeathOverlay"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="DeathOverlay/CenterContainer"]
-layout_mode = 2
-alignment = 1
-
-[node name="PanelBg" type="ColorRect" parent="DeathOverlay/CenterContainer/VBoxContainer"]
-visible = false
-custom_minimum_size = Vector2(160, 40)
-layout_mode = 2
-color = Color(0.168627, 0.121569, 0.101961, 0.9)
-
-[node name="DeathLabel" type="Label" parent="DeathOverlay/CenterContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 14
-text = "VỎ ĐÃ VỠ..."
-horizontal_alignment = 1
-
-[node name="SubLabel" type="Label" parent="DeathOverlay/CenterContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 8
-text = "Đang hồi sinh..."
-horizontal_alignment = 1
-`
-
-### scripts/autoload/behavior_tracker.gd
-`gdscript
-extends Node
-
-# Autoload BehaviorTracker: 5 bộ đếm hành vi ẩn của Trứng (GDD Mục 6.1)
-# GUARD, DODGE, MAGIC, EXPLORE, SUPPORT
-# Dùng để quyết định nhánh tiến hóa tại các mốc mà người chơi không thấy số điểm trực tiếp.
-
-signal points_changed(action_name: String, new_points: int, total_points: int)
-
-const ACTION_GUARD: String = "GUARD"
-const ACTION_DODGE: String = "DODGE"
-const ACTION_MAGIC: String = "MAGIC"
-const ACTION_EXPLORE: String = "EXPLORE"
-const ACTION_SUPPORT: String = "SUPPORT"
-
-const VALID_ACTIONS: Array[String] = [
-	ACTION_GUARD,
-	ACTION_DODGE,
-	ACTION_MAGIC,
-	ACTION_EXPLORE,
-	ACTION_SUPPORT
-]
-
-var _counters: Dictionary = {
-	ACTION_GUARD: 0,
-	ACTION_DODGE: 0,
-	ACTION_MAGIC: 0,
-	ACTION_EXPLORE: 0,
-	ACTION_SUPPORT: 0
-}
-
-func add_points(action_name: String, points: int) -> void:
-	if not _counters.has(action_name):
-		push_warning("BehaviorTracker: Hành động không hợp lệ: " + action_name)
-		return
-	if points <= 0:
-		return
-	_counters[action_name] += points
-	var total: int = get_total_points()
-	points_changed.emit(action_name, _counters[action_name], total)
-	print("[BehaviorTracker] +%d %s (Hiện tại: %d, Tổng: %d)" % [points, action_name, _counters[action_name], total])
-
-func get_points(action_name: String) -> int:
-	return _counters.get(action_name, 0)
-
-func get_total_points() -> int:
-	var total: int = 0
-	for key in _counters:
-		total += int(_counters[key])
-	return total
-
-func get_ratios() -> Dictionary:
-	var total: int = get_total_points()
-	var ratios: Dictionary = {}
-	for key in _counters:
-		if total > 0:
-			ratios[key] = float(_counters[key]) / float(total)
-		else:
-			ratios[key] = 0.0
-	return ratios
-
-func reset() -> void:
-	for key in _counters:
-		_counters[key] = 0
-
-func export_data() -> Dictionary:
-	return _counters.duplicate()
-
-func import_data(data: Dictionary) -> void:
-	for action_name in VALID_ACTIONS:
-		if data.has(action_name):
-			_counters[action_name] = int(data[action_name])
-`
-
-### scripts/autoload/game_data.gd
-`gdscript
-extends Node
-
-# Autoload GameData: Quản lý nạp toàn bộ file cấu hình JSON trong thư mục data/
-# Đảm bảo không hard-code bất kỳ chỉ số cân bằng nào vào mã nguồn.
-
-var stats: Dictionary = {}
-
-func _ready() -> void:
-	load_all_data()
-
-func load_all_data() -> void:
-	stats = load_json_file("res://data/stats.json")
-	if stats.is_empty():
-		push_error("GameData: Không thể nạp dữ liệu từ stats.json!")
-	else:
-		print("GameData: Nạp thành công stats.json.")
-
-func load_json_file(path: String) -> Dictionary:
-	if not FileAccess.file_exists(path):
-		push_error("GameData: Không tìm thấy file JSON tại " + path)
-		return {}
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		push_error("GameData: Không thể mở file " + path)
-		return {}
-	var content := file.get_as_text()
-	var json := JSON.new()
-	var parse_result := json.parse(content)
-	if parse_result != OK:
-		push_error("GameData: Lỗi parse JSON tại %s (dòng %d): %s" % [path, json.get_error_line(), json.get_error_message()])
-		return {}
-	if json.data is Dictionary:
-		return json.data
-	push_warning("GameData: Dữ liệu JSON trong %s không phải là Dictionary!" % path)
-	return {}
-
-func get_stat(category: String, key: String, default_value: Variant = null) -> Variant:
-	if stats.has(category) and stats[category] is Dictionary and stats[category].has(key):
-		return stats[category][key]
-	return default_value
-`
-
-### scripts/autoload/palette.gd
-`gdscript
-extends Node
-
-# Bảng màu trung cổ (16 màu cố định theo GDD Mục 3)
-# Toàn bộ màu sắc trong game bắt buộc phải tham chiếu từ Palette này.
-const DEN_THAN: Color = Color("#14110F")      # 1. Bóng sâu nhất, nền hầm ngục tối, hố đen
-const NAU_HAM: Color = Color("#2B1F1A")       # 2. Viền ngoài mọi sprite, tường hầm
-const XAM_SAT: Color = Color("#4A4A52")       # 3. Giáp, kim loại, đá tối
-const XAM_DA: Color = Color("#7C7C80")        # 4. Đá sáng, vũ khí, lưỡi kiếm
-const NAU_GO: Color = Color("#6B4423")        # 5. Gỗ, cửa, cán vũ khí, đất tối
-const NAU_DA: Color = Color("#A0693B")        # 6. Da thuộc, đất, rơm đậm
-const CAT: Color = Color("#D4A86A")           # 7. Rơm, cát, bóng đổ trên vỏ trứng
-const GIAY_DA: Color = Color("#E8D9B0")       # 8. Vỏ trứng (màu chính), giấy, xương
-const KEM: Color = Color("#F4EBD0")           # 9. Điểm sáng nhất, vùng ánh sáng trên vỏ trứng
-const DO_RUOU: Color = Color("#6E1423")       # 10. Vải quý tộc, máu khô, boss tối
-const DO_GACH: Color = Color("#A8342B")       # 11. Lửa nhẹ, cờ hiệu, cảnh báo sát thương, thanh HP
-const XANH_REU: Color = Color("#3B4A2A")      # 12. Cỏ, lá, đầm lầy, rừng
-const XANH_LA_UA: Color = Color("#6B7F3A")    # 13. Cỏ sáng, độc nhẹ, đồ vật tự nhiên, thanh Stamina
-const VANG_CO: Color = Color("#C79A2E")       # 14. Vàng đồng, chữ khắc, vật phẩm hiếm, Mảnh Vỏ
-const XANH_THEP: Color = Color("#2F4A63")     # 15. Nước, sương, đêm, phép băng/lòng trắng
-const TIM_MUC: Color = Color("#5A3A5E")       # 16. Mục Rữa, phép hắc ám
-`
-
-### scripts/autoload/save_manager.gd
-`gdscript
-extends Node
-
-# Autoload SaveManager: Nơi DUY NHẤT được ghi file save vào user://
-# Đảm bảo lưu/tải an toàn toàn bộ tiến trình người chơi và 5 bộ đếm hành vi dưới dạng JSON.
-
-const SAVE_PATH: String = "user://savegame.json"
-
-func has_save() -> bool:
-	return FileAccess.file_exists(SAVE_PATH)
-
-func save_game(extra_data: Dictionary = {}) -> bool:
-	var save_dict: Dictionary = {
-		"version": 1,
-		"timestamp": Time.get_unix_time_from_system(),
-		"behavior_counters": BehaviorTracker.export_data(),
-		"extra": extra_data
-	}
-	
-	var json_str := JSON.stringify(save_dict, "\t")
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if file == null:
-		var err := FileAccess.get_open_error()
-		push_error("SaveManager: Lỗi khi mở file save để ghi: %d" % err)
-		return false
-	
-	file.store_string(json_str)
-	file.close()
-	print("SaveManager: Đã lưu game thành công vào " + SAVE_PATH)
-	return true
-
-func load_game() -> Dictionary:
-	if not has_save():
-		print("SaveManager: Chưa có file save tại " + SAVE_PATH)
-		return {}
-	
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
-	if file == null:
-		push_error("SaveManager: Không thể mở file save để đọc")
-		return {}
-	
-	var content := file.get_as_text()
-	file.close()
-	
-	var json := JSON.new()
-	var err := json.parse(content)
-	if err != OK:
-		push_error("SaveManager: Lỗi parse file save: %s" % json.get_error_message())
-		return {}
-	
-	var data = json.data
-	if not data is Dictionary:
-		push_error("SaveManager: Nội dung file save không hợp lệ")
-		return {}
-	
-	if data.has("behavior_counters") and data["behavior_counters"] is Dictionary:
-		BehaviorTracker.import_data(data["behavior_counters"])
-	
-	print("SaveManager: Đã nạp dữ liệu save thành công.")
-	return data
-
-func delete_save() -> bool:
-	if has_save():
-		var err := DirAccess.remove_absolute(SAVE_PATH)
-		return err == OK
-	return true
-`
-
-### scripts/combat/dummy_enemy.gd
-`gdscript
-extends CharacterBody2D
-
-# Kẻ thù giả để kiểm tra né đòn và nhận sát thương.
-# Tuân thủ:
-# - Báo hiệu nhấp nháy Đỏ Gạch (DO_GACH) đúng 0.3 giây trước khi gây sát thương (GDD Mục 3 & 7)
-# - Chỉ cộng DODGE tối đa 1 lần cho mỗi lượt tung đòn (Quy tắc điều chỉnh #3)
-# - Số liệu cân bằng lấy từ data/stats.json
-# - Màu sắc 100% từ Palette
-
-enum State { IDLE, TELEGRAPH, ATTACK, RECOVERY }
-
-@onready var visual_node: Node2D = $EnemyVisual
-@onready var attack_area: Area2D = $AttackArea
-
-var max_hp: int = 50
-var current_hp: int = 50
-var damage: int = 20
-var telegraph_duration: float = 0.3
-var attack_interval: float = 2.2
-var attack_radius: float = 28.0
-
-var current_state: State = State.IDLE
-var state_timer: float = 0.0
-var flash_timer: float = 0.0
-var hurt_flash_timer: float = 0.0
-var is_flashing_red: bool = false
-
-# Đảm bảo mỗi lượt vung đòn chỉ tương tác với người chơi đúng 1 lần (Quy tắc điều chỉnh #3)
-var has_resolved_player_this_attack: bool = false
-var attack_active_duration: float = 0.15
-
-func _ready() -> void:
-	load_stats()
-	current_hp = max_hp
-	state_timer = attack_interval - telegraph_duration
-	current_state = State.IDLE
-
-func load_stats() -> void:
-	max_hp = int(GameData.get_stat("dummy_enemy", "max_hp", 50))
-	damage = int(GameData.get_stat("dummy_enemy", "damage", 20))
-	telegraph_duration = float(GameData.get_stat("dummy_enemy", "telegraph_duration", 0.3))
-	attack_interval = float(GameData.get_stat("dummy_enemy", "attack_interval", 2.2))
-	attack_radius = float(GameData.get_stat("dummy_enemy", "attack_radius", 28.0))
-
-func _physics_process(delta: float) -> void:
-	state_timer -= delta
-	
-	if hurt_flash_timer > 0.0:
-		hurt_flash_timer -= delta
-		if hurt_flash_timer <= 0.0:
-			modulate = Color.WHITE
-	
-	match current_state:
-		State.IDLE:
-			if state_timer <= 0.0:
-				start_telegraph()
-		
-		State.TELEGRAPH:
-			process_telegraph_flash(delta)
-			if state_timer <= 0.0:
-				execute_attack()
-		
-		State.ATTACK:
-			check_attack_hitbox()
-			if state_timer <= 0.0:
-				end_attack()
-		
-		State.RECOVERY:
-			if state_timer <= 0.0:
-				start_idle()
-
-func start_telegraph() -> void:
-	current_state = State.TELEGRAPH
-	state_timer = telegraph_duration
-	flash_timer = 0.0
-	is_flashing_red = true
-	visual_node.queue_redraw()
-
-func process_telegraph_flash(delta: float) -> void:
-	flash_timer += delta
-	# Nhấp nháy tần số nhanh (0.07s) bằng màu Đỏ Gạch
-	if flash_timer >= 0.07:
-		flash_timer = 0.0
-		is_flashing_red = not is_flashing_red
-		visual_node.queue_redraw()
-
-func execute_attack() -> void:
-	current_state = State.ATTACK
-	state_timer = attack_active_duration
-	has_resolved_player_this_attack = false
-	is_flashing_red = true
-	visual_node.queue_redraw()
-	print("[ENEMY] Tung đòn tấn công! (Sát thương: %d, Bán kính: %.1f)" % [damage, attack_radius])
-	check_attack_hitbox()
-
-func check_attack_hitbox() -> void:
-	# Nếu đợt vung đòn này đã giải quyết với Player rồi thì bỏ qua (Quy tắc #3)
-	if has_resolved_player_this_attack:
-		return
-	
-	var overlapping_areas := attack_area.get_overlapping_areas()
-	for area in overlapping_areas:
-		# Chỉ kiểm tra va chạm với Hurtbox, không tương tác với thân vật lý
-		if area.name == "Hurtbox":
-			var parent: Node = area.get_parent()
-			if parent != null and parent.has_method("receive_hit"):
-				has_resolved_player_this_attack = true
-				parent.receive_hit(damage, self)
-				break
-
-func end_attack() -> void:
-	current_state = State.RECOVERY
-	state_timer = 0.3
-	is_flashing_red = false
-	visual_node.queue_redraw()
-
-func start_idle() -> void:
-	current_state = State.IDLE
-	state_timer = maxf(0.5, attack_interval - telegraph_duration - 0.3)
-	is_flashing_red = false
-	visual_node.queue_redraw()
-
-func receive_hit(amount: int, _attack_source: Node) -> Dictionary:
-	current_hp = maxi(0, current_hp - amount)
-	print("[ENEMY] Nhận %d sát thương từ Player! HP còn: %d/%d" % [amount, current_hp, max_hp])
-	modulate = Palette.KEM
-	hurt_flash_timer = 0.15
-	if current_hp <= 0:
-		print("[ENEMY] Kẻ thù bị tiêu diệt! Tự động hồi phục sau 1.5 giây.")
-		current_hp = max_hp
-	return {"hit": true, "damage": amount}
-`
-
-### scripts/combat/enemy_visual.gd
-`gdscript
-extends Node2D
-
-# Vẽ hình khối tạm của Kẻ thù thử nghiệm
-# Màu sắc: Đỏ Rượu (DO_RUOU), viền Nâu Hầm (NAU_HAM), cảnh báo Đỏ Gạch (DO_GACH)
-
-const DummyEnemyScript = preload("res://scripts/combat/dummy_enemy.gd")
-
-@onready var enemy: Node2D = get_parent()
-
-func _draw() -> void:
-	if enemy == null:
-		return
-	
-	var radius: float = enemy.get("attack_radius")
-	var state_val = enemy.get("current_state")
-	var is_flashing: bool = enemy.get("is_flashing_red")
-	
-	# 1. Vẽ vòng bán kính cảnh báo / đòn đánh
-	match state_val:
-		DummyEnemyScript.State.TELEGRAPH:
-			if is_flashing:
-				draw_arc(Vector2.ZERO, radius, 0, TAU, 32, Palette.DO_GACH, 1.5)
-			else:
-				draw_arc(Vector2.ZERO, radius, 0, TAU, 32, Palette.DO_RUOU, 1.0)
-		DummyEnemyScript.State.ATTACK:
-			# Vùng sát thương khi đang vung đòn
-			draw_circle(Vector2.ZERO, radius, Color(Palette.DO_GACH.r, Palette.DO_GACH.g, Palette.DO_GACH.b, 0.35))
-			draw_arc(Vector2.ZERO, radius, 0, TAU, 32, Palette.DO_GACH, 2.0)
-		_:
-			# Hiển thị đường nét mờ bán kính khi nhàn rỗi
-			draw_arc(Vector2.ZERO, radius, 0, TAU, 24, Palette.XAM_SAT, 0.75)
-	
-	# 2. Thân khối quái vật (hình hộp 20x20 px)
-	var body_rect := Rect2(-10, -10, 20, 20)
-	var outline_rect := Rect2(-11, -11, 22, 22)
-	
-	draw_rect(outline_rect, Palette.NAU_HAM)
-	
-	if state_val == DummyEnemyScript.State.TELEGRAPH and is_flashing:
-		draw_rect(body_rect, Palette.DO_GACH)
-	elif state_val == DummyEnemyScript.State.ATTACK:
-		draw_rect(body_rect, Palette.DO_GACH)
-	else:
-		draw_rect(body_rect, Palette.DO_RUOU)
-	
-	# Mắt đỏ gạch quái vật
-	draw_rect(Rect2(-6, -4, 3, 3), Palette.DO_GACH)
-	draw_rect(Rect2(3, -4, 3, 3), Palette.DO_GACH)
-`
-
-### scripts/player/egg_visual.gd
-`gdscript
-extends Node2D
-
-# EggVisual: Quản lý hiệu ứng hình ảnh mở rộng trên người chơi
-# 1. Vết nứt trên vỏ trứng (to dần theo lượng máu giảm)
-# 2. Hiệu ứng văng mảnh vỏ (egg shell debris particles) khi trúng đòn
-# 3. Vệt chém combo cận chiến
-
-var attack_slash_timer: float = 0.0
-var attack_slash_dir: Vector2 = Vector2.DOWN
-var attack_slash_step: int = 0
-var show_placeholder_body: bool = false
-
-# Dữ liệu vết nứt vỏ trứng (tính theo tỉ lệ hp: 1.0 -> 0.0)
-var current_hp_ratio: float = 1.0
-
-# Danh sách mảnh vỏ đang văng: { pos: Vector2, vel: Vector2, color: Color, size: Vector2, life: float, max_life: float }
-var shell_shards: Array[Dictionary] = []
-
-func _ready() -> void:
-	set_process(true)
-
-func set_hp_ratio(ratio: float) -> void:
-	current_hp_ratio = clampf(ratio, 0.0, 1.0)
-	queue_redraw()
-
-func spawn_shell_burst(amount: int = 6) -> void:
-	# Bắn các mảnh vỏ trứng từ tâm thân nhân vật (y ~ -14)
-	for i in range(amount):
-		var angle := randf_range(0.0, TAU)
-		var speed := randf_range(40.0, 110.0)
-		var vel := Vector2(cos(angle), sin(angle)) * speed
-		vel.y -= randf_range(20.0, 50.0) # Văng hướng lên trên nhẹ
-		
-		var colors := [Palette.GIAY_DA, Palette.CAT, Palette.NAU_HAM, Palette.KEM]
-		var col: Color = colors[randi() % colors.size()]
-		var sz := Vector2(randf_range(1.5, 3.0), randf_range(1.5, 3.0))
-		var life := randf_range(0.3, 0.55)
-		
-		shell_shards.append({
-			"pos": Vector2(randf_range(-4.0, 4.0), randf_range(-18.0, -10.0)),
-			"vel": vel,
-			"color": col,
-			"size": sz,
-			"life": life,
-			"max_life": life
-		})
-	queue_redraw()
-
-func start_attack_visual(dir: Vector2, step: int) -> void:
-	attack_slash_dir = dir
-	attack_slash_step = step
-	attack_slash_timer = 0.18
-	queue_redraw()
-
-func _process(delta: float) -> void:
-	var needs_redraw: bool = false
-	
-	if attack_slash_timer > 0.0:
-		attack_slash_timer -= delta
-		needs_redraw = true
-	
-	if not shell_shards.is_empty():
-		var idx := shell_shards.size() - 1
-		while idx >= 0:
-			var shard: Dictionary = shell_shards[idx]
-			shard["life"] -= delta
-			if shard["life"] <= 0.0:
-				shell_shards.remove_at(idx)
-			else:
-				shard["pos"] += shard["vel"] * delta
-				shard["vel"].y += 220.0 * delta # Trọng lực rơi xuống
-			idx -= 1
-		needs_redraw = true
-	
-	if needs_redraw:
-		queue_redraw()
-
-func _draw() -> void:
-	# 1. Vẽ các vết nứt trên vỏ theo mức độ mất máu
-	# Nhân vật cao từ y = -22 đến y = -2, tâm khoảng x=0, y=-12
-	# Khi HP < 80%: Bắt đầu có vết rạn nhỏ ở đỉnh
-	# Khi HP < 50%: Nứt to và rẽ nhánh
-	# Khi HP < 25%: Nứt chằng chịt, lộ lòng vàng nhẹ
-	if current_hp_ratio < 0.8:
-		# Vết nứt đỉnh đầu (giai đoạn 1)
-		draw_line(Vector2(-1, -22), Vector2(1, -19), Palette.NAU_HAM, 1.0)
-		draw_line(Vector2(1, -19), Vector2(0, -17), Palette.NAU_HAM, 1.0)
-	
-	if current_hp_ratio < 0.6:
-		# Nhánh nứt kéo dài qua thân trên (giai đoạn 2)
-		draw_line(Vector2(0, -17), Vector2(3, -14), Palette.NAU_HAM, 1.0)
-		draw_line(Vector2(3, -14), Vector2(2, -11), Palette.NAU_HAM, 1.0)
-		# Vết nứt sườn trái
-		draw_line(Vector2(-5, -17), Vector2(-2, -15), Palette.NAU_HAM, 1.0)
-		draw_line(Vector2(-2, -15), Vector2(-4, -12), Palette.NAU_HAM, 1.0)
-	
-	if current_hp_ratio < 0.35:
-		# Vết nứt to toác (giai đoạn 3)
-		draw_line(Vector2(2, -11), Vector2(5, -8), Palette.NAU_HAM, 1.2)
-		draw_line(Vector2(-4, -12), Vector2(-2, -8), Palette.NAU_HAM, 1.2)
-		draw_line(Vector2(0, -17), Vector2(-2, -14), Palette.CAT, 1.0)
-		# Chấm vàng lộ lòng trứng bên trong kẽ nứt
-		draw_rect(Rect2(0, -15, 2, 2), Palette.VANG_CO)
-		draw_rect(Rect2(2, -12, 1, 2), Palette.VANG_CO)
-	
-	# 2. Vẽ các mảnh vỏ trứng đang văng khi dính đòn
-	for shard in shell_shards:
-		var alpha: float = clampf(shard["life"] / shard["max_life"], 0.0, 1.0)
-		var c: Color = shard["color"]
-		c.a = alpha
-		var sz: Vector2 = shard["size"]
-		var p: Vector2 = shard["pos"]
-		draw_rect(Rect2(p.x - sz.x * 0.5, p.y - sz.y * 0.5, sz.x, sz.y), c)
-	
-	# 3. Vệt chém combo đòn đánh cận chiến
-	if attack_slash_timer > 0.0:
-		var slash_center := Vector2(0, -10) + attack_slash_dir.normalized() * 14.0
-		var slash_color: Color = Palette.KEM if attack_slash_step == 2 else Palette.XAM_DA
-		var arc_radius: float = 12.0 if attack_slash_step == 2 else 9.0
-		var base_angle: float = attack_slash_dir.angle()
-		var start_ang: float = base_angle - PI * 0.45
-		var end_ang: float = base_angle + PI * 0.45
-		draw_arc(slash_center, arc_radius, start_ang, end_ang, 12, slash_color, 2.0)
-		draw_arc(slash_center, arc_radius - 2.0, start_ang, end_ang, 12, Palette.NAU_HAM, 1.0)
-`
-
-### scripts/player/player.gd
-`gdscript
-extends CharacterBody2D
-class_name Player
-
-# Player: Nhân vật Trứng trong game "Vỡ Vỏ"
-# Đầy đủ cơ chế:
-# - Di chuyển 8 hướng theo tốc độ từ stats.json
-# - Lăn né tiêu hao Stamina, i-frame 0.25s, chặn né khi thiếu thể lực
-# - Hệ thống tấn công cận chiến Combo 3 đòn theo facing_direction (Điểm 2, 3)
-# - AnimatedSprite2D nạp SpriteFrames từ animations.json, bật/tắt Hitbox qua frame_changed (Điểm 4)
-# - Kích thước Collision 10x6 sát chân, Hurtbox 10x14 giữa thân từ stats.json (Điểm 5)
-
-signal hp_changed(new_hp: int, max_hp: int)
-signal stamina_changed(new_stamina: float, max_stamina: float)
-signal player_died()
-signal player_respawned()
-signal combo_stepped(current_step: int)
-
-@onready var visual_node: Node2D = $EggVisual
-@onready var collision_shape: CollisionShape2D = $CollisionShape2D
-@onready var hurtbox: Area2D = $Hurtbox
-@onready var attack_hitbox: Area2D = $AttackHitbox
-@onready var attack_hitbox_shape: CollisionShape2D = $AttackHitbox/CollisionShape2D
-@onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
-
-# Chỉ số từ stats.json
-var max_hp: int = 100
-var current_hp: int = 100
-var max_stamina: float = 100.0
-var current_stamina: float = 100.0
-
-var move_speed: float = 95.0
-var dodge_speed_multiplier: float = 1.85
-var dodge_duration: float = 0.25
-var dodge_cooldown: float = 0.2
-var dodge_stamina_cost: float = 20.0
-var stamina_recovery_rate: float = 30.0
-var stamina_recovery_delay: float = 0.35
-
-# Thông số combo cận chiến từ stats.json
-var attack_combo_damage: Array = [15, 18, 28]
-var attack_cooldowns: Array = [0.15, 0.15, 0.45]
-var combo_window: float = 0.55
-var attack_stamina_costs: Array = [10.0, 12.0, 18.0]
-
-# Trạng thái di chuyển & né
-var facing_direction: Vector2 = Vector2.DOWN
-var is_dodging: bool = false
-var is_invulnerable: bool = false
-var can_dodge: bool = true
-var is_dead: bool = false
-
-var dodge_timer: float = 0.0
-var dodge_cooldown_timer: float = 0.0
-var stamina_delay_timer: float = 0.0
-var dodge_direction: Vector2 = Vector2.ZERO
-
-# Trạng thái combo tấn công
-var is_attacking: bool = false
-var can_attack: bool = true
-var combo_step: int = 0 # 0, 1, 2 tương ứng 3 đòn
-var attack_cooldown_timer: float = 0.0
-var combo_window_timer: float = 0.0
-var already_hit_enemies: Array[Node] = []
-var accumulated_melee_damage: int = 0
-
-# Hoạt ảnh và hit_frames
-var animations_config: Dictionary = {}
-var current_hit_frames: Array = []
-var is_in_hit_frame: bool = false
-var is_hurt: bool = false   # đang phát hurt animation → block update_animations
-
-var spawn_position: Vector2 = Vector2.ZERO
-var respawn_timer: float = 0.0
-var flash_timer: float = 0.0
-
-func _ready() -> void:
-	load_stats_from_data()
-	setup_animations()
-	spawn_position = global_position
-	current_hp = max_hp
-	current_stamina = max_stamina
-	hp_changed.emit(current_hp, max_hp)
-	stamina_changed.emit(current_stamina, max_stamina)
-	
-	if attack_hitbox != null:
-		attack_hitbox.monitoring = true
-		attack_hitbox.monitorable = false
-		attack_hitbox.area_entered.connect(_on_attack_hitbox_area_entered)
-	
-	if animated_sprite != null:
-		animated_sprite.frame_changed.connect(_on_sprite_frame_changed)
-		animated_sprite.animation_finished.connect(_on_sprite_animation_finished)
-	
-	update_animations()
-
-func load_stats_from_data() -> void:
-	max_hp = int(GameData.get_stat("player", "max_hp", 100))
-	max_stamina = float(GameData.get_stat("player", "max_stamina", 100.0))
-	move_speed = float(GameData.get_stat("player", "move_speed", 95.0))
-	dodge_speed_multiplier = float(GameData.get_stat("player", "dodge_speed_multiplier", 1.85))
-	dodge_duration = float(GameData.get_stat("player", "dodge_duration", 0.25))
-	dodge_cooldown = float(GameData.get_stat("player", "dodge_cooldown", 0.2))
-	dodge_stamina_cost = float(GameData.get_stat("player", "dodge_stamina_cost", 20.0))
-	stamina_recovery_rate = float(GameData.get_stat("player", "stamina_recovery_rate", 30.0))
-	stamina_recovery_delay = float(GameData.get_stat("player", "stamina_recovery_delay", 0.35))
-	
-	attack_combo_damage = GameData.get_stat("player", "attack_combo_damage", [15, 18, 28])
-	attack_cooldowns = GameData.get_stat("player", "attack_cooldowns", [0.15, 0.15, 0.45])
-	combo_window = float(GameData.get_stat("player", "combo_window", 0.55))
-	attack_stamina_costs = GameData.get_stat("player", "attack_stamina_costs", [10.0, 12.0, 18.0])
-	
-	# Nạp kích thước Collision & Hurtbox từ stats.json (Điểm 5)
-	var col_size: Array = GameData.get_stat("player", "collision_size", [10.0, 6.0])
-	var col_offset: Array = GameData.get_stat("player", "collision_offset", [0.0, -3.0])
-	var hurt_size: Array = GameData.get_stat("player", "hurtbox_size", [10.0, 14.0])
-	var hurt_offset: Array = GameData.get_stat("player", "hurtbox_offset", [0.0, -10.0])
-	
-	if collision_shape != null:
-		var col_rect := RectangleShape2D.new()
-		col_rect.size = Vector2(col_size[0], col_size[1])
-		collision_shape.shape = col_rect
-		collision_shape.position = Vector2(col_offset[0], col_offset[1])
-	
-	if hurtbox != null:
-		var hurt_col: CollisionShape2D = hurtbox.get_node_or_null("CollisionShape2D")
-		if hurt_col != null:
-			var hurt_rect := RectangleShape2D.new()
-			hurt_rect.size = Vector2(hurt_size[0], hurt_size[1])
-			hurt_col.shape = hurt_rect
-			hurt_col.position = Vector2(hurt_offset[0], hurt_offset[1])
-
-func setup_animations() -> void:
-	var anim_path := "res://assets/sprites/player/animations.json"
-	if FileAccess.file_exists(anim_path):
-		var file := FileAccess.open(anim_path, FileAccess.READ)
-		if file != null:
-			var json := JSON.new()
-			if json.parse(file.get_as_text()) == OK and json.data is Dictionary:
-				if json.data.has("player_egg") and json.data["player_egg"].has("animations"):
-					animations_config = json.data["player_egg"]["animations"]
-	
-	var sprite_frames := SpriteFrames.new()
-	for anim_name in animations_config:
-		var cfg: Dictionary = animations_config[anim_name]
-		var frame_count: int = int(cfg.get("frames", 4))
-		var fps: float = float(cfg.get("fps", 12))
-		var loop: bool = bool(cfg.get("loop", true))
-		
-		sprite_frames.add_animation(anim_name)
-		sprite_frames.set_animation_speed(anim_name, fps)
-		sprite_frames.set_animation_loop(anim_name, loop)
-		
-		var file_name: String = str(cfg.get("file", ""))
-		var full_img_path := "res://assets/sprites/player/" + file_name
-		
-		if ResourceLoader.exists(full_img_path):
-			var texture: Texture2D = load(full_img_path)
-			for i in range(frame_count):
-				var atlas := AtlasTexture.new()
-				atlas.atlas = texture
-				atlas.region = Rect2(i * 32, 0, 32, 32)
-				sprite_frames.add_frame(anim_name, atlas)
-		else:
-			var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
-			var placeholder_tex := ImageTexture.create_from_image(img)
-			for i in range(frame_count):
-				sprite_frames.add_frame(anim_name, placeholder_tex)
-	
-	animated_sprite.sprite_frames = sprite_frames
-	animated_sprite.offset = Vector2(0, -16)
-
-func _physics_process(delta: float) -> void:
-	if is_dead:
-		process_death(delta)
-		return
-	
-	process_cooldowns(delta)
-	process_input_and_movement(delta)
-	process_stamina(delta)
-	process_visual_effects(delta)
-	update_animations()
-	
-	if is_attacking and is_in_hit_frame:
-		check_melee_overlaps()
-
-func update_animations() -> void:
-	if is_dead:
-		return
-	
-	# Ẩn hoàn toàn hình khối tạm – sprite đã đủ
-	if visual_node != null and "show_placeholder_body" in visual_node:
-		visual_node.show_placeholder_body = false
-	animated_sprite.visible = true
-	
-	if is_attacking:
-		return  # hoạt ảnh attack đã được bật trong try_attack()
-	
-	var dir_suffix := get_direction_suffix(facing_direction)
-	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
-	animated_sprite.flip_h = flip_left
-	
-	if is_dodging:
-		var roll_anim := "roll_" + dir_suffix
-		if animated_sprite.animation != roll_anim or not animated_sprite.is_playing():
-			animated_sprite.play(roll_anim)
-		return
-	
-	if velocity == Vector2.ZERO:
-		var anim_name := "idle_" + dir_suffix
-		if animated_sprite.animation != anim_name or not animated_sprite.is_playing():
-			animated_sprite.play(anim_name)
-	else:
-		var run_anim := "run_" + dir_suffix
-		if animated_sprite.animation != run_anim or not animated_sprite.is_playing():
-			animated_sprite.play(run_anim)
-
-func process_cooldowns(delta: float) -> void:
-	if dodge_cooldown_timer > 0.0:
-		dodge_cooldown_timer -= delta
-		if dodge_cooldown_timer <= 0.0:
-			can_dodge = true
-	
-	if attack_cooldown_timer > 0.0:
-		attack_cooldown_timer -= delta
-		if attack_cooldown_timer <= 0.0:
-			can_attack = true
-	
-	if combo_window_timer > 0.0:
-		combo_window_timer -= delta
-		if combo_window_timer <= 0.0 and not is_attacking:
-			combo_step = 0
-	
-	if stamina_delay_timer > 0.0:
-		stamina_delay_timer -= delta
-
-func process_input_and_movement(delta: float) -> void:
-	if is_dodging:
-		dodge_timer -= delta
-		velocity = dodge_direction * (move_speed * dodge_speed_multiplier)
-		move_and_slide()
-		if dodge_timer <= 0.0:
-			end_dodge()
-		return
-	
-	if is_attacking:
-		velocity = Vector2.ZERO
-		move_and_slide()
-		return
-	
-	var input_vector: Vector2 = Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	if input_vector != Vector2.ZERO:
-		facing_direction = input_vector.normalized()
-		velocity = input_vector * move_speed
-		stamina_delay_timer = maxf(stamina_delay_timer, stamina_recovery_delay)
-	else:
-		velocity = Vector2.ZERO
-	
-	if Input.is_action_just_pressed("attack"):
-		try_attack()
-	
-	if Input.is_action_just_pressed("dodge"):
-		try_dodge(input_vector)
-	
-	move_and_slide()
-
-func try_attack() -> void:
-	if is_attacking or is_dodging or not can_attack:
-		return
-	
-	var cost: float = float(attack_stamina_costs[combo_step])
-	if current_stamina < cost:
-		print("[PLAYER] Không đủ Stamina để tấn công đòn %d! (Cần %.1f, có %.1f)" % [combo_step + 1, cost, current_stamina])
-		return
-	
-	current_stamina -= cost
-	stamina_changed.emit(current_stamina, max_stamina)
-	stamina_delay_timer = stamina_recovery_delay
-	
-	is_attacking = true
-	can_attack = false
-	already_hit_enemies.clear()
-	combo_stepped.emit(combo_step)
-	
-	var dir_suffix := get_direction_suffix(facing_direction)
-	var anim_name := "attack_" + dir_suffix
-	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
-	
-	animated_sprite.flip_h = flip_left
-	update_attack_hitbox_transform(dir_suffix, flip_left)
-	
-	if animations_config.has(anim_name):
-		current_hit_frames = animations_config[anim_name].get("hit_frames", [2])
-	else:
-		current_hit_frames = [2]
-	
-	is_in_hit_frame = false
-	animated_sprite.play(anim_name)
-	print("[PLAYER] Tung đòn combo %d/3! Sát thương: %d, Hướng: %s, Tiêu hao: %.1f Stamina" % [
-		combo_step + 1, attack_combo_damage[combo_step], dir_suffix, cost
-	])
-	
-	if visual_node != null and visual_node.has_method("start_attack_visual"):
-		visual_node.start_attack_visual(facing_direction, combo_step)
-
-func _on_sprite_frame_changed() -> void:
-	if not is_attacking:
-		return
-	
-	var cur_frame: int = animated_sprite.frame
-	if cur_frame in current_hit_frames:
-		is_in_hit_frame = true
-		check_melee_overlaps()
-	else:
-		is_in_hit_frame = false
-
-func _on_sprite_animation_finished() -> void:
-	if is_attacking:
-		end_attack()
-
-func end_attack() -> void:
-	is_attacking = false
-	is_in_hit_frame = false
-	
-	attack_cooldown_timer = float(attack_cooldowns[combo_step])
-	
-	if combo_step < 2:
-		combo_step += 1
-		combo_window_timer = combo_window
-	else:
-		combo_step = 0
-		combo_window_timer = 0.0
-
-func update_attack_hitbox_transform(dir_suffix: String, flip_left: bool) -> void:
-	match dir_suffix:
-		"down":
-			attack_hitbox.position = Vector2(0, 6)
-		"up":
-			attack_hitbox.position = Vector2(0, -24)
-		"side":
-			if flip_left:
-				attack_hitbox.position = Vector2(-16, -10)
-			else:
-				attack_hitbox.position = Vector2(16, -10)
-
-func check_melee_overlaps() -> void:
-	var areas := attack_hitbox.get_overlapping_areas()
-	for area in areas:
-		_process_hit_target(area)
-
-func _on_attack_hitbox_area_entered(area: Area2D) -> void:
-	if is_in_hit_frame:
-		_process_hit_target(area)
-
-func _process_hit_target(area: Area2D) -> void:
-	var target: Node = area.get_parent()
-	if target != null and target != self and not target in already_hit_enemies:
-		if target.has_method("receive_hit"):
-			already_hit_enemies.append(target)
-			var dmg: int = int(attack_combo_damage[combo_step])
-			target.receive_hit(dmg, self)
-			print("[COMBAT] Đòn %d đánh trúng kẻ thù! Gây %d sát thương." % [combo_step + 1, dmg])
-			
-			accumulated_melee_damage += dmg
-			if accumulated_melee_damage >= 10:
-				var guard_pts := accumulated_melee_damage / 10
-				accumulated_melee_damage = accumulated_melee_damage % 10
-				BehaviorTracker.add_points(BehaviorTracker.ACTION_GUARD, guard_pts)
-
-func get_direction_suffix(dir: Vector2) -> String:
-	if abs(dir.x) >= abs(dir.y):
-		return "side"
-	elif dir.y > 0:
-		return "down"
-	else:
-		return "up"
-
-func try_dodge(input_vector: Vector2) -> void:
-	if not can_dodge or is_dodging or is_attacking:
-		return
-	
-	if current_stamina < dodge_stamina_cost:
-		print("[PLAYER] Không đủ Stamina để lăn né! (Cần %.1f, có %.1f)" % [dodge_stamina_cost, current_stamina])
-		return
-	
-	current_stamina -= dodge_stamina_cost
-	stamina_changed.emit(current_stamina, max_stamina)
-	stamina_delay_timer = stamina_recovery_delay
-	
-	is_dodging = true
-	is_invulnerable = true
-	can_dodge = false
-	dodge_timer = dodge_duration
-	
-	if input_vector != Vector2.ZERO:
-		dodge_direction = input_vector.normalized()
-	else:
-		dodge_direction = facing_direction
-	
-	print("[PLAYER] Lăn né! Khung bất tử: %.2fs, tốn %.1f Stamina" % [dodge_duration, dodge_stamina_cost])
-
-func end_dodge() -> void:
-	is_dodging = false
-	is_invulnerable = false
-	dodge_cooldown_timer = dodge_cooldown
-
-func process_stamina(delta: float) -> void:
-	if not is_dodging and not is_attacking and velocity == Vector2.ZERO and stamina_delay_timer <= 0.0:
-		if current_stamina < max_stamina:
-			current_stamina = minf(max_stamina, current_stamina + stamina_recovery_rate * delta)
-			stamina_changed.emit(current_stamina, max_stamina)
-
-var hurt_invulnerable_timer: float = 0.0
-
-func process_visual_effects(delta: float) -> void:
-	if hurt_invulnerable_timer > 0.0:
-		hurt_invulnerable_timer -= delta
-		if hurt_invulnerable_timer <= 0.0:
-			is_invulnerable = false
-	
-	if flash_timer > 0.0:
-		flash_timer -= delta
-		if flash_timer <= 0.0:
-			modulate = Color.WHITE
-
-func receive_hit(damage: int, _attack_source: Node) -> Dictionary:
-	if is_dead:
-		return {"hit": false, "dodged": false}
-	
-	if is_invulnerable:
-		if is_dodging:
-			print("[COMBAT] Né thành công đòn đánh! +2 điểm DODGE")
-			BehaviorTracker.add_points(BehaviorTracker.ACTION_DODGE, 2)
-			return {"hit": false, "dodged": true}
-		else:
-			# Đang trong thời gian chớp miễn nhiễm sau khi bị thương (i-frame)
-			return {"hit": false, "dodged": false}
-	
-	current_hp = maxi(0, current_hp - damage)
-	hp_changed.emit(current_hp, max_hp)
-	print("[COMBAT] Player nhận %d sát thương! HP còn: %d/%d" % [damage, current_hp, max_hp])
-	
-	# Cập nhật tỉ lệ máu cho EggVisual để vẽ vết nứt to dần
-	if visual_node != null and visual_node.has_method("set_hp_ratio"):
-		visual_node.set_hp_ratio(float(current_hp) / float(maxi(1, max_hp)))
-	
-	# Bắn hiệu ứng mảnh vỏ văng tung tóe
-	if visual_node != null and visual_node.has_method("spawn_shell_burst"):
-		visual_node.spawn_shell_burst(7)
-	
-	if current_hp <= 0:
-		die()
-		return {"hit": true, "dodged": false}
-	
-	# Khung bất tử ngắn (i-frame 0.25s) và chớp đỏ phản hồi trúng đòn
-	is_invulnerable = true
-	hurt_invulnerable_timer = 0.25
-	flash_timer = 0.18
-	modulate = Palette.DO_GACH
-	
-	return {"hit": true, "dodged": false}
-
-func die() -> void:
-	is_dead = true
-	is_hurt = false
-	velocity = Vector2.ZERO
-	is_dodging = false
-	is_invulnerable = false
-	is_attacking = false
-	combo_step = 0
-	respawn_timer = 1.5
-	modulate = Color.WHITE
-	print("[PLAYER] VỎ ĐÃ VỠ... Bắt đầu chuẩn bị hồi sinh.")
-	
-	# Phát death animation
-	var dir_suffix := get_direction_suffix(facing_direction)
-	var death_anim := "death_" + dir_suffix
-	if animated_sprite != null and animations_config.has(death_anim):
-		animated_sprite.play(death_anim)
-	
-	player_died.emit()
-
-func process_death(delta: float) -> void:
-	respawn_timer -= delta
-	if respawn_timer <= 0.0:
-		respawn()
-
-func respawn() -> void:
-	global_position = spawn_position
-	current_hp = max_hp
-	current_stamina = max_stamina
-	is_dead = false
-	is_hurt = false
-	is_dodging = false
-	is_invulnerable = false
-	hurt_invulnerable_timer = 0.0
-	is_attacking = false
-	can_dodge = true
-	can_attack = true
-	combo_step = 0
-	dodge_cooldown_timer = 0.0
-	attack_cooldown_timer = 0.0
-	modulate = Color.WHITE
-	if visual_node != null and visual_node.has_method("set_hp_ratio"):
-		visual_node.set_hp_ratio(1.0)
-	hp_changed.emit(current_hp, max_hp)
-	stamina_changed.emit(current_stamina, max_stamina)
-	print("[PLAYER] Trứng đã hồi sinh tại điểm bắt đầu!")
-	player_respawned.emit()
-`
-
-### scripts/ui/hud.gd
-`gdscript
-extends CanvasLayer
-
-# HUD hiển thị máu, thể lực và thông báo tạm thời.
-# Toàn bộ màu sắc lấy trực tiếp từ Palette (GDD Mục 3).
-
-@onready var hp_bar_fill: ColorRect = $MarginContainer/VBoxContainer/HPBar/Fill
-@onready var hp_bar_bg: ColorRect = $MarginContainer/VBoxContainer/HPBar/Background
-@onready var stamina_bar_fill: ColorRect = $MarginContainer/VBoxContainer/StaminaBar/Fill
-@onready var stamina_bar_bg: ColorRect = $MarginContainer/VBoxContainer/StaminaBar/Background
-@onready var debug_label: Label = $MarginContainer/VBoxContainer/DebugDodgeLabel
-@onready var death_overlay: Control = $DeathOverlay
-
-var max_hp: int = 100
-var current_hp: int = 100
-var max_stamina: float = 100.0
-var current_stamina: float = 100.0
-
-var hp_bar_max_width: float = 64.0
-var stamina_bar_max_width: float = 52.0
-
-var show_debug_dodge: bool = false
-
-func _ready() -> void:
-	apply_palette()
-	# Nạp cờ debug từ stats.json
-	show_debug_dodge = bool(GameData.get_stat("debug", "show_dodge_debug", false))
-	update_debug_display()
-	death_overlay.visible = false
-	
-	BehaviorTracker.points_changed.connect(_on_behavior_points_changed)
-
-func apply_palette() -> void:
-	# Màu sắc chuẩn GDD Mục 3
-	hp_bar_bg.color = Palette.NAU_HAM
-	hp_bar_fill.color = Palette.DO_GACH
-	
-	stamina_bar_bg.color = Palette.NAU_HAM
-	stamina_bar_fill.color = Palette.XANH_LA_UA
-	
-	debug_label.add_theme_color_override("font_color", Palette.KEM)
-	
-	var death_label: Label = $DeathOverlay/CenterContainer/VBoxContainer/DeathLabel
-	death_label.add_theme_color_override("font_color", Palette.DO_GACH)
-	var death_sub: Label = $DeathOverlay/CenterContainer/VBoxContainer/SubLabel
-	death_sub.add_theme_color_override("font_color", Palette.KEM)
-	var death_panel: ColorRect = $DeathOverlay/CenterContainer/VBoxContainer/PanelBg
-	death_panel.color = Palette.NAU_HAM
-
-func _unhandled_key_input(event: InputEvent) -> void:
-	# Bật/tắt nhãn debug DODGE bằng phím F3
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_F3:
-			show_debug_dodge = not show_debug_dodge
-			update_debug_display()
-
-func update_hp(new_hp: int, new_max_hp: int) -> void:
-	current_hp = new_hp
-	max_hp = new_max_hp
-	var ratio: float = clampf(float(current_hp) / float(maxi(1, max_hp)), 0.0, 1.0)
-	hp_bar_fill.size.x = hp_bar_max_width * ratio
-
-func update_stamina(new_stamina: float, new_max_stamina: float) -> void:
-	current_stamina = new_stamina
-	max_stamina = new_max_stamina
-	var ratio: float = clampf(current_stamina / maxf(1.0, max_stamina), 0.0, 1.0)
-	stamina_bar_fill.size.x = stamina_bar_max_width * ratio
-
-func _on_behavior_points_changed(action_name: String, _new_points: int, _total: int) -> void:
-	if action_name == BehaviorTracker.ACTION_DODGE:
-		update_debug_display()
-
-func update_debug_display() -> void:
-	debug_label.visible = show_debug_dodge
-	if show_debug_dodge:
-		debug_label.text = "[DEBUG F3] DODGE: %d" % BehaviorTracker.get_points(BehaviorTracker.ACTION_DODGE)
-
-func show_death_screen(show_it: bool) -> void:
-	death_overlay.visible = show_it
 `
