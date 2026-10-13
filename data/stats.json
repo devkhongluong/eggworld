@@ -25,7 +25,12 @@
 	"attack_combo_damage": [15, 18, 28],
 	"attack_cooldowns": [0.15, 0.15, 0.45],
 	"combo_window": 0.55,
-	"attack_stamina_costs": [10.0, 12.0, 18.0]
+	"attack_stamina_costs": [10.0, 12.0, 18.0],
+	"guard_damage_reduction": 0.75,
+	"guard_stamina_cost_per_hit": 25.0,
+	"guard_speed_multiplier": 0.45,
+	"guard_break_stun_duration": 0.8,
+	"guard_arc_degrees": 180.0
   },
   "dummy_enemy": {
 	"max_hp": 50,

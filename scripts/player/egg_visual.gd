@@ -16,8 +16,18 @@ var current_hp_ratio: float = 1.0
 # Danh sách mảnh vỏ đang văng: { pos: Vector2, vel: Vector2, color: Color, size: Vector2, life: float, max_life: float }
 var shell_shards: Array[Dictionary] = []
 
+# Trạng thái đỡ đòn
+var is_guarding: bool = false
+var guard_dir: Vector2 = Vector2.DOWN
+
 func _ready() -> void:
 	set_process(true)
+
+func set_guarding(guarding: bool, dir: Vector2) -> void:
+	if is_guarding != guarding or guard_dir != dir:
+		is_guarding = guarding
+		guard_dir = dir
+		queue_redraw()
 
 func set_hp_ratio(ratio: float) -> void:
 	current_hp_ratio = clampf(ratio, 0.0, 1.0)
@@ -122,3 +132,15 @@ func _draw() -> void:
 		var end_ang: float = base_angle + PI * 0.45
 		draw_arc(slash_center, arc_radius, start_ang, end_ang, 12, slash_color, 2.0)
 		draw_arc(slash_center, arc_radius - 2.0, start_ang, end_ang, 12, Palette.NAU_HAM, 1.0)
+	
+	# 4. Hình khối tạm thời biểu diễn thế Đỡ Đòn (Guard)
+	if is_guarding:
+		var shield_center := Vector2(0, -10) + guard_dir.normalized() * 11.0
+		var guard_angle: float = guard_dir.angle()
+		var g_start: float = guard_angle - PI * 0.40
+		var g_end: float = guard_angle + PI * 0.40
+		# Vòng vòng cung khiên Xám Sắt với viền Nâu Hầm
+		draw_arc(shield_center, 9.0, g_start, g_end, 10, Palette.NAU_HAM, 3.5)
+		draw_arc(shield_center, 9.0, g_start, g_end, 10, Palette.XAM_SAT, 2.0)
+		# Điểm tâm khiên Vàng Cổ
+		draw_circle(shield_center, 2.0, Palette.VANG_CO)

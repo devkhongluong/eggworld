@@ -63,6 +63,16 @@ var combo_window_timer: float = 0.0
 var already_hit_enemies: Array[Node] = []
 var accumulated_melee_damage: int = 0
 
+# Trạng thái đỡ đòn (Guard)
+var is_guarding: bool = false
+var is_stunned: bool = false
+var stun_timer: float = 0.0
+var guard_damage_reduction: float = 0.75
+var guard_stamina_cost_per_hit: float = 25.0
+var guard_speed_multiplier: float = 0.45
+var guard_break_stun_duration: float = 0.8
+var guard_arc_degrees: float = 180.0
+
 # Hoạt ảnh và hit_frames
 var animations_config: Dictionary = {}
 var current_hit_frames: Array = []
@@ -108,6 +118,12 @@ func load_stats_from_data() -> void:
 	attack_cooldowns = GameData.get_stat("player", "attack_cooldowns", [0.15, 0.15, 0.45])
 	combo_window = float(GameData.get_stat("player", "combo_window", 0.55))
 	attack_stamina_costs = GameData.get_stat("player", "attack_stamina_costs", [10.0, 12.0, 18.0])
+	
+	guard_damage_reduction = float(GameData.get_stat("player", "guard_damage_reduction", 0.75))
+	guard_stamina_cost_per_hit = float(GameData.get_stat("player", "guard_stamina_cost_per_hit", 25.0))
+	guard_speed_multiplier = float(GameData.get_stat("player", "guard_speed_multiplier", 0.45))
+	guard_break_stun_duration = float(GameData.get_stat("player", "guard_break_stun_duration", 0.8))
+	guard_arc_degrees = float(GameData.get_stat("player", "guard_arc_degrees", 180.0))
 	
 	# Nạp kích thước Collision & Hurtbox từ stats.json (Điểm 5)
 	var col_size: Array = GameData.get_stat("player", "collision_size", [10.0, 6.0])
@@ -230,11 +246,27 @@ func process_cooldowns(delta: float) -> void:
 		if combo_window_timer <= 0.0 and not is_attacking:
 			combo_step = 0
 	
+	if stun_timer > 0.0:
+		stun_timer -= delta
+		if stun_timer <= 0.0:
+			is_stunned = false
+	
 	if stamina_delay_timer > 0.0:
 		stamina_delay_timer -= delta
 
 func process_input_and_movement(delta: float) -> void:
+	if is_stunned:
+		is_guarding = false
+		if visual_node != null and visual_node.has_method("set_guarding"):
+			visual_node.set_guarding(false, facing_direction)
+		velocity = Vector2.ZERO
+		move_and_slide()
+		return
+	
 	if is_dodging:
+		is_guarding = false
+		if visual_node != null and visual_node.has_method("set_guarding"):
+			visual_node.set_guarding(false, facing_direction)
 		dodge_timer -= delta
 		velocity = dodge_direction * (move_speed * dodge_speed_multiplier)
 		move_and_slide()
@@ -243,20 +275,33 @@ func process_input_and_movement(delta: float) -> void:
 		return
 	
 	if is_attacking:
+		is_guarding = false
+		if visual_node != null and visual_node.has_method("set_guarding"):
+			visual_node.set_guarding(false, facing_direction)
 		velocity = Vector2.ZERO
 		move_and_slide()
 		return
 	
+	# Kiểm tra trạng thái Giữ Guard
+	var wants_guard: bool = Input.is_action_pressed("guard") and current_stamina > 0.0
+	is_guarding = wants_guard
+	if visual_node != null and visual_node.has_method("set_guarding"):
+		visual_node.set_guarding(is_guarding, facing_direction)
+	
 	var input_vector: Vector2 = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if input_vector != Vector2.ZERO:
 		facing_direction = input_vector.normalized()
-		velocity = input_vector * move_speed
+		var speed: float = move_speed
+		if is_guarding:
+			speed *= guard_speed_multiplier
+		velocity = input_vector * speed
 		stamina_delay_timer = maxf(stamina_delay_timer, stamina_recovery_delay)
 	else:
 		velocity = Vector2.ZERO
 	
-	if Input.is_action_just_pressed("attack"):
-		try_attack()
+	if not is_guarding:
+		if Input.is_action_just_pressed("attack"):
+			try_attack()
 	
 	if Input.is_action_just_pressed("dodge"):
 		try_dodge(input_vector)
@@ -404,7 +449,7 @@ func end_dodge() -> void:
 	dodge_cooldown_timer = dodge_cooldown
 
 func process_stamina(delta: float) -> void:
-	if not is_dodging and not is_attacking and velocity == Vector2.ZERO and stamina_delay_timer <= 0.0:
+	if not is_dodging and not is_attacking and not is_guarding and not is_stunned and velocity == Vector2.ZERO and stamina_delay_timer <= 0.0:
 		if current_stamina < max_stamina:
 			current_stamina = minf(max_stamina, current_stamina + stamina_recovery_rate * delta)
 			stamina_changed.emit(current_stamina, max_stamina)
@@ -422,46 +467,105 @@ func process_visual_effects(delta: float) -> void:
 		if flash_timer <= 0.0:
 			modulate = Color.WHITE
 
-func receive_hit(damage: int, _attack_source: Node) -> Dictionary:
+func receive_hit(damage: int, attack_source: Node) -> Dictionary:
 	if is_dead:
-		return {"hit": false, "dodged": false}
+		return {"hit": false, "dodged": false, "guarded": false}
 	
 	if is_invulnerable:
 		if is_dodging:
 			print("[COMBAT] Né thành công đòn đánh! +2 điểm DODGE")
 			BehaviorTracker.add_points(BehaviorTracker.ACTION_DODGE, 2)
-			return {"hit": false, "dodged": true}
+			return {"hit": false, "dodged": true, "guarded": false}
 		else:
 			# Đang trong thời gian chớp miễn nhiễm sau khi bị thương (i-frame)
-			return {"hit": false, "dodged": false}
+			return {"hit": false, "dodged": false, "guarded": false}
 	
-	current_hp = maxi(0, current_hp - damage)
+	# Kiểm tra cơ chế Đỡ Đòn (Guard)
+	var guarded_successfully: bool = false
+	var final_damage: int = damage
+	
+	if is_guarding and not is_stunned:
+		# Xác định hướng từ Player tới nguồn tấn công
+		var incoming_dir := facing_direction
+		if attack_source != null and "global_position" in attack_source:
+			var diff: Vector2 = (attack_source.global_position - global_position)
+			if diff != Vector2.ZERO:
+				incoming_dir = diff.normalized()
+		
+		# Tính góc giữa hướng nhìn của Player và hướng của đòn tấn công
+		var angle_diff_rad: float = abs(facing_direction.angle_to(incoming_dir))
+		var max_allowed_rad: float = deg_to_rad(guard_arc_degrees * 0.5)
+		
+		if angle_diff_rad <= max_allowed_rad:
+			# Đòn đánh nằm trong cung đỡ phía trước!
+			if current_stamina >= guard_stamina_cost_per_hit:
+				# Đỡ thành công
+				current_stamina -= guard_stamina_cost_per_hit
+				stamina_changed.emit(current_stamina, max_stamina)
+				stamina_delay_timer = stamina_recovery_delay
+				
+				final_damage = int(round(float(damage) * (1.0 - guard_damage_reduction)))
+				guarded_successfully = true
+				
+				BehaviorTracker.add_points(BehaviorTracker.ACTION_GUARD, 2)
+				print("[COMBAT] Đỡ đòn thành công! Giảm sát thương từ %d xuống %d (-%.1f Stamina, +2 GUARD)" % [
+					damage, final_damage, guard_stamina_cost_per_hit
+				])
+				
+				# Hiệu ứng nảy lùi nhẹ & nháy sáng Xám Sắt
+				modulate = Palette.XAM_SAT
+				flash_timer = 0.12
+			else:
+				# Vỡ thế đỡ (Guard Break): Hết stamina khi đỡ
+				current_stamina = 0.0
+				stamina_changed.emit(current_stamina, max_stamina)
+				stamina_delay_timer = stamina_recovery_delay * 1.5
+				
+				is_guarding = false
+				is_stunned = true
+				stun_timer = guard_break_stun_duration
+				final_damage = damage # Nhận trọn sát thương
+				
+				if visual_node != null and visual_node.has_method("set_guarding"):
+					visual_node.set_guarding(false, facing_direction)
+				
+				print("[COMBAT] VỠ THẾ ĐỠ (Guard Break)! Choáng trong %.2fs và nhận trọn %d sát thương!" % [
+					guard_break_stun_duration, final_damage
+				])
+		else:
+			print("[COMBAT] Bị đánh từ phía sau / ngoài cung đỡ (góc: %.1f độ)! Không thể đỡ đòn." % rad_to_deg(angle_diff_rad))
+	
+	current_hp = maxi(0, current_hp - final_damage)
 	hp_changed.emit(current_hp, max_hp)
-	print("[COMBAT] Player nhận %d sát thương! HP còn: %d/%d" % [damage, current_hp, max_hp])
+	print("[COMBAT] Player nhận %d sát thương! HP còn: %d/%d" % [final_damage, current_hp, max_hp])
 	
 	# Cập nhật tỉ lệ máu cho EggVisual để vẽ vết nứt to dần
 	if visual_node != null and visual_node.has_method("set_hp_ratio"):
 		visual_node.set_hp_ratio(float(current_hp) / float(maxi(1, max_hp)))
 	
-	# Bắn hiệu ứng mảnh vỏ văng tung tóe
+	# Bắn hiệu ứng mảnh vỏ văng tung tóe (nếu đỡ thành công văng ít hơn)
 	if visual_node != null and visual_node.has_method("spawn_shell_burst"):
-		visual_node.spawn_shell_burst(7)
+		visual_node.spawn_shell_burst(3 if guarded_successfully else 7)
 	
 	if current_hp <= 0:
 		die()
-		return {"hit": true, "dodged": false}
+		return {"hit": true, "dodged": false, "guarded": guarded_successfully}
 	
-	# Khung bất tử ngắn (i-frame 0.25s) và chớp đỏ phản hồi trúng đòn
-	is_invulnerable = true
-	hurt_invulnerable_timer = 0.25
-	flash_timer = 0.18
-	modulate = Palette.DO_GACH
+	if not guarded_successfully:
+		# Khung bất tử ngắn (i-frame 0.25s) và chớp đỏ phản hồi trúng đòn
+		is_invulnerable = true
+		hurt_invulnerable_timer = 0.25
+		flash_timer = 0.18
+		modulate = Palette.DO_GACH
 	
-	return {"hit": true, "dodged": false}
+	return {"hit": true, "dodged": false, "guarded": guarded_successfully}
 
 func die() -> void:
 	is_dead = true
 	is_hurt = false
+	is_guarding = false
+	is_stunned = false
+	stun_timer = 0.0
 	velocity = Vector2.ZERO
 	is_dodging = false
 	is_invulnerable = false
@@ -469,6 +573,8 @@ func die() -> void:
 	combo_step = 0
 	respawn_timer = 1.5
 	modulate = Color.WHITE
+	if visual_node != null and visual_node.has_method("set_guarding"):
+		visual_node.set_guarding(false, facing_direction)
 	print("[PLAYER] VỎ ĐÃ VỠ... Bắt đầu chuẩn bị hồi sinh.")
 	
 	# Phát death animation
@@ -490,6 +596,9 @@ func respawn() -> void:
 	current_stamina = max_stamina
 	is_dead = false
 	is_hurt = false
+	is_guarding = false
+	is_stunned = false
+	stun_timer = 0.0
 	is_dodging = false
 	is_invulnerable = false
 	hurt_invulnerable_timer = 0.0
@@ -500,6 +609,8 @@ func respawn() -> void:
 	dodge_cooldown_timer = 0.0
 	attack_cooldown_timer = 0.0
 	modulate = Color.WHITE
+	if visual_node != null and visual_node.has_method("set_guarding"):
+		visual_node.set_guarding(false, facing_direction)
 	if visual_node != null and visual_node.has_method("set_hp_ratio"):
 		visual_node.set_hp_ratio(1.0)
 	hp_changed.emit(current_hp, max_hp)
