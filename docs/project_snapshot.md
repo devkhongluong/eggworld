@@ -500,8 +500,6 @@ cycle_item={
 ]
 }
 
-
-
 [physics]
 
 3d/physics_engine="Jolt Physics"
@@ -2279,11 +2277,11 @@ func _draw_dynamic_weapon() -> void:
 				# Dao găm đâm thẳng vọt tới trước cực nhanh
 				var thrust_dist: float = 4.0
 				if progress < 0.20:
-					thrust_dist = lerp(4.0, 0.0, progress / 0.20)
+					thrust_dist = lerpf(4.0, 0.0, progress / 0.20)
 				elif progress < 0.60:
-					thrust_dist = lerp(0.0, 22.0, (progress - 0.20) / 0.40)
+					thrust_dist = lerpf(0.0, 22.0, (progress - 0.20) / 0.40)
 				else:
-					thrust_dist = lerp(22.0, 4.0, (progress - 0.60) / 0.40)
+					thrust_dist = lerpf(22.0, 4.0, (progress - 0.60) / 0.40)
 				
 				var hilt := pivot + aim * thrust_dist
 				var tip := pivot + aim * (thrust_dist + 14.0)
@@ -2318,7 +2316,7 @@ func _draw_dynamic_weapon() -> void:
 					draw_circle(pull_pos, 2.0, Palette.XAM_SAT)
 			
 			"unarmed", _:
-				var p_dist := lerp(2.0, 14.0, sin(progress * PI))
+				var p_dist: float = lerpf(2.0, 14.0, sin(progress * PI))
 				draw_circle(pivot + aim * p_dist, 4.0, Palette.KEM)
 	else:
 		# --- TRẠNG THÁI NGHỈ: VŨ KHÍ NẰM GỌN BÊN HÔNG / TAY ---
