@@ -21,10 +21,10 @@ script = ExtResource("1_player")
 position = Vector2(0, -3)
 shape = SubResource("RectangleShape2D_col")
 
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+
 [node name="EggVisual" type="Node2D" parent="."]
 script = ExtResource("2_visual")
-
-[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 
 [node name="Hurtbox" type="Area2D" parent="."]
 collision_layer = 2

@@ -195,9 +195,6 @@ func update_animations() -> void:
 	if is_attacking:
 		return  # hoạt ảnh attack đã được bật trong try_attack()
 	
-	if is_hurt:
-		return  # hoạt ảnh hurt đang chạy, không ghi đè
-	
 	var dir_suffix := get_direction_suffix(facing_direction)
 	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
 	animated_sprite.flip_h = flip_left
@@ -319,10 +316,6 @@ func _on_sprite_frame_changed() -> void:
 func _on_sprite_animation_finished() -> void:
 	if is_attacking:
 		end_attack()
-	elif animated_sprite.animation.begins_with("hurt_"):
-		is_hurt = false
-		is_invulnerable = false
-		modulate = Color.WHITE
 
 func end_attack() -> void:
 	is_attacking = false
@@ -416,7 +409,14 @@ func process_stamina(delta: float) -> void:
 			current_stamina = minf(max_stamina, current_stamina + stamina_recovery_rate * delta)
 			stamina_changed.emit(current_stamina, max_stamina)
 
+var hurt_invulnerable_timer: float = 0.0
+
 func process_visual_effects(delta: float) -> void:
+	if hurt_invulnerable_timer > 0.0:
+		hurt_invulnerable_timer -= delta
+		if hurt_invulnerable_timer <= 0.0:
+			is_invulnerable = false
+	
 	if flash_timer > 0.0:
 		flash_timer -= delta
 		if flash_timer <= 0.0:
@@ -427,28 +427,35 @@ func receive_hit(damage: int, _attack_source: Node) -> Dictionary:
 		return {"hit": false, "dodged": false}
 	
 	if is_invulnerable:
-		print("[COMBAT] Né thành công đòn đánh! +2 điểm DODGE")
-		BehaviorTracker.add_points(BehaviorTracker.ACTION_DODGE, 2)
-		return {"hit": false, "dodged": true}
+		if is_dodging:
+			print("[COMBAT] Né thành công đòn đánh! +2 điểm DODGE")
+			BehaviorTracker.add_points(BehaviorTracker.ACTION_DODGE, 2)
+			return {"hit": false, "dodged": true}
+		else:
+			# Đang trong thời gian chớp miễn nhiễm sau khi bị thương (i-frame)
+			return {"hit": false, "dodged": false}
 	
 	current_hp = maxi(0, current_hp - damage)
 	hp_changed.emit(current_hp, max_hp)
 	print("[COMBAT] Player nhận %d sát thương! HP còn: %d/%d" % [damage, current_hp, max_hp])
 	
+	# Cập nhật tỉ lệ máu cho EggVisual để vẽ vết nứt to dần
+	if visual_node != null and visual_node.has_method("set_hp_ratio"):
+		visual_node.set_hp_ratio(float(current_hp) / float(maxi(1, max_hp)))
+	
+	# Bắn hiệu ứng mảnh vỏ văng tung tóe
+	if visual_node != null and visual_node.has_method("spawn_shell_burst"):
+		visual_node.spawn_shell_burst(7)
+	
 	if current_hp <= 0:
 		die()
 		return {"hit": true, "dodged": false}
 	
-	# Phát animation hurt
-	var dir_suffix := get_direction_suffix(facing_direction)
-	var hurt_anim := "hurt_" + dir_suffix
-	is_attacking = false
-	is_hurt = true
+	# Khung bất tử ngắn (i-frame 0.25s) và chớp đỏ phản hồi trúng đòn
 	is_invulnerable = true
-	flash_timer = 0.3
+	hurt_invulnerable_timer = 0.25
+	flash_timer = 0.18
 	modulate = Palette.DO_GACH
-	if animated_sprite != null and animations_config.has(hurt_anim):
-		animated_sprite.play(hurt_anim)
 	
 	return {"hit": true, "dodged": false}
 
@@ -485,6 +492,7 @@ func respawn() -> void:
 	is_hurt = false
 	is_dodging = false
 	is_invulnerable = false
+	hurt_invulnerable_timer = 0.0
 	is_attacking = false
 	can_dodge = true
 	can_attack = true
@@ -492,6 +500,8 @@ func respawn() -> void:
 	dodge_cooldown_timer = 0.0
 	attack_cooldown_timer = 0.0
 	modulate = Color.WHITE
+	if visual_node != null and visual_node.has_method("set_hp_ratio"):
+		visual_node.set_hp_ratio(1.0)
 	hp_changed.emit(current_hp, max_hp)
 	stamina_changed.emit(current_stamina, max_stamina)
 	print("[PLAYER] Trứng đã hồi sinh tại điểm bắt đầu!")
