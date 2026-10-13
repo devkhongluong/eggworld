@@ -1,0 +1,35 @@
+[gd_scene load_steps=5 format=3 uid="uid://cenemy001common"]
+
+[ext_resource type="Script" path="res://scripts/combat/base_enemy.gd" id="1_enemy"]
+[ext_resource type="Script" path="res://scripts/combat/common_enemy_visual.gd" id="2_visual"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
+size = Vector2(20, 20)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_attack"]
+radius = 24.0
+
+[node name="CommonEnemy" type="CharacterBody2D" groups=["enemies"]]
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("1_enemy")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="EnemyVisual" type="Node2D" parent="."]
+script = ExtResource("2_visual")
+
+[node name="AttackArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackArea"]
+shape = SubResource("CircleShape2D_attack")
+
+[node name="Hurtbox" type="Area2D" parent="." groups=["enemy_hurtbox"]]
+collision_layer = 16
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("RectangleShape2D_body")
