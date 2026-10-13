@@ -315,6 +315,9 @@ func _on_sprite_frame_changed() -> void:
 func _on_sprite_animation_finished() -> void:
 	if is_attacking:
 		end_attack()
+	elif animated_sprite.animation.begins_with("hurt_"):
+		is_invulnerable = false
+		modulate = Color.WHITE
 
 func end_attack() -> void:
 	is_attacking = false
@@ -427,11 +430,19 @@ func receive_hit(damage: int, _attack_source: Node) -> Dictionary:
 	hp_changed.emit(current_hp, max_hp)
 	print("[COMBAT] Player nhận %d sát thương! HP còn: %d/%d" % [damage, current_hp, max_hp])
 	
-	modulate = Palette.DO_GACH
-	flash_timer = 0.15
-	
 	if current_hp <= 0:
 		die()
+		return {"hit": true, "dodged": false}
+	
+	# Phát animation hurt
+	var dir_suffix := get_direction_suffix(facing_direction)
+	var hurt_anim := "hurt_" + dir_suffix
+	is_attacking = false
+	is_invulnerable = true
+	flash_timer = 0.3
+	modulate = Palette.DO_GACH
+	if animated_sprite != null and animations_config.has(hurt_anim):
+		animated_sprite.play(hurt_anim)
 	
 	return {"hit": true, "dodged": false}
 
@@ -443,8 +454,15 @@ func die() -> void:
 	is_attacking = false
 	combo_step = 0
 	respawn_timer = 1.5
-	modulate = Palette.XAM_SAT
+	modulate = Color.WHITE
 	print("[PLAYER] VỎ ĐÃ VỠ... Bắt đầu chuẩn bị hồi sinh.")
+	
+	# Phát death animation
+	var dir_suffix := get_direction_suffix(facing_direction)
+	var death_anim := "death_" + dir_suffix
+	if animated_sprite != null and animations_config.has(death_anim):
+		animated_sprite.play(death_anim)
+	
 	player_died.emit()
 
 func process_death(delta: float) -> void:
