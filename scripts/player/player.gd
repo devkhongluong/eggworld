@@ -15,6 +15,7 @@ signal player_died()
 signal player_respawned()
 signal combo_stepped(current_step: int)
 signal weapon_swapped(active_slot: int, weapon_id: String, weapon_name: String)
+signal shards_dropped(position: Vector2, amount: int)
 
 @onready var visual_node: Node2D = $EggVisual
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -117,27 +118,63 @@ func _ready() -> void:
 	if visual_node != null and visual_node.has_method("set_equipped_weapon"):
 		visual_node.set_equipped_weapon(current_weapon_id, facing_direction)
 	
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var inv = root.root.get_node_or_null("PlayerInventory")
+		if inv != null and inv.has_signal("stats_changed"):
+			inv.stats_changed.connect(apply_leveled_stats)
+	
 	update_animations()
+
+func apply_leveled_stats() -> void:
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var inv = root.root.get_node_or_null("PlayerInventory")
+		if inv != null and inv.has_method("get_effective_stats"):
+			player_stats = inv.get_effective_stats()
+	
+	var old_max_hp: int = max_hp
+	var old_max_stamina: float = max_stamina
+	max_hp = StatsCalc.calc_max_hp(player_stats)
+	max_stamina = StatsCalc.calc_max_stamina(player_stats)
+	
+	if max_hp > old_max_hp:
+		current_hp = mini(max_hp, current_hp + (max_hp - old_max_hp))
+	else:
+		current_hp = mini(current_hp, max_hp)
+	
+	if max_stamina > old_max_stamina:
+		current_stamina = minf(max_stamina, current_stamina + (max_stamina - old_max_stamina))
+	else:
+		current_stamina = minf(current_stamina, max_stamina)
+	
+	hp_changed.emit(current_hp, max_hp)
+	stamina_changed.emit(current_stamina, max_stamina)
+	print("[PLAYER] Đã áp dụng chỉ số mới: HP tối đa %d, Thể lực tối đa %.1f" % [max_hp, max_stamina])
 
 func load_stats_from_data() -> void:
 	debug_combat_log = bool(GameData.get_stat("debug", "show_combat_log", true))
-	var vit: int = int(GameData.get_stat("base_stats", "VIT", 10))
-	var hp_base: int = int(GameData.get_stat("formulas", "hp_base", 60))
-	var hp_per_vit: int = int(GameData.get_stat("formulas", "hp_per_vit", 4))
-	var sta_base: float = float(GameData.get_stat("formulas", "stamina_base", 60.0))
-	var sta_per_vit: float = float(GameData.get_stat("formulas", "stamina_per_vit", 2.0))
 	
-	max_hp = hp_base + vit * hp_per_vit
-	max_stamina = sta_base + float(vit) * sta_per_vit
+	var effective_stats: Dictionary = {}
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var inv = root.root.get_node_or_null("PlayerInventory")
+		if inv != null and inv.has_method("get_effective_stats"):
+			effective_stats = inv.get_effective_stats()
 	
-	player_stats = {
-		"STR": int(GameData.get_stat("base_stats", "STR", 10)),
-		"DEX": int(GameData.get_stat("base_stats", "DEX", 10)),
-		"INT": int(GameData.get_stat("base_stats", "INT", 10)),
-		"FAI": int(GameData.get_stat("base_stats", "FAI", 10)),
-		"VIT": vit,
-		"LUK": int(GameData.get_stat("base_stats", "LUK", 10))
-	}
+	if effective_stats.is_empty():
+		effective_stats = {
+			"STR": int(GameData.get_stat("base_stats", "STR", 10)),
+			"DEX": int(GameData.get_stat("base_stats", "DEX", 10)),
+			"INT": int(GameData.get_stat("base_stats", "INT", 10)),
+			"FAI": int(GameData.get_stat("base_stats", "FAI", 10)),
+			"VIT": int(GameData.get_stat("base_stats", "VIT", 10)),
+			"LUK": int(GameData.get_stat("base_stats", "LUK", 10))
+		}
+	
+	player_stats = effective_stats
+	max_hp = StatsCalc.calc_max_hp(player_stats)
+	max_stamina = StatsCalc.calc_max_stamina(player_stats)
 	current_weapon_data = WeaponDB.get_weapon(current_weapon_id)
 	
 	move_speed = float(GameData.get_stat("player", "move_speed", 95.0))
@@ -834,6 +871,22 @@ func die() -> void:
 	if visual_node != null and visual_node.has_method("set_dead"):
 		visual_node.set_dead(true)
 	print("[PLAYER] VỎ ĐÃ VỠ... Bắt đầu chuẩn bị hồi sinh.")
+	
+	# Rơi đống Mảnh Vỏ Vụn tại chỗ chết nếu Player có Mảnh Vỏ
+	var root = Engine.get_main_loop()
+	var current_shards: int = 0
+	var inv_node = null
+	if root != null and root.root != null:
+		inv_node = root.root.get_node_or_null("PlayerInventory")
+		if inv_node != null and "shell_shards" in inv_node:
+			current_shards = int(inv_node.shell_shards)
+	
+	if current_shards > 0:
+		LostShard.spawn_at(get_parent(), global_position, current_shards)
+		if inv_node != null and inv_node.has_method("spend_all_shards"):
+			inv_node.spend_all_shards()
+		shards_dropped.emit(global_position, current_shards)
+		print("[PLAYER] Đã đánh rơi %d Mảnh Vỏ Vụn tại %s!" % [current_shards, global_position])
 	
 	# Phát death animation
 	var dir_suffix := get_direction_suffix(facing_direction)

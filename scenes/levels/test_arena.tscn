@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://scenes/enemies/dummy_enemy.tscn" id="3_enemy"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/common_enemy.tscn" id="3_common_enemy"]
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="4_hud"]
+[ext_resource type="PackedScene" path="res://scenes/world/straw_bed.tscn" id="5_straw_bed"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_horiz"]
 size = Vector2(480, 16)
@@ -61,6 +62,9 @@ color = Color(0.168627, 0.121569, 0.101961, 1)
 [node name="RightCollision" type="CollisionShape2D" parent="Walls"]
 position = Vector2(472, 135)
 shape = SubResource("RectangleShape2D_vert")
+
+[node name="StrawBed" parent="." instance=ExtResource("5_straw_bed")]
+position = Vector2(80, 135)
 
 [node name="DummyEnemy" parent="." instance=ExtResource("3_enemy")]
 position = Vector2(260, 135)

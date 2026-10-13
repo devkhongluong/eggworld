@@ -62,5 +62,23 @@
   "debug": {
 	"show_dodge_debug": false,
 	"show_combat_log": true
+  },
+  "leveling": {
+	"cost_base": 40,
+	"cost_growth": 1.18
+  },
+  "scaling_coeff": {
+	"S": 0.08,
+	"A": 0.06,
+	"B": 0.045,
+	"C": 0.03,
+	"D": 0.02,
+	"E": 0.01,
+	"-": 0.0
+  },
+  "requirement_penalty": {
+	"damage_mult_per_pt": 0.05,
+	"damage_min_mult": 0.5,
+	"stamina_mult_per_pt": 0.04
   }
 }

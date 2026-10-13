@@ -101,19 +101,30 @@
     - Cập nhật HUD: hiển thị trực quan `[Q] Vũ khí (X/3): [Tên vũ khí]`, tự động cập nhật khi đổi ô.
     - Kịch bản kiểm thử tự động toàn diện: `tools/test_combat_stage_a.gd` (kiểm tra đầy đủ 7 tiêu chí đơn vị).
     - *File liên quan:* `data/weapons.json`, `data/stats.json`, `project.godot`, `scripts/autoload/game_data.gd`, `scripts/combat/*.gd`, `scripts/player/*.gd`, `scripts/ui/hud.gd`, `scenes/ui/hud.tscn`, `scenes/levels/test_arena.gd`, `tools/test_combat_stage_a.gd`.
+13. **Hệ thống Lên cấp & Ổ Rơm (Leveling System & Straw Bed - COMBAT_SPEC mục 9):**
+    - `data/stats.json`: Bổ sung cấu hình `leveling` (`cost_base: 40`, `cost_growth: 1.18`), `scaling_coeff` (S/A/B/C/D/E/-), và `requirement_penalty`.
+    - `scripts/combat/stats_calculator.gd` (`StatsCalc`): Dịch vụ tính toán chỉ số phái sinh và công thức cân bằng (`calc_max_hp`, `calc_max_stamina`, `calc_equip_capacity`, `calc_max_mp`, `calc_weapon_damage`, `calc_level_cost`, `calc_level`).
+    - `scripts/autoload/player_inventory.gd` (`PlayerInventory` Autoload): Quản lý tích lũy Mảnh Vỏ Vụn (EXP), 6 chỉ số (VIT, STR, DEX, INT, FAI, LUK), cấp độ nhân vật, thăng cấp và chi tiêu; phát tín hiệu `shards_changed` và `stats_changed`.
+    - `scripts/combat/shell_shard_pickup.gd`: Tích hợp nạp trực tiếp Mảnh Vỏ Vụn vào `PlayerInventory` khi Player nhặt.
+    - `scripts/combat/lost_shard.gd` & `scenes/items/lost_shard.tscn` (`LostShard`): Cơ chế đánh rơi Mảnh Vỏ Vụn tại chỗ chết và nhặt lại (Lost Runes mechanic). Chỉ tồn tại DUY NHẤT 1 đống trên bản đồ; chết lần 2 trước khi nhặt lại sẽ làm đống cũ tan biến vĩnh viễn.
+    - `scripts/world/straw_bed.gd` & `scenes/world/straw_bed.tscn` (`StrawBed`): Điểm lưu và nghỉ ngơi Ổ Rơm với hình khối vàng óng pixel-art; bấm phím `E` hồi đầy HP/Stamina, cập nhật `spawn_position`, hồi sinh kẻ thù trong đấu trường, lưu game và mở giao diện lên cấp.
+    - `scripts/ui/level_up_screen.gd` & `scenes/ui/level_up_screen.tscn` (`LevelUpScreen`): Giao diện lên cấp trực quan 320×180 px; hỗ trợ bàn phím, tay cầm và chuột; xem trước biến động chỉ số (HP, Thể lực, Sức tải, Sát thương vũ khí); hệ thống cộng điểm tạm thời (`pending_adds`) trước khi bấm Xác nhận.
+    - `scripts/ui/hud.gd` & `scenes/ui/hud.tscn`: Bổ sung `ShardLabel` hiển thị số Mảnh Vỏ Vụn hiện có bằng màu Vàng Cổ (`Palette.VANG_CO`).
+    - `scripts/autoload/save_manager.gd`: Lưu/tải tự động dữ liệu `PlayerInventory` (cấp độ, mảnh vỏ, điểm đã cộng) trong `savegame.json`.
+    - `scenes/levels/test_arena.tscn` & `test_arena.gd`: Bố trí Ổ Rơm tại đấu trường, hồi sinh lại toàn bộ kẻ thù (`DummyEnemy`, `CommonEnemy`) khi người chơi nghỉ ngơi.
+    - Kịch bản kiểm thử tự động: `tools/test_leveling_system.gd` kiểm tra thành công 9 tiêu chí kiểm thử.
+    - *File liên quan:* `data/stats.json`, `project.godot`, `scripts/combat/stats_calculator.gd`, `scripts/autoload/player_inventory.gd`, `scripts/combat/lost_shard.gd`, `scenes/items/lost_shard.tscn`, `scripts/world/straw_bed.gd`, `scenes/world/straw_bed.tscn`, `scripts/ui/level_up_screen.gd`, `scenes/ui/level_up_screen.tscn`, `scripts/player/player.gd`, `scripts/autoload/save_manager.gd`, `scripts/ui/hud.gd`, `scenes/ui/hud.tscn`, `scenes/levels/test_arena.tscn`, `scenes/levels/test_arena.gd`, `tools/test_leveling_system.gd`.
 
 ---
 
 ## 2. ĐANG LÀM DỞ / CHƯA HOÀN THIỆN
 
-1. **Cơ chế Nhặt lại Mảnh Vỏ Vụn đã mất khi Chết (Lost Runes mechanic - GDD mục 7):**
-   - Hiện tại Player chết chỉ rơi thông báo đếm ngược hồi sinh về điểm spawn, chưa rơi node `LostShell` chứa toàn bộ EXP đã tích lũy tại vị trí chết để người chơi nhặt lại.
-2. **Khu vực Môi trường & Tilemap Chương 0 (Tổ Hoang):**
+1. **Khu vực Môi trường & Tilemap Chương 0 (Tổ Hoang):**
    - Chưa dựng TileSet 16×16 px nền và tường gạch theo bảng màu GDD. Hiện test_arena vẫn đang dùng `ColorRect` đơn giản.
-3. **Boss Chương 0: Quạ Gác Tổ (64×64 px):**
+2. **Boss Chương 0: Quạ Gác Tổ (64×64 px):**
    - Đã có khung kế thừa `BaseEnemy`, sẵn sàng để mở rộng phase và các kỹ năng mổ thẳng (`peck`), quét cánh (`sweep`), dập lao (`dive`).
-4. **Hệ thống Giao diện Menu & Lưu/Tải game:**
-   - `SaveManager.gd` đã có hàm lưu và đọc `user://savegame.json`, nhưng chưa có màn hình UI Pause Menu hoặc Nút Save/Load trong game.
+3. **Hệ thống Giao diện Menu Pause:**
+   - Đã có màn hình lên cấp tại Ổ Rơm và lưu/tải tự động, nhưng chưa có màn hình UI Pause Menu khi nhấn phím Escape trong lúc khám phá ngoài Ổ Rơm.
 
 ---
 
@@ -170,7 +181,8 @@
 1. `Palette` $\rightarrow$ `*res://scripts/autoload/palette.gd`
 2. `GameData` $\rightarrow$ `*res://scripts/autoload/game_data.gd`
 3. `BehaviorTracker` $\rightarrow$ `*res://scripts/autoload/behavior_tracker.gd`
-4. `SaveManager` $\rightarrow$ `*res://scripts/autoload/save_manager.gd`
+4. `PlayerInventory` $\rightarrow$ `*res://scripts/autoload/player_inventory.gd`
+5. `SaveManager` $\rightarrow$ `*res://scripts/autoload/save_manager.gd`
 
 ### Input Map (`project.godot`):
 - `move_left`: `A`, Mũi tên trái, D-pad Trái, Joypad Trục X âm.
@@ -193,8 +205,8 @@ Lộ trình ưu tiên cho Vertical Slice: **Giai đoạn A $\rightarrow$ Lên c�
 | Giai đoạn | Nội dung trọng tâm | Tiêu chí hoàn thành | Trạng thái |
 |---|---|---|---|
 | **Giai đoạn A** | - Tạo `data/weapons.json` (3 vũ khí khởi đầu: Gậy Gỗ, Dao Găm, Ná + đòn tay không).<br>- Tách đòn đánh theo khung hình logic 60 FPS (`startup`, `active`, `recovery`, `cancel_from`).<br>- Thêm Input Map: `swap_weapon` (Q / D-pad lên).<br>- Tách dịch vụ: `CombatState`, `HitboxService`, `WeaponDB`. | Đổi mượt mà giữa Gậy / Dao / Ná; mỗi loại có cự ly, tốc độ, hitbox và cảm giác đánh riêng biệt; hitbox bật/tắt đúng khung hình logic. | **ĐÃ HOÀN THÀNH** |
-| **Giai đoạn Lên cấp** | - Quản lý Mảnh Vỏ Vụn (EXP) tích lũy của Player.<br>- Điểm lưu Ổ Rơm (`StrawBed`) tương tác bằng phím E.<br>- UI cộng chỉ số tại Ổ Rơm (bàn phím & tay cầm), xem trước chỉ số phát sinh (HP, Stamina, Sát thương, Sức tải).<br>- Công thức tính chỉ số chuẩn mục 9 COMBAT_SPEC.<br>- Cơ chế làm rơi Mảnh Vỏ Vụn tại chỗ chết và nhặt lại.<br>- Lưu/tải chỉ số vào `savegame.json`. | Cộng điểm được, chi phí tính đúng công thức, xem trước chính xác, chỉ số ảnh hưởng trực tiếp gameplay, chết nhặt lại được EXP, lưu/tải không mất tiến trình. | **TIẾP THEO** |
-| **Giai đoạn B** | - Đòn nặng tích lực (`heavy_charge`).<br>- Hệ thống Poise (độ vững) & Choáng (`stagger`) cho Player và Enemy.<br>- Đâm lén (`backstab` cung 90° phía sau) + Đòn kết liễu (`critical`).<br>- Đỡ khéo (`parry` trong 8 khung đầu của Guard) mở phản đòn. | Quái bị trừ poise và choáng khi hết poise; đâm lén trúng cung sau nhân sát thương và cộng DODGE; parry thành công gây choáng tức thì và cộng GUARD +4. | **CHƯA LÀM** |
+| **Giai đoạn Lên cấp** | - Quản lý Mảnh Vỏ Vụn (EXP) tích lũy của Player.<br>- Điểm lưu Ổ Rơm (`StrawBed`) tương tác bằng phím E.<br>- UI cộng chỉ số tại Ổ Rơm (bàn phím & tay cầm), xem trước chỉ số phát sinh (HP, Stamina, Sát thương, Sức tải).<br>- Công thức tính chỉ số chuẩn mục 9 COMBAT_SPEC.<br>- Cơ chế làm rơi Mảnh Vỏ Vụn tại chỗ chết và nhặt lại.<br>- Lưu/tải chỉ số vào `savegame.json`. | Cộng điểm được, chi phí tính đúng công thức, xem trước chính xác, chỉ số ảnh hưởng trực tiếp gameplay, chết nhặt lại được EXP, lưu/tải không mất tiến trình. | **ĐÃ HOÀN THÀNH** |
+| **Giai đoạn B** | - Đòn nặng tích lực (`heavy_charge`).<br>- Hệ thống Poise (độ vững) & Choáng (`stagger`) cho Player và Enemy.<br>- Đâm lén (`backstab` cung 90° phía sau) + Đòn kết liễu (`critical`).<br>- Đỡ khéo (`parry` trong 8 khung đầu của Guard) mở phản đòn. | Quái bị trừ poise và choáng khi hết poise; đâm lén trúng cung sau nhân sát thương và cộng DODGE; parry thành công gây choáng tức thì và cộng GUARD +4. | **TIẾP THEO** |
 | **Giai đoạn Overlay** | - Hệ thống tư thế đánh dùng chung của Trứng (`swing_h`, `swing_v`, `thrust`, `shoot`...).<br>- Lớp phủ vũ khí 16×16 px vẽ đè lên bàn tay theo `data/pose_anchors.json`.<br>- Vệt chém (slash effect) riêng từng vũ khí. | Đổi vũ khí tự động đổi sprite vũ khí và vệt chém trên tay nhân vật mà không cần vẽ lại thân Trứng. | **CHƯA LÀM** |
 | **Giai đoạn C** | - Ô kỹ năng vũ khí (`skill_slot`, `data/skills.json`, nút `skill`).<br>- Thế cầm hai tay (`two_hand`, nút Tab). | Tháo lắp được kỹ năng giữa các vũ khí tương thích; bật hai tay nhận `two_hand_bonus` sát thương nhưng bỏ khiên. | **ĐỂ SAU VERTICAL SLICE** |
 | **Giai đoạn D** | - Phụ ma (Lửa, Băng, Thánh, Mục) & Thanh tích lũy trạng thái (Buildup).<br>- Tương tác môi trường cơ bản (cháy rơm, ướt nước). | Tích lũy đủ kích hoạt hiệu ứng rút máu/chậm; lửa lan trên tile rơm. | **ĐỂ SAU VERTICAL SLICE** |

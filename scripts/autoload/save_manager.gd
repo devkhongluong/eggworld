@@ -9,10 +9,18 @@ func has_save() -> bool:
 	return FileAccess.file_exists(SAVE_PATH)
 
 func save_game(extra_data: Dictionary = {}) -> bool:
+	var inv_data: Dictionary = {}
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var inv = root.root.get_node_or_null("PlayerInventory")
+		if inv != null and inv.has_method("export_data"):
+			inv_data = inv.export_data()
+	
 	var save_dict: Dictionary = {
 		"version": 1,
 		"timestamp": Time.get_unix_time_from_system(),
 		"behavior_counters": BehaviorTracker.export_data(),
+		"player_inventory": inv_data,
 		"extra": extra_data
 	}
 	
@@ -54,6 +62,13 @@ func load_game() -> Dictionary:
 	
 	if data.has("behavior_counters") and data["behavior_counters"] is Dictionary:
 		BehaviorTracker.import_data(data["behavior_counters"])
+	
+	if data.has("player_inventory") and data["player_inventory"] is Dictionary:
+		var root = Engine.get_main_loop()
+		if root != null and root.root != null:
+			var inv = root.root.get_node_or_null("PlayerInventory")
+			if inv != null and inv.has_method("import_data"):
+				inv.import_data(data["player_inventory"])
 	
 	print("SaveManager: Đã nạp dữ liệu save thành công.")
 	return data

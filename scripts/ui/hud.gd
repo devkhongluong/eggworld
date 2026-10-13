@@ -9,6 +9,7 @@ extends CanvasLayer
 @onready var stamina_bar_bg: ColorRect = $MarginContainer/VBoxContainer/StaminaBar/Background
 @onready var debug_label: Label = $MarginContainer/VBoxContainer/DebugDodgeLabel
 @onready var weapon_label: Label = $MarginContainer/VBoxContainer/WeaponLabel
+@onready var shard_label: Label = $MarginContainer/VBoxContainer/ShardLabel
 @onready var death_overlay: Control = $DeathOverlay
 
 var max_hp: int = 100
@@ -29,6 +30,15 @@ func _ready() -> void:
 	death_overlay.visible = false
 	
 	BehaviorTracker.points_changed.connect(_on_behavior_points_changed)
+	
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var inv = root.root.get_node_or_null("PlayerInventory")
+		if inv != null:
+			if inv.has_signal("shards_changed"):
+				inv.shards_changed.connect(update_shards)
+			if "shell_shards" in inv:
+				update_shards(int(inv.shell_shards))
 
 func apply_palette() -> void:
 	# Màu sắc chuẩn GDD Mục 3
@@ -41,6 +51,8 @@ func apply_palette() -> void:
 	debug_label.add_theme_color_override("font_color", Palette.KEM)
 	if weapon_label != null:
 		weapon_label.add_theme_color_override("font_color", Palette.KEM)
+	if shard_label != null:
+		shard_label.add_theme_color_override("font_color", Palette.VANG_CO)
 	
 	var death_label: Label = $DeathOverlay/CenterContainer/VBoxContainer/DeathLabel
 	death_label.add_theme_color_override("font_color", Palette.DO_GACH)
@@ -71,6 +83,10 @@ func update_stamina(new_stamina: float, new_max_stamina: float) -> void:
 func update_weapon(slot_idx: int, _weapon_id: String, weapon_name: String) -> void:
 	if weapon_label != null:
 		weapon_label.text = "[Q] Vũ khí (%d/3): %s" % [slot_idx + 1, weapon_name]
+
+func update_shards(amount: int) -> void:
+	if shard_label != null:
+		shard_label.text = "Mảnh Vỏ: %d" % amount
 
 func _on_behavior_points_changed(action_name: String, _new_points: int, _total: int) -> void:
 	if action_name == BehaviorTracker.ACTION_DODGE:
