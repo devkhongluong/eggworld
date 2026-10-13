@@ -67,6 +67,7 @@ var accumulated_melee_damage: int = 0
 var animations_config: Dictionary = {}
 var current_hit_frames: Array = []
 var is_in_hit_frame: bool = false
+var is_hurt: bool = false   # đang phát hurt animation → block update_animations
 
 var spawn_position: Vector2 = Vector2.ZERO
 var respawn_timer: float = 0.0
@@ -194,6 +195,9 @@ func update_animations() -> void:
 	if is_attacking:
 		return  # hoạt ảnh attack đã được bật trong try_attack()
 	
+	if is_hurt:
+		return  # hoạt ảnh hurt đang chạy, không ghi đè
+	
 	var dir_suffix := get_direction_suffix(facing_direction)
 	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
 	animated_sprite.flip_h = flip_left
@@ -316,6 +320,7 @@ func _on_sprite_animation_finished() -> void:
 	if is_attacking:
 		end_attack()
 	elif animated_sprite.animation.begins_with("hurt_"):
+		is_hurt = false
 		is_invulnerable = false
 		modulate = Color.WHITE
 
@@ -438,6 +443,7 @@ func receive_hit(damage: int, _attack_source: Node) -> Dictionary:
 	var dir_suffix := get_direction_suffix(facing_direction)
 	var hurt_anim := "hurt_" + dir_suffix
 	is_attacking = false
+	is_hurt = true
 	is_invulnerable = true
 	flash_timer = 0.3
 	modulate = Palette.DO_GACH
@@ -448,6 +454,7 @@ func receive_hit(damage: int, _attack_source: Node) -> Dictionary:
 
 func die() -> void:
 	is_dead = true
+	is_hurt = false
 	velocity = Vector2.ZERO
 	is_dodging = false
 	is_invulnerable = false
@@ -475,6 +482,7 @@ func respawn() -> void:
 	current_hp = max_hp
 	current_stamina = max_stamina
 	is_dead = false
+	is_hurt = false
 	is_dodging = false
 	is_invulnerable = false
 	is_attacking = false
