@@ -185,34 +185,33 @@ func _physics_process(delta: float) -> void:
 func update_animations() -> void:
 	if is_dead:
 		return
+	
+	# Ẩn hoàn toàn hình khối tạm – sprite đã đủ
+	if visual_node != null and "show_placeholder_body" in visual_node:
+		visual_node.show_placeholder_body = false
+	animated_sprite.visible = true
+	
 	if is_attacking:
-		animated_sprite.visible = true
-		if visual_node != null and "show_placeholder_body" in visual_node:
-			visual_node.show_placeholder_body = false
-		return
-	if is_dodging:
-		# Giữ hình khối tạm khi lăn né cho tới khi vẽ sprite roll
-		animated_sprite.visible = false
-		if visual_node != null and "show_placeholder_body" in visual_node:
-			visual_node.show_placeholder_body = true
-		return
+		return  # hoạt ảnh attack đã được bật trong try_attack()
 	
 	var dir_suffix := get_direction_suffix(facing_direction)
 	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
 	animated_sprite.flip_h = flip_left
 	
+	if is_dodging:
+		var roll_anim := "roll_" + dir_suffix
+		if animated_sprite.animation != roll_anim or not animated_sprite.is_playing():
+			animated_sprite.play(roll_anim)
+		return
+	
 	if velocity == Vector2.ZERO:
 		var anim_name := "idle_" + dir_suffix
 		if animated_sprite.animation != anim_name or not animated_sprite.is_playing():
 			animated_sprite.play(anim_name)
-		animated_sprite.visible = true
-		if visual_node != null and "show_placeholder_body" in visual_node:
-			visual_node.show_placeholder_body = false
 	else:
-		# Đang chạy: giữ hình khối tạm cho tới khi vẽ sprite run
-		animated_sprite.visible = false
-		if visual_node != null and "show_placeholder_body" in visual_node:
-			visual_node.show_placeholder_body = true
+		var run_anim := "run_" + dir_suffix
+		if animated_sprite.animation != run_anim or not animated_sprite.is_playing():
+			animated_sprite.play(run_anim)
 
 func process_cooldowns(delta: float) -> void:
 	if dodge_cooldown_timer > 0.0:
