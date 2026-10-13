@@ -28,7 +28,13 @@ static func configure_hitbox(hitbox: Area2D, hitbox_spec: Dictionary, dir_suffix
 	
 	var shape_type: String = str(hitbox_spec.get("shape", "arc"))
 	var radius: float = float(hitbox_spec.get("radius", 18.0))
-	var shape_owner := hitbox.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	var shape_owner: CollisionShape2D = null
+	for child in hitbox.get_children():
+		if child is CollisionShape2D:
+			shape_owner = child
+			break
+	if shape_owner == null:
+		shape_owner = hitbox.get_node_or_null("CollisionShape2D") as CollisionShape2D
 	
 	match shape_type:
 		"line":

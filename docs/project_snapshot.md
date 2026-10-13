@@ -35,7 +35,7 @@
 ---
 
 ## assets\sprites\player\animations.json
-`json
+```json
 {
   "player_egg": {
     "frame_size": [32, 32],
@@ -59,10 +59,12 @@
     }
   }
 }
-`
+```
+
+---
 
 ## data\stats.json
-`json
+```json
 {
   "_huong_dan": "Dữ liệu cân bằng cho Trứng và hệ thống chiến đấu ban đầu. Bạn có thể tự do điều chỉnh các chỉ số dưới đây mà không cần sửa code.",
   "base_stats": {
@@ -129,10 +131,12 @@
 	"show_combat_log": true
   }
 }
-`
+```
+
+---
 
 ## data\weapons.json
-`json
+```json
 {
   "fist": {
     "name": "Tay Không",
@@ -359,10 +363,12 @@
     "two_hand_bonus": 1.2
   }
 }
-`
+```
+
+---
 
 ## project.godot
-`godot
+```ini
 ; Engine configuration file.
 ; It's best edited using the editor UI and not directly,
 ; since the parameters that go here are not all obvious.
@@ -506,10 +512,12 @@ textures/canvas_textures/default_texture_filter=0
 rendering_device/driver.windows="d3d12"
 2d/snap/snap_2d_transforms_to_pixel=true
 2d/snap/snap_2d_vertices_to_pixel=true
-`
+```
+
+---
 
 ## scenes\enemies\common_enemy.tscn
-`tscn
+```ini
 [gd_scene format=3 uid="uid://da6ht4f4h0yqb"]
 
 [ext_resource type="Script" path="res://scripts/combat/base_enemy.gd" id="1_enemy"]
@@ -545,10 +553,12 @@ collision_mask = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
 shape = SubResource("RectangleShape2D_body")
-`
+```
+
+---
 
 ## scenes\enemies\dummy_enemy.tscn
-`tscn
+```ini
 [gd_scene load_steps=5 format=3 uid="uid://dmmyenemy001"]
 
 [ext_resource type="Script" path="res://scripts/combat/dummy_enemy.gd" id="1_enemy"]
@@ -584,10 +594,12 @@ collision_mask = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
 shape = SubResource("RectangleShape2D_body")
-`
+```
+
+---
 
 ## scenes\levels\test_arena.gd
-`gdscript
+```gdscript
 extends Node2D
 
 # Màn chơi thử nghiệm test_arena:
@@ -613,11 +625,13 @@ func _ready() -> void:
 		var w_name: String = str(player.current_weapon_data.get("name", player.current_weapon_id))
 		hud.update_weapon(player.active_slot_idx, player.current_weapon_id, w_name)
 	
-	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD), Lăn né (Space), Tấn công (J), Đỡ (L), Đổi vũ khí 2 ô (Q), Đổi trang bị (1,2,3,4).")
-`
+	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD), Lăn né (Space), Tấn công (J/Chuột trái), Đỡ (L/Chuột phải), Đổi vũ khí 3 ô (Q), Chọn nhanh (1: Gậy, 2: Dao, 3: Ná, 4: Tay không).")
+```
+
+---
 
 ## scenes\levels\test_arena.tscn
-`tscn
+```ini
 [gd_scene format=3 uid="uid://btestarena001"]
 
 [ext_resource type="Script" path="res://scenes/levels/test_arena.gd" id="1_arena"]
@@ -700,10 +714,12 @@ limit_right = 480
 limit_bottom = 270
 
 [node name="HUD" parent="." instance=ExtResource("4_hud")]
-`
+```
+
+---
 
 ## scenes\player\player.tscn
-`tscn
+```ini
 [gd_scene load_steps=6 format=3 uid="uid://df7xeggplayer01"]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
@@ -746,10 +762,12 @@ collision_mask = 16
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AttackHitbox"]
 shape = SubResource("RectangleShape2D_attack")
-`
+```
+
+---
 
 ## scenes\ui\hud.tscn
-`tscn
+```ini
 [gd_scene format=3 uid="uid://bvyhud001"]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
@@ -848,10 +866,12 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 8
 text = "Đang hồi sinh..."
 horizontal_alignment = 1
-`
+```
+
+---
 
 ## scripts\autoload\behavior_tracker.gd
-`gdscript
+```gdscript
 extends Node
 
 # Autoload BehaviorTracker: 5 bộ đếm hành vi ẩn của Trứng (GDD Mục 6.1)
@@ -923,10 +943,12 @@ func import_data(data: Dictionary) -> void:
 	for action_name in VALID_ACTIONS:
 		if data.has(action_name):
 			_counters[action_name] = int(data[action_name])
-`
+```
+
+---
 
 ## scripts\autoload\game_data.gd
-`gdscript
+```gdscript
 extends Node
 
 # Autoload GameData: Quản lý nạp toàn bộ file cấu hình JSON trong thư mục data/
@@ -982,10 +1004,12 @@ func get_weapon(weapon_id: String) -> Dictionary:
 
 func get_all_weapons() -> Dictionary:
 	return weapons
-`
+```
+
+---
 
 ## scripts\autoload\palette.gd
-`gdscript
+```gdscript
 extends Node
 
 # Bảng màu trung cổ (16 màu cố định theo GDD Mục 3)
@@ -1006,10 +1030,12 @@ const XANH_LA_UA: Color = Color("#6B7F3A")    # 13. Cỏ sáng, độc nhẹ, đ
 const VANG_CO: Color = Color("#C79A2E")       # 14. Vàng đồng, chữ khắc, vật phẩm hiếm, Mảnh Vỏ
 const XANH_THEP: Color = Color("#2F4A63")     # 15. Nước, sương, đêm, phép băng/lòng trắng
 const TIM_MUC: Color = Color("#5A3A5E")       # 16. Mục Rữa, phép hắc ám
-`
+```
+
+---
 
 ## scripts\autoload\save_manager.gd
-`gdscript
+```gdscript
 extends Node
 
 # Autoload SaveManager: Nơi DUY NHẤT được ghi file save vào user://
@@ -1075,10 +1101,12 @@ func delete_save() -> bool:
 		var err := DirAccess.remove_absolute(SAVE_PATH)
 		return err == OK
 	return true
-`
+```
+
+---
 
 ## scripts\combat\base_enemy.gd
-`gdscript
+```gdscript
 extends CharacterBody2D
 class_name BaseEnemy
 
@@ -1324,10 +1352,12 @@ func spawn_exp_drop() -> void:
 	pickup.add_child(col)
 	
 	get_parent().call_deferred("add_child", pickup)
-`
+```
+
+---
 
 ## scripts\combat\combat_state.gd
-`gdscript
+```gdscript
 extends RefCounted
 class_name CombatState
 
@@ -1406,10 +1436,12 @@ func process_timers(delta: float, attacking_flag: bool) -> void:
 		stun_timer -= delta
 		if stun_timer <= 0.0 and current_state == State.STUNNED:
 			current_state = State.IDLE
-`
+```
+
+---
 
 ## scripts\combat\common_enemy_visual.gd
-`gdscript
+```gdscript
 extends Node2D
 
 # Vẽ hình khối tạm của Kẻ thù thường (Common Enemy)
@@ -1471,10 +1503,12 @@ func _draw() -> void:
 	else:
 		draw_rect(Rect2(-6, -5, 3, 3), Palette.DO_RUOU)
 		draw_rect(Rect2(3, -5, 3, 3), Palette.DO_RUOU)
-`
+```
+
+---
 
 ## scripts\combat\dummy_enemy.gd
-`gdscript
+```gdscript
 extends CharacterBody2D
 
 # Kẻ thù giả để kiểm tra né đòn và nhận sát thương.
@@ -1606,10 +1640,12 @@ func receive_hit(amount: int, _attack_source: Node) -> Dictionary:
 		print("[ENEMY] Kẻ thù bị tiêu diệt! Tự động hồi phục sau 1.5 giây.")
 		current_hp = max_hp
 	return {"hit": true, "damage": amount}
-`
+```
+
+---
 
 ## scripts\combat\enemy_visual.gd
-`gdscript
+```gdscript
 extends Node2D
 
 # Vẽ hình khối tạm của Kẻ thù thử nghiệm
@@ -1658,10 +1694,12 @@ func _draw() -> void:
 	# Mắt đỏ gạch quái vật
 	draw_rect(Rect2(-6, -4, 3, 3), Palette.DO_GACH)
 	draw_rect(Rect2(3, -4, 3, 3), Palette.DO_GACH)
-`
+```
+
+---
 
 ## scripts\combat\hitbox_service.gd
-`gdscript
+```gdscript
 extends Node
 class_name HitboxService
 
@@ -1692,7 +1730,13 @@ static func configure_hitbox(hitbox: Area2D, hitbox_spec: Dictionary, dir_suffix
 	
 	var shape_type: String = str(hitbox_spec.get("shape", "arc"))
 	var radius: float = float(hitbox_spec.get("radius", 18.0))
-	var shape_owner := hitbox.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	var shape_owner: CollisionShape2D = null
+	for child in hitbox.get_children():
+		if child is CollisionShape2D:
+			shape_owner = child
+			break
+	if shape_owner == null:
+		shape_owner = hitbox.get_node_or_null("CollisionShape2D") as CollisionShape2D
 	
 	match shape_type:
 		"line":
@@ -1787,10 +1831,12 @@ static func process_single_target(area: Area2D, attacker: Node, damage: int, alr
 			var res: Dictionary = target.receive_hit(damage, attacker)
 			if on_hit_callback.is_valid():
 				on_hit_callback.call(target, damage, res)
-`
+```
+
+---
 
 ## scripts\combat\projectile.gd
-`gdscript
+```gdscript
 extends Area2D
 class_name Projectile
 
@@ -1850,10 +1896,12 @@ func _on_area_entered(area: Area2D) -> void:
 			print("[PROJECTILE] Đạn Ná bắn trúng %s! Gây %d sát thương. (+2 MAGIC)" % [target.name, damage])
 		BehaviorTracker.add_points(BehaviorTracker.ACTION_MAGIC, 2)
 		queue_free()
-`
+```
+
+---
 
 ## scripts\combat\shell_shard_pickup.gd
-`gdscript
+```gdscript
 extends Area2D
 class_name ShellShardPickup
 
@@ -1907,10 +1955,12 @@ func _collect(player_node: Node) -> void:
 	# Tích lũy hành vi EXPLORE nhẹ nếu nhặt đồ
 	BehaviorTracker.add_points(BehaviorTracker.ACTION_EXPLORE, 1)
 	queue_free()
-`
+```
+
+---
 
 ## scripts\combat\weapon_db.gd
-`gdscript
+```gdscript
 extends RefCounted
 class_name WeaponDB
 
@@ -2009,32 +2059,43 @@ static func calculate_stamina_cost(attack_spec: Dictionary, weapon: Dictionary, 
 		base_cost *= (1.0 + 0.04 * float(missing_pts))
 	
 	return base_cost
-`
+
+```
+
+---
 
 ## scripts\player\egg_visual.gd
-`gdscript
+```gdscript
 extends Node2D
 
 # EggVisual: Quản lý hiệu ứng hình ảnh mở rộng trên người chơi
 # 1. Vết nứt trên vỏ trứng (to dần theo lượng máu giảm)
 # 2. Hiệu ứng văng mảnh vỏ (egg shell debris particles) khi trúng đòn
-# 3. Vệt chém combo cận chiến
+# 3. Hoạt ảnh vung kiếm/dao/ná sống động (Dynamic weapon attack swing/thrust/shoot)
+# 4. Vệt chém combo đòn đánh tương ứng từng vũ khí
+# 5. Hình khối vũ khí giắt bên hông khi nghỉ
 
+var attack_slash_total_time: float = 0.22
 var attack_slash_timer: float = 0.0
 var attack_slash_dir: Vector2 = Vector2.DOWN
 var attack_slash_step: int = 0
-var attack_weapon_type: String = "staff"
+var attack_weapon_type: String = "staff_wood"
+var is_attacking_visual: bool = false
 var show_placeholder_body: bool = false
 
 # Dữ liệu vết nứt vỏ trứng (tính theo tỉ lệ hp: 1.0 -> 0.0)
 var current_hp_ratio: float = 1.0
 
-# Danh sách mảnh vỏ đang văng: { pos: Vector2, vel: Vector2, color: Color, size: Vector2, life: float, max_life: float }
+# Danh sách mảnh vỏ đang văng
 var shell_shards: Array[Dictionary] = []
 
 # Trạng thái đỡ đòn
 var is_guarding: bool = false
 var guard_dir: Vector2 = Vector2.DOWN
+
+var is_dead_visual: bool = false
+var equipped_weapon_id: String = "staff_wood"
+var facing_dir: Vector2 = Vector2.DOWN
 
 func _ready() -> void:
 	set_process(true)
@@ -2045,17 +2106,28 @@ func set_guarding(guarding: bool, dir: Vector2) -> void:
 		guard_dir = dir
 		queue_redraw()
 
+func set_dead(dead: bool) -> void:
+	is_dead_visual = dead
+	if dead:
+		is_attacking_visual = false
+		attack_slash_timer = 0.0
+	queue_redraw()
+
 func set_hp_ratio(ratio: float) -> void:
 	current_hp_ratio = clampf(ratio, 0.0, 1.0)
 	queue_redraw()
 
+func set_equipped_weapon(w_id: String, dir: Vector2) -> void:
+	equipped_weapon_id = w_id
+	facing_dir = dir
+	queue_redraw()
+
 func spawn_shell_burst(amount: int = 6) -> void:
-	# Bắn các mảnh vỏ trứng từ tâm thân nhân vật (y ~ -14)
 	for i in range(amount):
 		var angle := randf_range(0.0, TAU)
 		var speed := randf_range(40.0, 110.0)
 		var vel := Vector2(cos(angle), sin(angle)) * speed
-		vel.y -= randf_range(20.0, 50.0) # Văng hướng lên trên nhẹ
+		vel.y -= randf_range(20.0, 50.0)
 		
 		var colors := [Palette.GIAY_DA, Palette.CAT, Palette.NAU_HAM, Palette.KEM]
 		var col: Color = colors[randi() % colors.size()]
@@ -2072,16 +2144,30 @@ func spawn_shell_burst(amount: int = 6) -> void:
 		})
 	queue_redraw()
 
-func start_attack_visual(dir: Vector2, step: int, weapon_type: String = "staff") -> void:
-	attack_slash_dir = dir
+func start_attack_visual(dir: Vector2, step: int, weapon_id: String = "staff_wood", custom_duration: float = -1.0) -> void:
+	attack_slash_dir = dir.normalized()
+	if attack_slash_dir == Vector2.ZERO:
+		attack_slash_dir = Vector2.DOWN
+	facing_dir = attack_slash_dir
 	attack_slash_step = step
-	attack_weapon_type = weapon_type
-	if weapon_type == "dagger":
-		attack_slash_timer = 0.10
-	elif weapon_type == "sling":
-		attack_slash_timer = 0.12
+	attack_weapon_type = weapon_id
+	
+	if custom_duration > 0.0:
+		attack_slash_total_time = custom_duration
+	elif weapon_id == "dagger":
+		attack_slash_total_time = 0.14
+	elif weapon_id == "sling":
+		attack_slash_total_time = 0.18
 	else:
-		attack_slash_timer = 0.18
+		attack_slash_total_time = 0.22
+	
+	attack_slash_timer = attack_slash_total_time
+	is_attacking_visual = true
+	queue_redraw()
+
+func stop_attack_visual() -> void:
+	is_attacking_visual = false
+	attack_slash_timer = 0.0
 	queue_redraw()
 
 func _process(delta: float) -> void:
@@ -2089,6 +2175,8 @@ func _process(delta: float) -> void:
 	
 	if attack_slash_timer > 0.0:
 		attack_slash_timer -= delta
+		if attack_slash_timer <= 0.0:
+			is_attacking_visual = false
 		needs_redraw = true
 	
 	if not shell_shards.is_empty():
@@ -2100,7 +2188,7 @@ func _process(delta: float) -> void:
 				shell_shards.remove_at(idx)
 			else:
 				shard["pos"] += shard["vel"] * delta
-				shard["vel"].y += 220.0 * delta # Trọng lực rơi xuống
+				shard["vel"].y += 220.0 * delta
 			idx -= 1
 		needs_redraw = true
 	
@@ -2109,29 +2197,20 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	# 1. Vẽ các vết nứt trên vỏ theo mức độ mất máu
-	# Nhân vật cao từ y = -22 đến y = -2, tâm khoảng x=0, y=-12
-	# Khi HP < 80%: Bắt đầu có vết rạn nhỏ ở đỉnh
-	# Khi HP < 50%: Nứt to và rẽ nhánh
-	# Khi HP < 25%: Nứt chằng chịt, lộ lòng vàng nhẹ
 	if current_hp_ratio < 0.8:
-		# Vết nứt đỉnh đầu (giai đoạn 1)
 		draw_line(Vector2(-1, -22), Vector2(1, -19), Palette.NAU_HAM, 1.0)
 		draw_line(Vector2(1, -19), Vector2(0, -17), Palette.NAU_HAM, 1.0)
 	
 	if current_hp_ratio < 0.6:
-		# Nhánh nứt kéo dài qua thân trên (giai đoạn 2)
 		draw_line(Vector2(0, -17), Vector2(3, -14), Palette.NAU_HAM, 1.0)
 		draw_line(Vector2(3, -14), Vector2(2, -11), Palette.NAU_HAM, 1.0)
-		# Vết nứt sườn trái
 		draw_line(Vector2(-5, -17), Vector2(-2, -15), Palette.NAU_HAM, 1.0)
 		draw_line(Vector2(-2, -15), Vector2(-4, -12), Palette.NAU_HAM, 1.0)
 	
 	if current_hp_ratio < 0.35:
-		# Vết nứt to toác (giai đoạn 3)
 		draw_line(Vector2(2, -11), Vector2(5, -8), Palette.NAU_HAM, 1.2)
 		draw_line(Vector2(-4, -12), Vector2(-2, -8), Palette.NAU_HAM, 1.2)
 		draw_line(Vector2(0, -17), Vector2(-2, -14), Palette.CAT, 1.0)
-		# Chấm vàng lộ lòng trứng bên trong kẽ nứt
 		draw_rect(Rect2(0, -15, 2, 2), Palette.VANG_CO)
 		draw_rect(Rect2(2, -12, 1, 2), Palette.VANG_CO)
 	
@@ -2144,90 +2223,131 @@ func _draw() -> void:
 		var p: Vector2 = shard["pos"]
 		draw_rect(Rect2(p.x - sz.x * 0.5, p.y - sz.y * 0.5, sz.x, sz.y), c)
 	
-	# 3. Vệt tấn công theo từng loại vũ khí
-	if attack_slash_timer > 0.0:
-		var slash_center := Vector2(0, -10) + attack_slash_dir.normalized() * 14.0
-		var base_angle: float = attack_slash_dir.angle()
-		if attack_weapon_type == "dagger":
-			# Vệt đâm nhọn thẳng nhanh
-			var tip := Vector2(0, -10) + attack_slash_dir.normalized() * 20.0
-			var base_pt := Vector2(0, -10) + attack_slash_dir.normalized() * 6.0
-			draw_line(base_pt, tip, Palette.KEM, 2.0)
-			draw_line(base_pt, tip + Vector2(-attack_slash_dir.y, attack_slash_dir.x) * 3.0, Palette.XAM_SAT, 1.0)
-		elif attack_weapon_type == "sling":
-			# Tia giật dây ná khi bắn
-			var p1 := Vector2(0, -10) + Vector2(-attack_slash_dir.y, attack_slash_dir.x) * 5.0
-			var p2 := Vector2(0, -10) + Vector2(attack_slash_dir.y, -attack_slash_dir.x) * 5.0
-			draw_line(p1, p2, Palette.CAT, 1.5)
-		elif attack_weapon_type == "unarmed":
-			# Vệt thụi nắm đấm ngắn
-			var punch_center := Vector2(0, -10) + attack_slash_dir.normalized() * 10.0
-			draw_circle(punch_center, 4.0, Palette.KEM)
-		else:
-			# Quét vòng cung cho Gậy Gỗ (Staff)
-			var slash_color: Color = Palette.KEM if attack_slash_step == 2 else Palette.XAM_DA
-			var arc_radius: float = 14.0 if attack_slash_step == 2 else 11.0
-			var start_ang: float = base_angle - PI * 0.45
-			var end_ang: float = base_angle + PI * 0.45
-			draw_arc(slash_center, arc_radius, start_ang, end_ang, 12, slash_color, 2.0)
-			draw_arc(slash_center, arc_radius - 2.0, start_ang, end_ang, 12, Palette.NAU_HAM, 1.0)
-
-	
-	# 4. Hình khối tạm thời biểu diễn thế Đỡ Đòn (Guard)
+	# 3. Vẽ thế Đỡ Đòn (Guard)
 	if is_guarding:
 		var shield_center := Vector2(0, -10) + guard_dir.normalized() * 11.0
 		var guard_angle: float = guard_dir.angle()
 		var g_start: float = guard_angle - PI * 0.40
 		var g_end: float = guard_angle + PI * 0.40
-		# Vòng vòng cung khiên Xám Sắt với viền Nâu Hầm
 		draw_arc(shield_center, 9.0, g_start, g_end, 10, Palette.NAU_HAM, 3.5)
 		draw_arc(shield_center, 9.0, g_start, g_end, 10, Palette.XAM_SAT, 2.0)
-		# Điểm tâm khiên Vàng Cổ
 		draw_circle(shield_center, 2.0, Palette.VANG_CO)
 	
-	# 5. Hình khối tạm thời biểu diễn vũ khí đang cầm (Placeholder Weapon Visual)
-	_draw_placeholder_weapon()
+	# 4. Vẽ diễn hoạt vũ khí & đòn đánh (Hoạt ảnh động)
+	_draw_dynamic_weapon()
 
-var equipped_weapon_id: String = "staff_wood"
-var facing_dir: Vector2 = Vector2.DOWN
-
-func set_equipped_weapon(w_id: String, dir: Vector2) -> void:
-	equipped_weapon_id = w_id
-	facing_dir = dir
-	queue_redraw()
-
-func _draw_placeholder_weapon() -> void:
-	if is_guarding:
+func _draw_dynamic_weapon() -> void:
+	if is_guarding or is_dead_visual:
 		return
 	
+	var pivot := Vector2(0, -10)
+	var aim := facing_dir.normalized()
+	if aim == Vector2.ZERO:
+		aim = Vector2.DOWN
+	var base_angle := aim.angle()
 	var flip_sign: float = -1.0 if facing_dir.x < 0 else 1.0
-	var hand_pos: Vector2 = Vector2(7.0 * flip_sign, -8.0)
-	if abs(facing_dir.y) > abs(facing_dir.x):
-		hand_pos = Vector2(7.0, -8.0 if facing_dir.y > 0 else -10.0)
 	
-	match equipped_weapon_id:
-		"staff_wood":
-			# Gậy gỗ dài màu Nâu Da
-			draw_line(hand_pos + Vector2(0, 4), hand_pos + Vector2(2 * flip_sign, -12), Palette.NAU_DA, 2.5)
-			draw_circle(hand_pos + Vector2(2 * flip_sign, -12), 1.5, Palette.KEM)
-		"dagger":
-			# Dao găm ngắn màu Xám Sắt
-			var aim := facing_dir.normalized()
-			if aim == Vector2.ZERO:
-				aim = Vector2.DOWN
-			draw_line(hand_pos, hand_pos + aim * 8.0, Palette.XAM_SAT, 2.0)
-			draw_circle(hand_pos, 1.5, Palette.NAU_HAM)
-		"sling":
-			# Ná chạc chữ Y màu Cát
-			draw_line(hand_pos, hand_pos + Vector2(0, -4), Palette.CAT, 2.0)
-			draw_line(hand_pos + Vector2(0, -4), hand_pos + Vector2(3 * flip_sign, -7), Palette.CAT, 1.5)
-			draw_line(hand_pos + Vector2(0, -4), hand_pos + Vector2(-3 * flip_sign, -7), Palette.CAT, 1.5)
-		"fist", _:
-			pass
-`
+	if is_attacking_visual:
+		# --- TRẠNG THÁI RA ĐÒN: VŨ KHÍ CHUYỂN ĐỘNG THEO PHA ---
+		var progress: float = clampf(1.0 - (attack_slash_timer / maxf(0.01, attack_slash_total_time)), 0.0, 1.0)
+		
+		match attack_weapon_type:
+			"staff_wood", "staff":
+				# Gậy gỗ vung xoay vòng cung
+				var reverse_swing: bool = (attack_slash_step % 2 == 1)
+				var start_ang: float = base_angle + PI * 0.52 if reverse_swing else base_angle - PI * 0.52
+				var end_ang: float = base_angle - PI * 0.52 if reverse_swing else base_angle + PI * 0.52
+				var cur_ang: float = lerp_angle(start_ang, end_ang, progress)
+				
+				var staff_dir := Vector2(cos(cur_ang), sin(cur_ang))
+				var staff_base := pivot + staff_dir * 3.0
+				var staff_tip := pivot + staff_dir * 24.0
+				
+				# Vệt chém hình vòng cung vàng rực bám theo sau mũi gậy
+				var arc_rad: float = 23.0 if attack_slash_step == 2 else 19.0
+				var a1 := minf(start_ang, cur_ang)
+				var a2 := maxf(start_ang, cur_ang)
+				draw_arc(pivot, arc_rad, a1, a2, 14, Palette.KEM, 3.0)
+				draw_arc(pivot, arc_rad - 2.0, a1, a2, 14, Palette.VANG_CO, 2.0)
+				
+				# Thân gậy vung
+				draw_line(staff_base, staff_tip, Palette.NAU_DA, 3.0)
+				draw_circle(staff_tip, 2.5, Palette.KEM)
+				draw_circle(staff_base, 1.5, Palette.NAU_HAM)
+			
+			"dagger":
+				# Dao găm đâm thẳng vọt tới trước cực nhanh
+				var thrust_dist: float = 4.0
+				if progress < 0.20:
+					thrust_dist = lerp(4.0, 0.0, progress / 0.20)
+				elif progress < 0.60:
+					thrust_dist = lerp(0.0, 22.0, (progress - 0.20) / 0.40)
+				else:
+					thrust_dist = lerp(22.0, 4.0, (progress - 0.60) / 0.40)
+				
+				var hilt := pivot + aim * thrust_dist
+				var tip := pivot + aim * (thrust_dist + 14.0)
+				
+				# Vệt đâm nhọn ánh sáng lướt theo dao
+				draw_line(pivot + aim * 2.0, tip + aim * 5.0, Palette.KEM, 2.5)
+				draw_line(pivot + aim * 2.0 + Vector2(-aim.y, aim.x) * 2.5, tip, Palette.XAM_SAT, 1.5)
+				draw_line(pivot + aim * 2.0 + Vector2(aim.y, -aim.x) * 2.5, tip, Palette.XAM_SAT, 1.5)
+				
+				# Lưỡi dao
+				draw_line(hilt, tip, Palette.KEM, 2.5)
+				draw_line(hilt, tip, Palette.XAM_SAT, 1.5)
+				# Chuôi dao
+				draw_circle(hilt, 2.0, Palette.NAU_HAM)
+				draw_line(hilt + Vector2(-aim.y, aim.x) * 3.0, hilt + Vector2(aim.y, -aim.x) * 3.0, Palette.VANG_CO, 2.0)
+			
+			"sling":
+				# Ná giương chạc và bung dây thun
+				var fork_pos := pivot + aim * 9.0
+				var fork_l := fork_pos + Vector2(-aim.y, aim.x) * 4.5 + aim * 3.0
+				var fork_r := fork_pos + Vector2(aim.y, -aim.x) * 4.5 + aim * 3.0
+				var pull_pos := pivot - aim * 3.0 if progress < 0.45 else fork_pos + aim * 2.0
+				
+				# Cán ná gỗ
+				draw_line(pivot, fork_pos, Palette.CAT, 2.5)
+				draw_line(fork_pos, fork_l, Palette.CAT, 2.0)
+				draw_line(fork_pos, fork_r, Palette.CAT, 2.0)
+				# Dây thun
+				draw_line(fork_l, pull_pos, Palette.GIAY_DA, 1.5)
+				draw_line(fork_r, pull_pos, Palette.GIAY_DA, 1.5)
+				if progress < 0.45:
+					draw_circle(pull_pos, 2.0, Palette.XAM_SAT)
+			
+			"unarmed", _:
+				var p_dist := lerp(2.0, 14.0, sin(progress * PI))
+				draw_circle(pivot + aim * p_dist, 4.0, Palette.KEM)
+	else:
+		# --- TRẠNG THÁI NGHỈ: VŨ KHÍ NẰM GỌN BÊN HÔNG / TAY ---
+		var hand_pos: Vector2 = Vector2(7.0 * flip_sign, -8.0)
+		if abs(facing_dir.y) > abs(facing_dir.x):
+			hand_pos = Vector2(7.0, -8.0 if facing_dir.y > 0 else -10.0)
+		
+		match equipped_weapon_id:
+			"staff_wood", "staff":
+				draw_line(hand_pos + Vector2(0, 5), hand_pos + Vector2(3 * flip_sign, -13), Palette.NAU_DA, 2.5)
+				draw_circle(hand_pos + Vector2(3 * flip_sign, -13), 1.5, Palette.KEM)
+				draw_circle(hand_pos + Vector2(0, 5), 1.5, Palette.NAU_HAM)
+			"dagger":
+				var d_aim := aim * 8.0
+				draw_line(hand_pos, hand_pos + d_aim, Palette.XAM_SAT, 2.0)
+				draw_line(hand_pos, hand_pos + d_aim * 0.7, Palette.KEM, 1.0)
+				draw_circle(hand_pos, 2.0, Palette.NAU_HAM)
+			"sling":
+				draw_line(hand_pos, hand_pos + Vector2(0, -5), Palette.CAT, 2.0)
+				draw_line(hand_pos + Vector2(0, -5), hand_pos + Vector2(3 * flip_sign, -8), Palette.CAT, 1.5)
+				draw_line(hand_pos + Vector2(0, -5), hand_pos + Vector2(-3 * flip_sign, -8), Palette.CAT, 1.5)
+			"fist", _:
+				pass
+```
+
+---
 
 ## scripts\player\player.gd
-`gdscript
+```gdscript
 extends CharacterBody2D
 class_name Player
 
@@ -2291,8 +2411,8 @@ var is_attacking: bool = false
 var can_attack: bool = true
 var combo_step: int = 0 # 0, 1, 2 tương ứng các đòn trong chuỗi
 
-# Hệ thống vũ khí (Giai đoạn A: 2 ô vũ khí trang bị)
-var weapon_slots: Array[String] = ["staff_wood", "dagger"]
+# Hệ thống vũ khí (Giai đoạn A: 3 ô vũ khí trang bị)
+var weapon_slots: Array[String] = ["staff_wood", "dagger", "sling"]
 var active_slot_idx: int = 0
 var current_weapon_id: String = "staff_wood"
 var current_weapon_data: Dictionary = {}
@@ -2567,14 +2687,14 @@ func process_input_and_movement(delta: float) -> void:
 		if Input.is_action_just_pressed("swap_weapon"):
 			swap_weapon()
 		
-		# Hỗ trợ phím số 1, 2, 3, 4 để người chơi thử nghiệm đủ 3 vũ khí + tay không vào ô đang chọn
-		if Input.is_key_pressed(KEY_1):
-			equip_weapon_to_active_slot("staff_wood")
-		elif Input.is_key_pressed(KEY_2):
-			equip_weapon_to_active_slot("dagger")
-		elif Input.is_key_pressed(KEY_3):
-			equip_weapon_to_active_slot("sling")
-		elif Input.is_key_pressed(KEY_4):
+		# Hỗ trợ phím số 1, 2, 3 để chọn nhanh 3 ô vũ khí, phím 4 là đòn tay không
+		if Input.is_physical_key_pressed(KEY_1) or Input.is_key_pressed(KEY_1):
+			_switch_to_slot(0)
+		elif Input.is_physical_key_pressed(KEY_2) or Input.is_key_pressed(KEY_2):
+			_switch_to_slot(1)
+		elif Input.is_physical_key_pressed(KEY_3) or Input.is_key_pressed(KEY_3):
+			_switch_to_slot(2)
+		elif Input.is_physical_key_pressed(KEY_4) or Input.is_key_pressed(KEY_4):
 			equip_weapon_to_active_slot("fist")
 		elif Input.is_action_just_pressed("cycle_item"):
 			var all_keys := ["staff_wood", "dagger", "sling", "fist"]
@@ -2597,8 +2717,8 @@ func swap_weapon() -> void:
 	if is_attacking or is_dodging or is_dead or is_stunned:
 		return
 	
-	# Đổi qua lại giữa 2 ô vũ khí trang bị
-	active_slot_idx = 1 - active_slot_idx
+	# Đổi xoay vòng giữa 3 ô vũ khí trang bị (Gậy Gỗ -> Dao Găm -> Ná)
+	active_slot_idx = (active_slot_idx + 1) % weapon_slots.size()
 	current_weapon_id = weapon_slots[active_slot_idx]
 	current_weapon_data = WeaponDB.get_weapon(current_weapon_id)
 	
@@ -2610,7 +2730,24 @@ func swap_weapon() -> void:
 	
 	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
 	if debug_combat_log:
-		print("[PLAYER] Đổi ô vũ khí: Ô %d -> %s (%s)" % [active_slot_idx + 1, w_name, current_weapon_id])
+		print("[PLAYER] Đổi ô vũ khí: Ô %d/%d -> %s (%s)" % [active_slot_idx + 1, weapon_slots.size(), w_name, current_weapon_id])
+	weapon_swapped.emit(active_slot_idx, current_weapon_id, w_name)
+
+func _switch_to_slot(slot_idx: int) -> void:
+	if slot_idx < 0 or slot_idx >= weapon_slots.size():
+		return
+	if active_slot_idx == slot_idx:
+		return
+	active_slot_idx = slot_idx
+	current_weapon_id = weapon_slots[active_slot_idx]
+	current_weapon_data = WeaponDB.get_weapon(current_weapon_id)
+	combat_state.reset_combo()
+	combo_step = 0
+	if visual_node != null and visual_node.has_method("set_equipped_weapon"):
+		visual_node.set_equipped_weapon(current_weapon_id, facing_direction)
+	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
+	if debug_combat_log:
+		print("[PLAYER] Chọn nhanh Ô %d: %s (%s)" % [active_slot_idx + 1, w_name, current_weapon_id])
 	weapon_swapped.emit(active_slot_idx, current_weapon_id, w_name)
 
 func equip_weapon_to_active_slot(weapon_id: String) -> void:
@@ -2694,7 +2831,15 @@ func _start_attack_step(step: int) -> void:
 	animated_sprite.flip_h = flip_left
 	
 	if animated_sprite != null and animations_config.has(anim_name):
+		animated_sprite.stop()
+		animated_sprite.frame = 0
 		animated_sprite.play(anim_name)
+	
+	# Khởi động diễn hoạt vũ khí động (vung gậy / đâm dao / kéo ná)
+	var total_frames: int = int(spec.get("startup", 4)) + int(spec.get("active", 3)) + int(spec.get("recovery", 6))
+	var attack_duration: float = float(total_frames) * LOGIC_FRAME_TIME
+	if visual_node != null and visual_node.has_method("start_attack_visual"):
+		visual_node.start_attack_visual(facing_direction, combo_step, current_weapon_id, attack_duration)
 	
 	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
 	print("[PLAYER] Tung đòn combo %d/%d (%s)! Startup: %d khung, Tiêu hao: %.1f Stamina" % [
@@ -2781,17 +2926,11 @@ func _enter_active_phase(spec: Dictionary) -> void:
 		# Bắn đạn tầm xa (Ná) qua HitboxService
 		var spawn_pos: Vector2 = global_position + Vector2(0, -10) + facing_direction * 8.0
 		HitboxService.spawn_projectile(get_parent(), hitbox_spec, facing_direction, spawn_pos, self, dmg)
-		
-		if visual_node != null and visual_node.has_method("start_attack_visual"):
-			visual_node.start_attack_visual(facing_direction, combo_step, w_type)
 	else:
 		# Cận chiến: tạo/cấu hình Hitbox theo hình dạng (arc, line, rect)
 		HitboxService.configure_hitbox(attack_hitbox, hitbox_spec, dir_suffix, flip_left, facing_direction)
 		attack_hitbox.monitoring = true
 		check_melee_overlaps()
-		
-		if visual_node != null and visual_node.has_method("start_attack_visual"):
-			visual_node.start_attack_visual(facing_direction, combo_step, w_type)
 
 func _enter_recovery_phase() -> void:
 	is_in_hit_frame = false
@@ -2825,6 +2964,8 @@ func end_attack(reset_step: bool = true) -> void:
 	combat_state.current_state = CombatState.State.IDLE
 	can_attack = true
 	attack_frame_accumulator = 0.0
+	if visual_node != null and visual_node.has_method("stop_attack_visual"):
+		visual_node.stop_attack_visual()
 	if reset_step:
 		combo_step = 0
 		combat_state.combo_step = 0
@@ -3038,6 +3179,10 @@ func die() -> void:
 	modulate = Color.WHITE
 	if visual_node != null and visual_node.has_method("set_guarding"):
 		visual_node.set_guarding(false, facing_direction)
+	if visual_node != null and visual_node.has_method("stop_attack_visual"):
+		visual_node.stop_attack_visual()
+	if visual_node != null and visual_node.has_method("set_dead"):
+		visual_node.set_dead(true)
 	print("[PLAYER] VỎ ĐÃ VỠ... Bắt đầu chuẩn bị hồi sinh.")
 	
 	# Phát death animation
@@ -3077,14 +3222,18 @@ func respawn() -> void:
 		visual_node.set_guarding(false, facing_direction)
 	if visual_node != null and visual_node.has_method("set_hp_ratio"):
 		visual_node.set_hp_ratio(1.0)
+	if visual_node != null and visual_node.has_method("set_dead"):
+		visual_node.set_dead(false)
 	hp_changed.emit(current_hp, max_hp)
 	stamina_changed.emit(current_stamina, max_stamina)
 	print("[PLAYER] Trứng đã hồi sinh tại điểm bắt đầu!")
 	player_respawned.emit()
-`
+```
+
+---
 
 ## scripts\ui\hud.gd
-`gdscript
+```gdscript
 extends CanvasLayer
 
 # HUD hiển thị máu, thể lực và thông báo tạm thời.
@@ -3157,7 +3306,7 @@ func update_stamina(new_stamina: float, new_max_stamina: float) -> void:
 
 func update_weapon(slot_idx: int, _weapon_id: String, weapon_name: String) -> void:
 	if weapon_label != null:
-		weapon_label.text = "[Q] Ô %d: %s" % [slot_idx + 1, weapon_name]
+		weapon_label.text = "[Q] Vũ khí (%d/3): %s" % [slot_idx + 1, weapon_name]
 
 func _on_behavior_points_changed(action_name: String, _new_points: int, _total: int) -> void:
 	if action_name == BehaviorTracker.ACTION_DODGE:
@@ -3170,10 +3319,12 @@ func update_debug_display() -> void:
 
 func show_death_screen(show_it: bool) -> void:
 	death_overlay.visible = show_it
-`
+```
+
+---
 
 ## tools\generate_run_roll_sprites.gd
-`gdscript
+```gdscript
 extends SceneTree
 
 # ============================================================
@@ -3642,10 +3793,12 @@ func _init() -> void:
 
 	print("=== Hoàn tất ===")
 	quit(0)
-`
+```
+
+---
 
 ## tools\generate_run_roll_v2.gd
-`gdscript
+```gdscript
 extends SceneTree
 
 # ============================================================
@@ -4078,10 +4231,12 @@ func _init() -> void:
 
 	print("=== Xong ===")
 	quit(0)
-`
+```
+
+---
 
 ## tools\test_combat_stage_a.gd
-`gdscript
+```gdscript
 extends SceneTree
 
 # Test verification script for Combat Stage A
@@ -4164,4 +4319,7 @@ func _init() -> void:
 	
 	print("--- TAT CA CAC TEST UNIT CUA STAGE A DA VUOT QUA THANH CONG! ---")
 	quit(0)
-`
+```
+
+---
+

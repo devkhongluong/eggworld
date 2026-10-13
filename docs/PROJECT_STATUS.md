@@ -87,12 +87,18 @@
     - `GameData.gd` nạp `weapons.json` và `WeaponDB.gd` đọc qua `GameData`, áp dụng công thức scaling và phạt khi thiếu chỉ số.
     - Chu kỳ 3 pha theo khung hình logic 60 FPS: `startup` $\rightarrow$ `active` $\rightarrow$ `recovery` với khả năng hủy đòn sang lăn né (`dodge cancel`) hoặc nối chuỗi combo từ khung `cancel_from`.
     - Input Map khai báo theo mục 2: `swap_weapon` (Q, Joypad D-pad Lên - đã kích hoạt), `use_item` (R), `cycle_item` (Z), `skill` (I), `two_hand` (Tab).
-    - Đổi vũ khí bằng `swap_weapon` giữa 2 ô trang bị (`weapon_slots`). Hỗ trợ phím số 1, 2, 3, 4 hoặc `cycle_item` (Z) để đổi nhanh vũ khí trang bị vào ô đang chọn phục vụ thử nghiệm.
-    - Hình khối tạm (Placeholder visual) cho vũ khí đang cầm và đòn đánh trên thân nhân vật: Gậy Gỗ (thanh nâu), Dao Găm (lưỡi bạc), Ná (chạc chữ Y).
+    - Đổi vũ khí bằng `swap_weapon` (Q / Joypad D-pad Lên) xoay vòng mượt mà giữa 3 ô trang bị: Ô 1: Gậy Gỗ $\rightarrow$ Ô 2: Dao Găm $\rightarrow$ Ô 3: Ná. Hỗ trợ phím số 1, 2, 3 để chọn nhanh từng ô, phím 4 để chuyển sang đòn Tay Không (`fist`).
+    - **Hoạt ảnh diễn hoạt vũ khí động (Dynamic Weapon Animations):** Khắc phục triệt để lỗi vũ khí đứng yên:
+      - Khi nghỉ: Vũ khí giắt gọn gàng bên hông/tay nhân vật (Gậy Gỗ gác chéo lưng, Dao Găm cài hông, Ná cầm tay). Khi chết hoặc đỡ đòn vũ khí tự động ẩn phù hợp.
+      - Khi ra đòn: Vũ khí chuyển động sống động theo chu kỳ đòn đánh 60 FPS:
+        - **Gậy Gỗ (`staff_wood`):** Vung quét xoay tròn qua góc 180° kèm vệt chém cánh cung vàng rực rỡ (`Palette.KEM` và `Palette.VANG_CO`), đổi hướng vung xen kẽ theo từng bước combo.
+        - **Dao Găm (`dagger`):** Đâm thẳng vút tới trước (+22px) cực nhanh kèm vệt sáng ánh thép và thu dao về mượt mà.
+        - **Ná (`sling`):** Kéo căng chạc và dây thun kèm hòn sỏi ở pha tụ lực, sau đó nhả bung dây và bắn viên đạn bay vút đi ở pha phát lực.
+        - **Tay không (`fist`):** Thụi nắm đấm bật về phía trước.
     - Vũ khí tầm xa Ná (`sling`): Bắn đạn `Projectile` qua `HitboxService`, bay theo hướng nhìn, va chạm Hurtbox kẻ thù, gây sát thương và cộng +2 điểm `MAGIC` vào `BehaviorTracker`.
-    - `HitboxService.gd`: Tạo, định vị và cấu hình hitbox chuẩn xác theo 4 hình dạng (`arc`, `rect`, `line`, `projectile`), xoay theo `facing_direction` và lật theo `flip_h`.
+    - `HitboxService.gd`: Tạo, định vị và cấu hình hitbox chuẩn xác theo 4 hình dạng (`arc`, `rect`, `line`, `projectile`), xoay theo `facing_direction` và lật theo `flip_h`. Hỗ trợ quét tự động mọi dạng node con `CollisionShape2D`.
     - Mỗi đòn trúng cộng điểm theo mục 12 và in console log khi bật cờ `debug.show_combat_log` trong `data/stats.json`.
-    - Cập nhật HUD: hiển thị trực quan ô vũ khí và tên vũ khí `[Q] Ô 1: Gậy Gỗ`, tự động cập nhật khi đổi ô.
+    - Cập nhật HUD: hiển thị trực quan `[Q] Vũ khí (X/3): [Tên vũ khí]`, tự động cập nhật khi đổi ô.
     - Kịch bản kiểm thử tự động toàn diện: `tools/test_combat_stage_a.gd` (kiểm tra đầy đủ 7 tiêu chí đơn vị).
     - *File liên quan:* `data/weapons.json`, `data/stats.json`, `project.godot`, `scripts/autoload/game_data.gd`, `scripts/combat/*.gd`, `scripts/player/*.gd`, `scripts/ui/hud.gd`, `scenes/ui/hud.tscn`, `scenes/levels/test_arena.gd`, `tools/test_combat_stage_a.gd`.
 

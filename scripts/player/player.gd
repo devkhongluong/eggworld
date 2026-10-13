@@ -61,8 +61,8 @@ var is_attacking: bool = false
 var can_attack: bool = true
 var combo_step: int = 0 # 0, 1, 2 tương ứng các đòn trong chuỗi
 
-# Hệ thống vũ khí (Giai đoạn A: 2 ô vũ khí trang bị)
-var weapon_slots: Array[String] = ["staff_wood", "dagger"]
+# Hệ thống vũ khí (Giai đoạn A: 3 ô vũ khí trang bị)
+var weapon_slots: Array[String] = ["staff_wood", "dagger", "sling"]
 var active_slot_idx: int = 0
 var current_weapon_id: String = "staff_wood"
 var current_weapon_data: Dictionary = {}
@@ -337,14 +337,14 @@ func process_input_and_movement(delta: float) -> void:
 		if Input.is_action_just_pressed("swap_weapon"):
 			swap_weapon()
 		
-		# Hỗ trợ phím số 1, 2, 3, 4 để người chơi thử nghiệm đủ 3 vũ khí + tay không vào ô đang chọn
-		if Input.is_key_pressed(KEY_1):
-			equip_weapon_to_active_slot("staff_wood")
-		elif Input.is_key_pressed(KEY_2):
-			equip_weapon_to_active_slot("dagger")
-		elif Input.is_key_pressed(KEY_3):
-			equip_weapon_to_active_slot("sling")
-		elif Input.is_key_pressed(KEY_4):
+		# Hỗ trợ phím số 1, 2, 3 để chọn nhanh 3 ô vũ khí, phím 4 là đòn tay không
+		if Input.is_physical_key_pressed(KEY_1) or Input.is_key_pressed(KEY_1):
+			_switch_to_slot(0)
+		elif Input.is_physical_key_pressed(KEY_2) or Input.is_key_pressed(KEY_2):
+			_switch_to_slot(1)
+		elif Input.is_physical_key_pressed(KEY_3) or Input.is_key_pressed(KEY_3):
+			_switch_to_slot(2)
+		elif Input.is_physical_key_pressed(KEY_4) or Input.is_key_pressed(KEY_4):
 			equip_weapon_to_active_slot("fist")
 		elif Input.is_action_just_pressed("cycle_item"):
 			var all_keys := ["staff_wood", "dagger", "sling", "fist"]
@@ -367,8 +367,8 @@ func swap_weapon() -> void:
 	if is_attacking or is_dodging or is_dead or is_stunned:
 		return
 	
-	# Đổi qua lại giữa 2 ô vũ khí trang bị
-	active_slot_idx = 1 - active_slot_idx
+	# Đổi xoay vòng giữa 3 ô vũ khí trang bị (Gậy Gỗ -> Dao Găm -> Ná)
+	active_slot_idx = (active_slot_idx + 1) % weapon_slots.size()
 	current_weapon_id = weapon_slots[active_slot_idx]
 	current_weapon_data = WeaponDB.get_weapon(current_weapon_id)
 	
@@ -380,7 +380,24 @@ func swap_weapon() -> void:
 	
 	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
 	if debug_combat_log:
-		print("[PLAYER] Đổi ô vũ khí: Ô %d -> %s (%s)" % [active_slot_idx + 1, w_name, current_weapon_id])
+		print("[PLAYER] Đổi ô vũ khí: Ô %d/%d -> %s (%s)" % [active_slot_idx + 1, weapon_slots.size(), w_name, current_weapon_id])
+	weapon_swapped.emit(active_slot_idx, current_weapon_id, w_name)
+
+func _switch_to_slot(slot_idx: int) -> void:
+	if slot_idx < 0 or slot_idx >= weapon_slots.size():
+		return
+	if active_slot_idx == slot_idx:
+		return
+	active_slot_idx = slot_idx
+	current_weapon_id = weapon_slots[active_slot_idx]
+	current_weapon_data = WeaponDB.get_weapon(current_weapon_id)
+	combat_state.reset_combo()
+	combo_step = 0
+	if visual_node != null and visual_node.has_method("set_equipped_weapon"):
+		visual_node.set_equipped_weapon(current_weapon_id, facing_direction)
+	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
+	if debug_combat_log:
+		print("[PLAYER] Chọn nhanh Ô %d: %s (%s)" % [active_slot_idx + 1, w_name, current_weapon_id])
 	weapon_swapped.emit(active_slot_idx, current_weapon_id, w_name)
 
 func equip_weapon_to_active_slot(weapon_id: String) -> void:
@@ -464,7 +481,15 @@ func _start_attack_step(step: int) -> void:
 	animated_sprite.flip_h = flip_left
 	
 	if animated_sprite != null and animations_config.has(anim_name):
+		animated_sprite.stop()
+		animated_sprite.frame = 0
 		animated_sprite.play(anim_name)
+	
+	# Khởi động diễn hoạt vũ khí động (vung gậy / đâm dao / kéo ná)
+	var total_frames: int = int(spec.get("startup", 4)) + int(spec.get("active", 3)) + int(spec.get("recovery", 6))
+	var attack_duration: float = float(total_frames) * LOGIC_FRAME_TIME
+	if visual_node != null and visual_node.has_method("start_attack_visual"):
+		visual_node.start_attack_visual(facing_direction, combo_step, current_weapon_id, attack_duration)
 	
 	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
 	print("[PLAYER] Tung đòn combo %d/%d (%s)! Startup: %d khung, Tiêu hao: %.1f Stamina" % [
@@ -551,17 +576,11 @@ func _enter_active_phase(spec: Dictionary) -> void:
 		# Bắn đạn tầm xa (Ná) qua HitboxService
 		var spawn_pos: Vector2 = global_position + Vector2(0, -10) + facing_direction * 8.0
 		HitboxService.spawn_projectile(get_parent(), hitbox_spec, facing_direction, spawn_pos, self, dmg)
-		
-		if visual_node != null and visual_node.has_method("start_attack_visual"):
-			visual_node.start_attack_visual(facing_direction, combo_step, w_type)
 	else:
 		# Cận chiến: tạo/cấu hình Hitbox theo hình dạng (arc, line, rect)
 		HitboxService.configure_hitbox(attack_hitbox, hitbox_spec, dir_suffix, flip_left, facing_direction)
 		attack_hitbox.monitoring = true
 		check_melee_overlaps()
-		
-		if visual_node != null and visual_node.has_method("start_attack_visual"):
-			visual_node.start_attack_visual(facing_direction, combo_step, w_type)
 
 func _enter_recovery_phase() -> void:
 	is_in_hit_frame = false
@@ -595,6 +614,8 @@ func end_attack(reset_step: bool = true) -> void:
 	combat_state.current_state = CombatState.State.IDLE
 	can_attack = true
 	attack_frame_accumulator = 0.0
+	if visual_node != null and visual_node.has_method("stop_attack_visual"):
+		visual_node.stop_attack_visual()
 	if reset_step:
 		combo_step = 0
 		combat_state.combo_step = 0
@@ -808,6 +829,10 @@ func die() -> void:
 	modulate = Color.WHITE
 	if visual_node != null and visual_node.has_method("set_guarding"):
 		visual_node.set_guarding(false, facing_direction)
+	if visual_node != null and visual_node.has_method("stop_attack_visual"):
+		visual_node.stop_attack_visual()
+	if visual_node != null and visual_node.has_method("set_dead"):
+		visual_node.set_dead(true)
 	print("[PLAYER] VỎ ĐÃ VỠ... Bắt đầu chuẩn bị hồi sinh.")
 	
 	# Phát death animation
@@ -847,6 +872,8 @@ func respawn() -> void:
 		visual_node.set_guarding(false, facing_direction)
 	if visual_node != null and visual_node.has_method("set_hp_ratio"):
 		visual_node.set_hp_ratio(1.0)
+	if visual_node != null and visual_node.has_method("set_dead"):
+		visual_node.set_dead(false)
 	hp_changed.emit(current_hp, max_hp)
 	stamina_changed.emit(current_stamina, max_stamina)
 	print("[PLAYER] Trứng đã hồi sinh tại điểm bắt đầu!")

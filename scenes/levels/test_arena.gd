@@ -23,4 +23,4 @@ func _ready() -> void:
 		var w_name: String = str(player.current_weapon_data.get("name", player.current_weapon_id))
 		hud.update_weapon(player.active_slot_idx, player.current_weapon_id, w_name)
 	
-	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD), Lăn né (Space), Tấn công (J), Đỡ (L), Đổi vũ khí 2 ô (Q), Đổi trang bị (1,2,3,4).")
+	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD), Lăn né (Space), Tấn công (J/Chuột trái), Đỡ (L/Chuột phải), Đổi vũ khí 3 ô (Q), Chọn nhanh (1: Gậy, 2: Dao, 3: Ná, 4: Tay không).")

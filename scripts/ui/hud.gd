@@ -70,7 +70,7 @@ func update_stamina(new_stamina: float, new_max_stamina: float) -> void:
 
 func update_weapon(slot_idx: int, _weapon_id: String, weapon_name: String) -> void:
 	if weapon_label != null:
-		weapon_label.text = "[Q] Ô %d: %s" % [slot_idx + 1, weapon_name]
+		weapon_label.text = "[Q] Vũ khí (%d/3): %s" % [slot_idx + 1, weapon_name]
 
 func _on_behavior_points_changed(action_name: String, _new_points: int, _total: int) -> void:
 	if action_name == BehaviorTracker.ACTION_DODGE:
