@@ -332,7 +332,7 @@ func _update_preview_section(cur_stats: Dictionary, new_stats: Dictionary) -> vo
 	var dmg_lbl: Label = preview_vbox.get_node_or_null("DamageLabel")
 	if dmg_lbl != null:
 		dmg_lbl.text = "Sát thương: %d %s" % [cur_dmg, ("-> %d" % new_dmg) if new_dmg != cur_dmg else ""]
-		dmg_lbl.add_theme_color_override("font_color", Palette.CAM_DAT if new_dmg > cur_dmg else Palette.KEM)
+		dmg_lbl.add_theme_color_override("font_color", Palette.CAT if new_dmg > cur_dmg else Palette.KEM)
 
 func _on_confirm_pressed() -> void:
 	var total_pts: int = _get_total_pending_points()

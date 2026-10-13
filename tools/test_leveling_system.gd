@@ -1,8 +1,8 @@
-extends SceneTree
+extends Node
 
 # Test verification script for Leveling System (COMBAT_SPEC Section 9)
 
-func _init() -> void:
+func _ready() -> void:
 	print("--- BAT DAU TEST HE THONG LEN CAP (LEVELING SYSTEM) ---")
 	
 	# 1. Test StatsCalc Formulas
@@ -38,7 +38,7 @@ func _init() -> void:
 	
 	# 3. Test Weapon Damage with StatsCalc
 	var w_data := WeaponDB.get_weapon("staff_wood")
-	var spec := w_data["light_chain"][0]
+	var spec: Dictionary = w_data["light_chain"][0]
 	var dmg_base := StatsCalc.calc_weapon_damage(w_data, spec, base_stats)
 	assert(dmg_base == 12, "Sat thuong Gay Go don 1 tai STR 10 phai la 12, nhan duoc: %d" % dmg_base)
 	
@@ -51,7 +51,7 @@ func _init() -> void:
 	# 4. Test PlayerInventory Autoload Logic
 	var inv_script = load("res://scripts/autoload/player_inventory.gd")
 	var inv = inv_script.new()
-	root.add_child(inv)
+	add_child(inv)
 	
 	assert(inv.level == 1, "Level khoi dau phai la 1!")
 	assert(inv.shell_shards == 0, "Mảnh vỏ khoi dau phai la 0!")
@@ -61,7 +61,7 @@ func _init() -> void:
 	assert(inv.can_level_up(), "Voi 100 shards va cost 40, can_level_up phai la true!")
 	
 	# Nang 1 cap don le
-	var success := inv.apply_stat_point("VIT")
+	var success: bool = inv.apply_stat_point("VIT")
 	assert(success, "apply_stat_point phai thanh cong!")
 	assert(inv.level == 2, "Sau khi nang 1 diem, level phai la 2!")
 	assert(inv.shell_shards == 60, "100 - 40 = 60 shards!")
@@ -71,24 +71,24 @@ func _init() -> void:
 	
 	# Nang nhieu diem dong thoi (apply_multiple_stats)
 	# Level 2 cost = 47. We have 60 shards. Adding 1 STR costs 47 -> leaves 13 shards.
-	var multi_success := inv.apply_multiple_stats({"STR": 1})
+	var multi_success: bool = inv.apply_multiple_stats({"STR": 1})
 	assert(multi_success, "Nang tiep 1 diem STR phai thanh cong!")
 	assert(inv.level == 3, "Sau do level phai la 3!")
 	assert(inv.shell_shards == 13, "60 - 47 = 13 shards, nhan duoc: %d" % inv.shell_shards)
 	
 	# Thu nang tiep khi khong du shards (Level 3 cost = 56, only have 13)
-	var fail_attempt := inv.apply_multiple_stats({"DEX": 1})
+	var fail_attempt: bool = inv.apply_multiple_stats({"DEX": 1})
 	assert(not fail_attempt, "Khong du shards thi apply_multiple_stats phai fail!")
 	assert(inv.level == 3, "Level phai giu nguyen 3!")
 	print("[PASS] 6. PlayerInventory: apply_multiple_stats kiem tra du shards va ap dung chinh xac.")
 	
 	# 5. Test Export / Import (Save/Load)
-	var exported := inv.export_data()
+	var exported: Dictionary = inv.export_data()
 	assert(exported["level"] == 3, "Exported level phai la 3!")
 	assert(exported["shell_shards"] == 13, "Exported shards phai la 13!")
 	
 	var inv2 = inv_script.new()
-	root.add_child(inv2)
+	add_child(inv2)
 	inv2.import_data(exported)
 	assert(inv2.level == 3, "Imported level phai la 3!")
 	assert(inv2.shell_shards == 13, "Imported shards phai la 13!")
@@ -100,15 +100,15 @@ func _init() -> void:
 	var lost_node1 = LostShard.new()
 	lost_node1.shard_amount = 50
 	LostShard.current_pile = lost_node1
-	root.add_child(lost_node1)
+	add_child(lost_node1)
 	
 	# Mo phong Player chet lan 2 -> spawn_at phai xoa pile cu
-	var pile2 = LostShard.spawn_at(root, Vector2(100, 100), 30)
+	var pile2 = LostShard.spawn_at(self, Vector2(100, 100), 30)
 	assert(pile2 != null, "Pile moi phai duoc tao!")
 	assert(not is_instance_valid(lost_node1) or lost_node1.is_queued_for_deletion(), "Pile cu phai bi xoa khi chet lan 2!")
 	assert(LostShard.current_pile == pile2, "current_pile phai tro vao pile moi!")
 	pile2.queue_free()
-	print("[PASS] 8. LostShard: Co che duy nhat 1 dong shards va huy dong cu khi chet lan 2 hoat dong dung.")
+	print("[PASS] 8. LostShard: Co che duy nhat 1 dong shards va huy dong cu khi chet lan 2 hoat dung.")
 	
 	# 7. Test StrawBed & LevelUpScreen scene loading
 	var straw_bed_scene = load("res://scenes/world/straw_bed.tscn")
@@ -129,4 +129,4 @@ func _init() -> void:
 	inv2.queue_free()
 	
 	print("--- TAT CA CAC TEST CUA LEVELING SYSTEM DA VUOT QUA THANH CONG! ---")
-	quit(0)
+	get_tree().quit(0)

@@ -46,6 +46,11 @@ func get_stat(category: String, key: String, default_value: Variant = null) -> V
 		return stats[category][key]
 	return default_value
 
+func get_category(category: String, default_value: Dictionary = {}) -> Dictionary:
+	if stats.has(category) and stats[category] is Dictionary:
+		return stats[category]
+	return default_value
+
 func get_weapon(weapon_id: String) -> Dictionary:
 	if weapons.has(weapon_id) and weapons[weapon_id] is Dictionary:
 		return weapons[weapon_id]

@@ -30,14 +30,14 @@ func _ready() -> void:
 	_init_stats()
 
 func _init_stats() -> void:
-	var stats_data = GameData.get_stat("base_stats", {})
-	if stats_data is Dictionary and not stats_data.is_empty():
+	var stats_data = GameData.get_category("base_stats", {})
+	if not stats_data.is_empty():
 		for s in stats_data:
 			base_stats[s] = int(stats_data[s])
 	
 	for s in ["VIT", "STR", "DEX", "INT", "FAI", "LUK"]:
 		if not base_stats.has(s):
-			base_stats[s] = 10
+			base_stats[s] = int(GameData.get_stat("base_stats", s, 10))
 		if not added_points.has(s):
 			added_points[s] = 0
 	
