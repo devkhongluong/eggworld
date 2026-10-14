@@ -97,14 +97,14 @@ static func configure_hitbox(hitbox: Area2D, hitbox_spec: Dictionary, dir_suffix
 				circle.radius = radius
 				shape_owner.shape = circle
 
-static func spawn_projectile(parent: Node, hitbox_spec: Dictionary, facing_dir: Vector2, spawn_pos: Vector2, attacker: Node, damage: int) -> Area2D:
+static func spawn_projectile(parent: Node, hitbox_spec: Dictionary, facing_dir: Vector2, spawn_pos: Vector2, attacker: Node, damage: int, hit_spec: Dictionary = {}) -> Area2D:
 	if parent == null:
 		return null
 	var proj: Area2D = ProjectileScript.new()
 	var spd: float = float(hitbox_spec.get("speed", 220.0))
 	var life: float = float(hitbox_spec.get("life", 0.75))
 	var rad: float = float(hitbox_spec.get("radius", 3.0))
-	proj.setup(facing_dir, spd, damage, life, attacker, rad)
+	proj.setup(facing_dir, spd, damage, life, attacker, rad, hit_spec)
 	proj.global_position = spawn_pos
 	parent.add_child(proj)
 	return proj
@@ -113,19 +113,19 @@ static func deactivate_hitbox(hitbox: Area2D) -> void:
 	if hitbox != null:
 		hitbox.monitoring = false
 
-static func check_and_process_overlaps(hitbox: Area2D, attacker: Node, damage: int, already_hit: Array[Node], on_hit_callback: Callable = Callable()) -> void:
+static func check_and_process_overlaps(hitbox: Area2D, attacker: Node, damage: int, already_hit: Array[Node], on_hit_callback: Callable = Callable(), hit_spec: Dictionary = {}) -> void:
 	if hitbox == null or not hitbox.monitoring:
 		return
 	
 	var areas := hitbox.get_overlapping_areas()
 	for area in areas:
-		process_single_target(area, attacker, damage, already_hit, on_hit_callback)
+		process_single_target(area, attacker, damage, already_hit, on_hit_callback, hit_spec)
 
-static func process_single_target(area: Area2D, attacker: Node, damage: int, already_hit: Array[Node], on_hit_callback: Callable = Callable()) -> void:
+static func process_single_target(area: Area2D, attacker: Node, damage: int, already_hit: Array[Node], on_hit_callback: Callable = Callable(), hit_spec: Dictionary = {}) -> void:
 	var target: Node = area.get_parent()
 	if target != null and target != attacker and not target in already_hit:
 		if target.has_method("receive_hit"):
 			already_hit.append(target)
-			var res: Dictionary = target.receive_hit(damage, attacker)
+			var res: Dictionary = target.receive_hit(damage, attacker, hit_spec)
 			if on_hit_callback.is_valid():
 				on_hit_callback.call(target, damage, res)

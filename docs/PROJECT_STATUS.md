@@ -1,5 +1,5 @@
 # BÁO CÁO TÌNH TRẠNG DỰ ÁN "VỠ VỎ" (SHELLBOUND)
-*Cập nhật lần cuối: 13/10/2026*  
+*Cập nhật lần cuối: 15/10/2026*  
 *Nền tảng: Godot Engine v4.7.2.stable.official (GDScript typed, 2D Pixel Art)*
 
 ---
@@ -114,6 +114,33 @@
     - `scenes/levels/test_arena.tscn` & `test_arena.gd`: Bố trí Ổ Rơm tại đấu trường, hồi sinh lại toàn bộ kẻ thù (`DummyEnemy`, `CommonEnemy`) khi người chơi nghỉ ngơi.
     - Kịch bản kiểm thử tự động: `tools/test_leveling_system.gd` kiểm tra thành công 9 tiêu chí kiểm thử.
     - *File liên quan:* `data/stats.json`, `project.godot`, `scripts/combat/stats_calculator.gd`, `scripts/autoload/player_inventory.gd`, `scripts/combat/lost_shard.gd`, `scenes/items/lost_shard.tscn`, `scripts/world/straw_bed.gd`, `scenes/world/straw_bed.tscn`, `scripts/ui/level_up_screen.gd`, `scenes/ui/level_up_screen.tscn`, `scripts/player/player.gd`, `scripts/autoload/save_manager.gd`, `scripts/ui/hud.gd`, `scenes/ui/hud.tscn`, `scenes/levels/test_arena.tscn`, `scenes/levels/test_arena.gd`, `tools/test_leveling_system.gd`.
+14. **Triển khai Giai đoạn B – Đòn nặng, Poise/Stagger, Đâm lén, Đỡ khéo, Game Feel & F3 Debug (COMBAT_SPEC mục 5, 12, 13):**
+    - **Cân bằng lại Luật Điểm Hành Vi:**
+      - Bỏ hoàn toàn luật "+1 GUARD mỗi 10 sát thương cận chiến".
+      - `GUARD` chỉ cộng khi đỡ thường (+2) và đỡ khéo (+4).
+      - Thêm trường `behavior_tag` trong `data/weapons.json` (Dao Găm: `DODGE`, Ná: `MAGIC`, Gậy Gỗ: không có, Tay Không: không có). Mỗi đòn trúng thưởng +1 điểm hành vi tương ứng (tối đa 1 lần/lượt vung đòn).
+      - `EXPLORE`: bỏ +1 khi nhặt Mảnh Vỏ Vụn, chỉ giữ +5 khi mở rương, tìm lối tắt hoặc phòng ẩn.
+      - Giao diện debug F3: hiển thị bảng thông số đầy đủ 5 bộ đếm ẩn (`GUARD`, `DODGE`, `MAGIC`, `EXPLORE`, `SUPPORT`) kèm tỉ lệ phần trăm trực quan.
+    - **Đòn nặng tích lực (`heavy_charge`):**
+      - Kích hoạt bằng cách giữ phím tấn công (`J` / chuột trái) quá `heavy_hold_threshold` (0.18s) hoặc nhấn phím `U` (`heavy_attack`).
+      - Hiển thị hiệu ứng hào quang tụ lực co giãn quanh Trứng. Khi thả nút, tung đòn nặng gây sát thương cao, poise damage lớn và đẩy lùi mạnh.
+    - **Hệ thống Poise & Choáng (Stagger):**
+      - Cả Player và Enemy đều sở hữu thanh Poise ẩn (`max_poise`, `current_poise`) tự hồi phục sau thời gian không nhận đòn (`poise_recovery_delay`).
+      - Khi thanh Poise cạn kiệt, mục tiêu rơi vào trạng thái choáng (`stagger`) trong thời gian định sẵn, hiện chữ phản hồi "CHOÁNG!".
+    - **Đâm lén (Backstab):**
+      - Tấn công kẻ thù từ cung 90° sau lưng (`backstab_angle_threshold` 0.785 rad): gây sát thương nhân đôi (2.0×), hiện nhãn "ĐÂM LÉN!", cộng +2 điểm `DODGE`.
+    - **Đòn kết liễu (Critical Hit / Riposte):**
+      - Tấn công kẻ thù đang bị choáng (`is_staggered`): gây sát thương 2.5×, lập tức xóa trạng thái choáng, hiện nhãn "KẾT LIỄU!".
+    - **Đỡ khéo (Parry):**
+      - Kích hoạt trong cửa sổ 8 khung hình đầu tiên của tư thế Đỡ (`parry_window_frames: 8`).
+      - Parry thành công: triệt tiêu 100% sát thương, tiêu hao 0 thể lực, lập tức làm choáng kẻ tấn công, rung camera, hiện nhãn "ĐỠ KHÉO!" và thưởng +4 điểm `GUARD`.
+    - **Cảm giác đánh (Game Feel) – toàn bộ tham số trong `data/stats.json` & có công tắc bật/tắt:**
+      - `hit_stop`: Dừng ngắn 2-4 khung hình logic khi đánh trúng (đòn nặng và đòn kết liễu dừng 4-5 khung).
+      - `flash_white`: Kẻ thù nhấp nháy màu kem sáng (`Palette.KEM`) ngắn khi trúng đòn; đòn nặng đẩy lùi xa hơn đòn nhẹ.
+      - `camera_shake`: Rung màn hình khi tung đòn nặng trúng, đòn kết liễu trúng, parry thành công và khi người chơi nhận đòn.
+      - `floating_numbers`: Hiển thị số sát thương nhảy lên và nhãn chữ hiệu ứng trực quan ("ĐÂM LÉN!", "KẾT LIỄU!", "CHOÁNG!", "ĐỠ KHÉO!").
+    - Kịch bản kiểm thử tự động toàn diện: `tools/test_combat_stage_b.gd` (vượt qua 100% cả 6 bộ kiểm thử: behavior tags, poise & stagger break, backstab detection & multiplier, critical hit & stagger reset, parry window & rewards, heavy attack data & formula).
+    - *File liên quan:* `data/stats.json`, `data/weapons.json`, `project.godot`, `scripts/combat/combat_state.gd`, `scripts/combat/combat_feedback.gd`, `scripts/combat/hitbox_service.gd`, `scripts/combat/projectile.gd`, `scripts/combat/base_enemy.gd`, `scripts/combat/dummy_enemy.gd`, `scripts/combat/lost_shard.gd`, `scripts/combat/shell_shard_pickup.gd`, `scripts/player/player.gd`, `scripts/player/player_camera.gd`, `scripts/player/egg_visual.gd`, `scripts/ui/hud.gd`, `scenes/levels/test_arena.tscn`, `tools/test_combat_stage_b.gd`.
 
 ---
 
@@ -171,10 +198,10 @@
 ## 5. BỘ ĐẾM HÀNH VI, AUTOLOAD & INPUT MAP HIỆN CÓ
 
 ### Bộ đếm hành vi ẩn (BehaviorTracker):
-- `GUARD`: +2 khi đỡ đòn thành công (mỗi đòn tối đa 1 lần); +1 mỗi 10 sát thương cận chiến gây ra.
-- `DODGE`: +2 khi lăn né tránh đòn trong i-frame (mỗi đòn tối đa 1 lần).
-- `MAGIC`: +2 khi đánh trúng bằng phép/tầm xa (chưa có vũ khí phép).
-- `EXPLORE`: +5 khi tìm lối tắt/mở rương, +1 khi nhặt Mảnh Vỏ Vụn.
+- `GUARD`: +2 khi đỡ đòn thành công (mỗi đòn tối đa 1 lần); +4 khi đỡ khéo (parry) thành công. (Đã bỏ luật +1 mỗi 10 sát thương cận chiến).
+- `DODGE`: +2 khi lăn né tránh đòn trong i-frame (mỗi đòn tối đa 1 lần); +2 khi đâm lén (backstab); +1 khi đánh trúng bằng vũ khí có thẻ `behavior_tag: DODGE` (Dao Găm).
+- `MAGIC`: +1 khi đánh trúng bằng vũ khí có thẻ `behavior_tag: MAGIC` (Ná); +2 khi dùng phép/tầm xa đặc biệt.
+- `EXPLORE`: +5 khi tìm lối tắt/mở rương/phòng ẩn. (Đã bỏ +1 khi nhặt Mảnh Vỏ Vụn).
 - `SUPPORT`: +3 khi dùng hỗ trợ/hồi máu (chưa có item hồi máu).
 
 ### Autoload (Project Settings):
@@ -190,11 +217,13 @@
 - `move_up`: `W`, Mũi tên lên, D-pad Lên, Joypad Trục Y âm.
 - `move_down`: `S`, Mũi tên xuống, D-pad Xuống, Joypad Trục Y dương.
 - `attack`: `J`, Chuột trái, Nút Joypad X (Square/X).
+- `heavy_attack`: `U` (hoặc giữ `attack` quá 0.18s).
 - `dodge`: `Space`, `K`, Nút Joypad A (Cross/A).
-- `guard`: `L`, Chuột phải, Nút Joypad L1.
+- `guard`: `L`, Chuột phải, Nút Joypad L1 (8 khung đầu là cửa sổ Parry).
 - `interact`: `E`, Nút Joypad Y (Triangle/Y).
 - `pause`: `Escape`, Nút Joypad Start.
 - `swap_weapon`: `Q`, Joypad D-pad Lên.
+- Phím gỡ lỗi: `F3` (Bật/tắt overlay theo dõi 5 bộ đếm hành vi và tỉ lệ %).
 
 ---
 
@@ -206,8 +235,8 @@ Lộ trình ưu tiên cho Vertical Slice: **Giai đoạn A $\rightarrow$ Lên c�
 |---|---|---|---|
 | **Giai đoạn A** | - Tạo `data/weapons.json` (3 vũ khí khởi đầu: Gậy Gỗ, Dao Găm, Ná + đòn tay không).<br>- Tách đòn đánh theo khung hình logic 60 FPS (`startup`, `active`, `recovery`, `cancel_from`).<br>- Thêm Input Map: `swap_weapon` (Q / D-pad lên).<br>- Tách dịch vụ: `CombatState`, `HitboxService`, `WeaponDB`. | Đổi mượt mà giữa Gậy / Dao / Ná; mỗi loại có cự ly, tốc độ, hitbox và cảm giác đánh riêng biệt; hitbox bật/tắt đúng khung hình logic. | **ĐÃ HOÀN THÀNH** |
 | **Giai đoạn Lên cấp** | - Quản lý Mảnh Vỏ Vụn (EXP) tích lũy của Player.<br>- Điểm lưu Ổ Rơm (`StrawBed`) tương tác bằng phím E.<br>- UI cộng chỉ số tại Ổ Rơm (bàn phím & tay cầm), xem trước chỉ số phát sinh (HP, Stamina, Sát thương, Sức tải).<br>- Công thức tính chỉ số chuẩn mục 9 COMBAT_SPEC.<br>- Cơ chế làm rơi Mảnh Vỏ Vụn tại chỗ chết và nhặt lại.<br>- Lưu/tải chỉ số vào `savegame.json`. | Cộng điểm được, chi phí tính đúng công thức, xem trước chính xác, chỉ số ảnh hưởng trực tiếp gameplay, chết nhặt lại được EXP, lưu/tải không mất tiến trình. | **ĐÃ HOÀN THÀNH** |
-| **Giai đoạn B** | - Đòn nặng tích lực (`heavy_charge`).<br>- Hệ thống Poise (độ vững) & Choáng (`stagger`) cho Player và Enemy.<br>- Đâm lén (`backstab` cung 90° phía sau) + Đòn kết liễu (`critical`).<br>- Đỡ khéo (`parry` trong 8 khung đầu của Guard) mở phản đòn. | Quái bị trừ poise và choáng khi hết poise; đâm lén trúng cung sau nhân sát thương và cộng DODGE; parry thành công gây choáng tức thì và cộng GUARD +4. | **TIẾP THEO** |
-| **Giai đoạn Overlay** | - Hệ thống tư thế đánh dùng chung của Trứng (`swing_h`, `swing_v`, `thrust`, `shoot`...).<br>- Lớp phủ vũ khí 16×16 px vẽ đè lên bàn tay theo `data/pose_anchors.json`.<br>- Vệt chém (slash effect) riêng từng vũ khí. | Đổi vũ khí tự động đổi sprite vũ khí và vệt chém trên tay nhân vật mà không cần vẽ lại thân Trứng. | **CHƯA LÀM** |
+| **Giai đoạn B** | - Đòn nặng tích lực (`heavy_charge`).<br>- Hệ thống Poise (độ vững) & Choáng (`stagger`) cho Player và Enemy.<br>- Đâm lén (`backstab` cung 90° phía sau) + Đòn kết liễu (`critical`).<br>- Đỡ khéo (`parry` trong 8 khung đầu của Guard) mở phản đòn.<br>- Game feel (hit-stop, nhấp nháy trắng, rung camera, số sát thương/nhãn nổi).<br>- Luật hành vi theo thẻ `behavior_tag` & F3 Debug Overlay. | Quái bị trừ poise và choáng khi hết poise; đâm lén trúng cung sau nhân sát thương và cộng DODGE; parry thành công gây choáng tức thì và cộng GUARD +4; game feel mượt mà và trực quan; F3 hiển thị chuẩn xác. | **ĐÃ HOÀN THÀNH** |
+| **Giai đoạn Overlay** | - Hệ thống tư thế đánh dùng chung của Trứng (`swing_h`, `swing_v`, `thrust`, `shoot`...).<br>- Lớp phủ vũ khí 16×16 px vẽ đè lên bàn tay theo `data/pose_anchors.json`.<br>- Vệt chém (slash effect) riêng từng vũ khí. | Đổi vũ khí tự động đổi sprite vũ khí và vệt chém trên tay nhân vật mà không cần vẽ lại thân Trứng. | **TIẾP THEO** |
 | **Giai đoạn C** | - Ô kỹ năng vũ khí (`skill_slot`, `data/skills.json`, nút `skill`).<br>- Thế cầm hai tay (`two_hand`, nút Tab). | Tháo lắp được kỹ năng giữa các vũ khí tương thích; bật hai tay nhận `two_hand_bonus` sát thương nhưng bỏ khiên. | **ĐỂ SAU VERTICAL SLICE** |
 | **Giai đoạn D** | - Phụ ma (Lửa, Băng, Thánh, Mục) & Thanh tích lũy trạng thái (Buildup).<br>- Tương tác môi trường cơ bản (cháy rơm, ướt nước). | Tích lũy đủ kích hoạt hiệu ứng rút máu/chậm; lửa lan trên tile rơm. | **ĐỂ SAU VERTICAL SLICE** |
 | **Giai đoạn E** | - Tải Vỏ (Equip Load) tính từ trọng lượng vũ khí/giáp so với `equip_capacity`.<br>- Ba bậc lăn né: Nhẹ ($<30\%$), Vừa ($30-70\%$), Nặng ($>70\%$), Quá tải ($>100\%$). | Mang nặng thay đổi độ dài lăn né và khung bất tử i-frame đúng bảng dữ liệu. | **ĐỂ SAU VERTICAL SLICE** |

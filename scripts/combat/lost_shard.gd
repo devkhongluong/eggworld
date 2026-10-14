@@ -88,9 +88,4 @@ func _collect() -> void:
 	if current_pile == self:
 		current_pile = null
 	
-	# Cộng nhẹ điểm EXPLORE
-	var bt = root.root.get_node_or_null("BehaviorTracker")
-	if bt != null:
-		bt.add_points(bt.ACTION_EXPLORE, 3)
-	
 	queue_free()

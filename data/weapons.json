@@ -2,6 +2,7 @@
   "fist": {
     "name": "Tay Không",
     "type": "unarmed",
+    "behavior_tag": "",
     "pose_set": "swing",
     "weight": 0.0,
     "base_damage": 6,
@@ -52,6 +53,7 @@
   "staff_wood": {
     "name": "Gậy Gỗ",
     "type": "staff",
+    "behavior_tag": "",
     "pose_set": "swing",
     "weight": 3.0,
     "base_damage": 12,
@@ -114,6 +116,7 @@
   "dagger": {
     "name": "Dao Găm",
     "type": "dagger",
+    "behavior_tag": "DODGE",
     "pose_set": "thrust",
     "weight": 1.5,
     "base_damage": 9,
@@ -176,6 +179,7 @@
   "sling": {
     "name": "Ná",
     "type": "sling",
+    "behavior_tag": "MAGIC",
     "pose_set": "shoot",
     "weight": 1.2,
     "base_damage": 10,

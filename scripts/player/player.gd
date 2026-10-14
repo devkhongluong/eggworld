@@ -75,7 +75,23 @@ var attack_frame_accumulator: float = 0.0
 var attack_cooldown_timer: float = 0.0
 var combo_window_timer: float = 0.0
 var already_hit_enemies: Array[Node] = []
-var accumulated_melee_damage: int = 0
+var has_awarded_behavior_this_attack: bool = false
+
+# Poise & Stagger của Player (COMBAT_SPEC mục 5)
+var max_poise: float = 40.0
+var current_poise: float = 40.0
+var poise_recover_delay: float = 2.0
+var poise_recover_rate: float = 15.0
+var poise_delay_timer: float = 0.0
+var player_stagger_duration: float = 0.8
+
+# Đòn nặng & gồng lực (Heavy Attack Charge)
+var is_charging_heavy: bool = false
+var heavy_charge_timer: float = 0.0
+var heavy_charge_ratio: float = 0.0
+var is_heavy_attack: bool = false
+var attack_button_held_time: float = 0.0
+var heavy_hold_threshold: float = 0.18
 
 # Trạng thái đỡ đòn (Guard)
 var is_guarding: bool = false
@@ -196,6 +212,13 @@ func load_stats_from_data() -> void:
 	guard_break_stun_duration = float(GameData.get_stat("player", "guard_break_stun_duration", 0.8))
 	guard_arc_degrees = float(GameData.get_stat("player", "guard_arc_degrees", 180.0))
 	
+	max_poise = float(GameData.get_stat("combat_stage_b", "player_max_poise", 40.0))
+	current_poise = max_poise
+	poise_recover_delay = float(GameData.get_stat("combat_stage_b", "player_poise_recover_delay", 2.0))
+	poise_recover_rate = float(GameData.get_stat("combat_stage_b", "player_poise_recover_rate", 15.0))
+	player_stagger_duration = float(GameData.get_stat("combat_stage_b", "player_stagger_duration", 0.8))
+	heavy_hold_threshold = float(GameData.get_stat("combat_stage_b", "heavy_hold_threshold", 0.18))
+	
 	# Nạp kích thước Collision & Hurtbox từ stats.json (Điểm 5)
 	var col_size: Array = GameData.get_stat("player", "collision_size", [10.0, 6.0])
 	var col_offset: Array = GameData.get_stat("player", "collision_offset", [0.0, -3.0])
@@ -260,6 +283,13 @@ func _physics_process(delta: float) -> void:
 	if is_dead:
 		process_death(delta)
 		return
+	
+	# Xử lý cửa sổ đỡ khéo (parry window 8 frames)
+	if combat_state.is_parry_window:
+		combat_state.parry_frame += 1
+		var max_parry_f: int = int(GameData.get_stat("combat_stage_b", "parry_window_frames", 8))
+		if combat_state.parry_frame >= max_parry_f:
+			combat_state.is_parry_window = false
 	
 	process_cooldowns(delta)
 	process_input_and_movement(delta)
@@ -343,6 +373,15 @@ func process_input_and_movement(delta: float) -> void:
 			end_dodge()
 		return
 	
+	if is_charging_heavy:
+		is_guarding = false
+		if visual_node != null and visual_node.has_method("set_guarding"):
+			visual_node.set_guarding(false, facing_direction)
+		velocity = Vector2.ZERO
+		move_and_slide()
+		process_heavy_charge(delta)
+		return
+	
 	if is_attacking:
 		is_guarding = false
 		if visual_node != null and visual_node.has_method("set_guarding"):
@@ -351,9 +390,15 @@ func process_input_and_movement(delta: float) -> void:
 		move_and_slide()
 		return
 	
-	# Kiểm tra trạng thái Giữ Guard
+	# Kiểm tra trạng thái Giữ Guard & Cửa sổ Đỡ Khéo (Parry Window 8 frames)
 	var wants_guard: bool = Input.is_action_pressed("guard") and current_stamina > 0.0
+	if Input.is_action_just_pressed("guard") and current_stamina > 0.0:
+		combat_state.is_parry_window = true
+		combat_state.parry_frame = 0
+	
 	is_guarding = wants_guard
+	if not is_guarding:
+		combat_state.is_parry_window = false
 	if visual_node != null and visual_node.has_method("set_guarding"):
 		visual_node.set_guarding(is_guarding, facing_direction)
 	
@@ -390,7 +435,9 @@ func process_input_and_movement(delta: float) -> void:
 			equip_weapon_to_active_slot(all_keys[nxt_i])
 	
 	if not is_guarding:
-		if Input.is_action_just_pressed("attack"):
+		if Input.is_physical_key_pressed(KEY_U) or Input.is_action_just_pressed("heavy_attack"):
+			start_heavy_charge()
+		elif Input.is_action_just_pressed("attack"):
 			try_attack()
 	
 	if Input.is_action_just_pressed("dodge"):
@@ -457,6 +504,106 @@ func equip_weapon_to_active_slot(weapon_id: String) -> void:
 		print("[PLAYER] Trang bị vào Ô %d: %s (%s)" % [active_slot_idx + 1, w_name, current_weapon_id])
 	weapon_swapped.emit(active_slot_idx, current_weapon_id, w_name)
 
+# --- Đòn nặng và Gồng lực (Heavy Attack Charge) ---
+
+func start_heavy_charge() -> void:
+	if is_dodging or is_dead or is_stunned or is_guarding or is_attacking or is_charging_heavy:
+		return
+	
+	var heavy_spec: Dictionary = current_weapon_data.get("heavy", {})
+	if heavy_spec.is_empty():
+		return
+	
+	var cost: float = WeaponDB.calculate_stamina_cost(heavy_spec, current_weapon_data, player_stats)
+	if current_stamina < cost:
+		if debug_combat_log:
+			print("[PLAYER] Không đủ Stamina để gồng đòn nặng! (Cần %.1f, có %.1f)" % [cost, current_stamina])
+		return
+	
+	is_charging_heavy = true
+	heavy_charge_timer = 0.0
+	heavy_charge_ratio = 0.0
+	combat_state.current_state = CombatState.State.HEAVY_CHARGE
+	
+	if visual_node != null and visual_node.has_method("set_heavy_charging"):
+		visual_node.set_heavy_charging(true, 0.0)
+	
+	if debug_combat_log:
+		print("[PLAYER] Bắt đầu gồng đòn nặng (%s)..." % current_weapon_id)
+
+func process_heavy_charge(delta: float) -> void:
+	if not is_charging_heavy:
+		return
+	
+	heavy_charge_timer += delta
+	var heavy_spec: Dictionary = current_weapon_data.get("heavy", {})
+	var c_min: float = float(heavy_spec.get("charge_min", 0.25))
+	var c_max: float = float(heavy_spec.get("charge_max", 0.8))
+	
+	heavy_charge_ratio = clampf((heavy_charge_timer - c_min) / maxf(0.01, c_max - c_min), 0.0, 1.0)
+	if visual_node != null and visual_node.has_method("set_heavy_charging"):
+		visual_node.set_heavy_charging(true, heavy_charge_ratio)
+	
+	# Nhả phím hoặc đạt ngưỡng tối đa thì ra đòn
+	var button_down: bool = Input.is_action_pressed("attack") or Input.is_physical_key_pressed(KEY_U) or Input.is_action_pressed("heavy_attack")
+	if not button_down or heavy_charge_timer >= c_max:
+		release_heavy_attack()
+
+func release_heavy_attack() -> void:
+	if not is_charging_heavy:
+		return
+	
+	is_charging_heavy = false
+	if visual_node != null and visual_node.has_method("set_heavy_charging"):
+		visual_node.set_heavy_charging(false, 0.0)
+	
+	var heavy_spec: Dictionary = current_weapon_data.get("heavy", {})
+	if heavy_spec.is_empty():
+		combat_state.current_state = CombatState.State.IDLE
+		return
+	
+	var cost: float = WeaponDB.calculate_stamina_cost(heavy_spec, current_weapon_data, player_stats)
+	if current_stamina < cost:
+		combat_state.current_state = CombatState.State.IDLE
+		return
+	
+	current_stamina -= cost
+	stamina_changed.emit(current_stamina, max_stamina)
+	stamina_delay_timer = stamina_recovery_delay
+	
+	is_attacking = true
+	is_heavy_attack = true
+	can_attack = false
+	has_awarded_behavior_this_attack = false
+	
+	combat_state.current_state = CombatState.State.ATTACK_STARTUP
+	combat_state.attack_phase = CombatState.AttackPhase.STARTUP
+	combat_state.attack_frame = 0
+	combat_state.is_heavy = true
+	combat_state.charge_ratio = heavy_charge_ratio
+	attack_frame_accumulator = 0.0
+	already_hit_enemies.clear()
+	
+	var dir_suffix := get_direction_suffix(facing_direction)
+	var anim_name := "attack_" + dir_suffix
+	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
+	animated_sprite.flip_h = flip_left
+	
+	if animated_sprite != null and animations_config.has(anim_name):
+		animated_sprite.stop()
+		animated_sprite.frame = 0
+		animated_sprite.play(anim_name)
+	
+	var total_frames: int = int(heavy_spec.get("startup", 6)) + int(heavy_spec.get("active", 3)) + int(heavy_spec.get("recovery", 10))
+	var attack_duration: float = float(total_frames) * LOGIC_FRAME_TIME
+	if visual_node != null and visual_node.has_method("start_attack_visual"):
+		visual_node.start_attack_visual(facing_direction, 2, current_weapon_id, attack_duration, true)
+	
+	if debug_combat_log:
+		print("[PLAYER] TUNG ĐÒN NẶNG (%s)! Tỉ lệ gồng: %.0f%%, Tiêu hao: %.1f Stamina" % [
+			current_weapon_data.get("name", current_weapon_id), heavy_charge_ratio * 100.0, cost
+		])
+
 # --- Chuỗi đòn nhẹ 60 FPS Logic (Startup -> Active -> Recovery) ---
 
 const ProjectileScript = preload("res://scripts/combat/projectile.gd")
@@ -487,6 +634,9 @@ func _start_attack_step(step: int) -> void:
 	if step >= chain.size():
 		step = 0
 	combo_step = step
+	is_heavy_attack = false
+	attack_button_held_time = 0.0
+	has_awarded_behavior_this_attack = false
 	
 	var spec: Dictionary = chain[combo_step]
 	var cost: float = WeaponDB.calculate_stamina_cost(spec, current_weapon_data, player_stats)
@@ -503,6 +653,7 @@ func _start_attack_step(step: int) -> void:
 	
 	is_attacking = true
 	can_attack = false
+	combat_state.is_heavy = false
 	combat_state.current_state = CombatState.State.ATTACK_STARTUP
 	combat_state.attack_phase = CombatState.AttackPhase.STARTUP
 	combat_state.attack_frame = 0
@@ -526,7 +677,7 @@ func _start_attack_step(step: int) -> void:
 	var total_frames: int = int(spec.get("startup", 4)) + int(spec.get("active", 3)) + int(spec.get("recovery", 6))
 	var attack_duration: float = float(total_frames) * LOGIC_FRAME_TIME
 	if visual_node != null and visual_node.has_method("start_attack_visual"):
-		visual_node.start_attack_visual(facing_direction, combo_step, current_weapon_id, attack_duration)
+		visual_node.start_attack_visual(facing_direction, combo_step, current_weapon_id, attack_duration, false)
 	
 	var w_name: String = str(current_weapon_data.get("name", current_weapon_id))
 	print("[PLAYER] Tung đòn combo %d/%d (%s)! Startup: %d khung, Tiêu hao: %.1f Stamina" % [
@@ -537,6 +688,15 @@ func process_attack_logic(delta: float) -> void:
 	if not is_attacking:
 		return
 	
+	# Kiểm tra nếu giữ nút attack trong giai đoạn startup của đòn nhẹ -> chuyển sang gồng đòn nặng
+	if not is_heavy_attack and combat_state.attack_phase == CombatState.AttackPhase.STARTUP:
+		if Input.is_action_pressed("attack"):
+			attack_button_held_time += delta
+			if attack_button_held_time >= heavy_hold_threshold:
+				end_attack(false)
+				start_heavy_charge()
+				return
+	
 	attack_frame_accumulator += delta
 	while attack_frame_accumulator >= LOGIC_FRAME_TIME:
 		attack_frame_accumulator -= LOGIC_FRAME_TIME
@@ -546,12 +706,19 @@ func _tick_attack_frame() -> void:
 	if not is_attacking:
 		return
 	
-	var chain: Array = current_weapon_data.get("light_chain", [])
-	if combo_step < 0 or combo_step >= chain.size():
-		end_attack(true)
-		return
+	var spec: Dictionary = {}
+	if is_heavy_attack:
+		spec = current_weapon_data.get("heavy", {})
+		if spec.is_empty():
+			end_attack(true)
+			return
+	else:
+		var chain: Array = current_weapon_data.get("light_chain", [])
+		if combo_step < 0 or combo_step >= chain.size():
+			end_attack(true)
+			return
+		spec = chain[combo_step]
 	
-	var spec: Dictionary = chain[combo_step]
 	var startup_frames: int = int(spec.get("startup", 4))
 	var active_frames: int = int(spec.get("active", 3))
 	var recovery_frames: int = int(spec.get("recovery", 6))
@@ -588,15 +755,19 @@ func _tick_attack_frame() -> void:
 				try_dodge(input_vec)
 				return
 			
-			# Nối chuỗi combo từ khung cancel_from
-			if combat_state.can_chain_combo(cancel_from):
+			# Nối chuỗi combo từ khung cancel_from (chỉ đòn nhẹ)
+			if not is_heavy_attack and combat_state.can_chain_combo(cancel_from):
 				if combat_state.combo_buffered or Input.is_action_just_pressed("attack"):
 					combat_state.combo_buffered = false
 					_advance_combo()
 					return
 			
 			if combat_state.attack_frame >= recovery_frames:
-				_finish_attack_recovery(spec, chain)
+				if is_heavy_attack:
+					end_attack(true)
+				else:
+					var chain: Array = current_weapon_data.get("light_chain", [])
+					_finish_attack_recovery(spec, chain)
 
 func _enter_active_phase(spec: Dictionary) -> void:
 	is_in_hit_frame = true
@@ -606,13 +777,18 @@ func _enter_active_phase(spec: Dictionary) -> void:
 	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
 	var hitbox_spec: Dictionary = spec.get("hitbox", {})
 	var shape_type: String = str(hitbox_spec.get("shape", "arc"))
-	var w_type: String = str(current_weapon_data.get("type", "staff"))
-	var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
+	var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats, heavy_charge_ratio if is_heavy_attack else 0.0)
+	
+	var hit_spec: Dictionary = {
+		"is_heavy": is_heavy_attack,
+		"poise_dmg": float(spec.get("poise_dmg", 10.0 if not is_heavy_attack else 35.0)),
+		"behavior_tag": str(current_weapon_data.get("behavior_tag", ""))
+	}
 	
 	if shape_type == "projectile":
 		# Bắn đạn tầm xa (Ná) qua HitboxService
 		var spawn_pos: Vector2 = global_position + Vector2(0, -10) + facing_direction * 8.0
-		HitboxService.spawn_projectile(get_parent(), hitbox_spec, facing_direction, spawn_pos, self, dmg)
+		HitboxService.spawn_projectile(get_parent(), hitbox_spec, facing_direction, spawn_pos, self, dmg, hit_spec)
 	else:
 		# Cận chiến: tạo/cấu hình Hitbox theo hình dạng (arc, line, rect)
 		HitboxService.configure_hitbox(attack_hitbox, hitbox_spec, dir_suffix, flip_left, facing_direction)
@@ -645,7 +821,10 @@ func _finish_attack_recovery(spec: Dictionary, chain: Array) -> void:
 
 func end_attack(reset_step: bool = true) -> void:
 	is_attacking = false
+	is_heavy_attack = false
 	is_in_hit_frame = false
+	combat_state.is_heavy = false
+	attack_button_held_time = 0.0
 	HitboxService.deactivate_hitbox(attack_hitbox)
 	combat_state.attack_phase = CombatState.AttackPhase.NONE
 	combat_state.current_state = CombatState.State.IDLE
@@ -669,34 +848,61 @@ func update_attack_hitbox_transform(dir_suffix: String, flip_left: bool) -> void
 	HitboxService.update_attack_hitbox_position(attack_hitbox, dir_suffix, flip_left)
 
 func check_melee_overlaps() -> void:
-	var chain: Array = current_weapon_data.get("light_chain", [])
-	if combo_step >= chain.size():
-		return
-	var spec: Dictionary = chain[combo_step]
-	var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
-	HitboxService.check_and_process_overlaps(attack_hitbox, self, dmg, already_hit_enemies, _on_enemy_hit)
-
-func _on_attack_hitbox_area_entered(area: Area2D) -> void:
-	if is_in_hit_frame:
+	var spec: Dictionary = {}
+	if is_heavy_attack:
+		spec = current_weapon_data.get("heavy", {})
+		if spec.is_empty():
+			return
+	else:
 		var chain: Array = current_weapon_data.get("light_chain", [])
 		if combo_step >= chain.size():
 			return
-		var spec: Dictionary = chain[combo_step]
-		var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats)
-		HitboxService.process_single_target(area, self, dmg, already_hit_enemies, _on_enemy_hit)
+		spec = chain[combo_step]
+	
+	var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats, heavy_charge_ratio if is_heavy_attack else 0.0)
+	var hit_spec: Dictionary = {
+		"is_heavy": is_heavy_attack,
+		"poise_dmg": float(spec.get("poise_dmg", 10.0 if not is_heavy_attack else 35.0)),
+		"behavior_tag": str(current_weapon_data.get("behavior_tag", ""))
+	}
+	HitboxService.check_and_process_overlaps(attack_hitbox, self, dmg, already_hit_enemies, _on_enemy_hit, hit_spec)
+
+func _on_attack_hitbox_area_entered(area: Area2D) -> void:
+	if is_in_hit_frame:
+		var spec: Dictionary = {}
+		if is_heavy_attack:
+			spec = current_weapon_data.get("heavy", {})
+			if spec.is_empty():
+				return
+		else:
+			var chain: Array = current_weapon_data.get("light_chain", [])
+			if combo_step >= chain.size():
+				return
+			spec = chain[combo_step]
+		
+		var dmg: int = WeaponDB.calculate_damage(current_weapon_data, spec, player_stats, heavy_charge_ratio if is_heavy_attack else 0.0)
+		var hit_spec: Dictionary = {
+			"is_heavy": is_heavy_attack,
+			"poise_dmg": float(spec.get("poise_dmg", 10.0 if not is_heavy_attack else 35.0)),
+			"behavior_tag": str(current_weapon_data.get("behavior_tag", ""))
+		}
+		HitboxService.process_single_target(area, self, dmg, already_hit_enemies, _on_enemy_hit, hit_spec)
 
 func _on_enemy_hit(target: Node, dmg: int, _res: Dictionary) -> void:
 	if debug_combat_log:
-		print("[COMBAT] Đòn %d của %s đánh trúng %s! Gây %d sát thương." % [
-			combo_step + 1, current_weapon_data.get("name", current_weapon_id), target.name, dmg
+		var atk_type := "Đòn nặng" if is_heavy_attack else ("Đòn %d" % (combo_step + 1))
+		print("[COMBAT] %s của %s đánh trúng %s! Gây %d sát thương." % [
+			atk_type, current_weapon_data.get("name", current_weapon_id), target.name, dmg
 		])
-	accumulated_melee_damage += dmg
-	if accumulated_melee_damage >= 10:
-		var guard_pts := accumulated_melee_damage / 10
-		accumulated_melee_damage = accumulated_melee_damage % 10
-		BehaviorTracker.add_points(BehaviorTracker.ACTION_GUARD, guard_pts)
+	
+	# Cộng điểm hành vi theo behavior_tag của vũ khí (tối đa 1 lần mỗi đòn đánh)
+	var tag: String = str(current_weapon_data.get("behavior_tag", ""))
+	if tag != "" and not has_awarded_behavior_this_attack:
+		has_awarded_behavior_this_attack = true
+		var hit_pts: int = int(GameData.get_stat("behavior_points", "weapon_hit_points", 1))
+		BehaviorTracker.add_points(tag, hit_pts)
 		if debug_combat_log:
-			print("[COMBAT] +%d điểm GUARD từ tích lũy sát thương cận chiến!" % guard_pts)
+			print("[COMBAT] +%d điểm %s từ vũ khí %s!" % [hit_pts, tag, current_weapon_id])
 
 func get_direction_suffix(dir: Vector2) -> String:
 	if abs(dir.x) >= abs(dir.y):
@@ -738,10 +944,22 @@ func end_dodge() -> void:
 	dodge_cooldown_timer = dodge_cooldown
 
 func process_stamina(delta: float) -> void:
-	if not is_dodging and not is_attacking and not is_guarding and not is_stunned and velocity == Vector2.ZERO and stamina_delay_timer <= 0.0:
+	if not is_dodging and not is_attacking and not is_guarding and not is_stunned and not is_charging_heavy and velocity == Vector2.ZERO and stamina_delay_timer <= 0.0:
 		if current_stamina < max_stamina:
 			current_stamina = minf(max_stamina, current_stamina + stamina_recovery_rate * delta)
 			stamina_changed.emit(current_stamina, max_stamina)
+	
+	# Hồi phục Poise tự nhiên cho Player
+	if current_poise < max_poise and not is_stunned:
+		if poise_delay_timer > 0.0:
+			poise_delay_timer -= delta
+		else:
+			current_poise = minf(max_poise, current_poise + poise_recover_rate * delta)
+
+func shake_camera(duration: float, intensity: float) -> void:
+	var cam := get_node_or_null("Camera2D") as Camera2D
+	if cam != null:
+		CombatFeedback.shake_camera(cam, duration, intensity)
 
 var hurt_invulnerable_timer: float = 0.0
 
@@ -769,11 +987,12 @@ func receive_hit(damage: int, attack_source: Node) -> Dictionary:
 			# Đang trong thời gian chớp miễn nhiễm sau khi bị thương (i-frame)
 			return {"hit": false, "dodged": false, "guarded": false}
 	
-	# Kiểm tra cơ chế Đỡ Đòn (Guard)
+	# Kiểm tra cơ chế Đỡ Đòn (Guard) & Đỡ Khéo (Parry)
 	var guarded_successfully: bool = false
+	var parried_successfully: bool = false
 	var final_damage: int = damage
 	
-	if is_guarding and not is_stunned:
+	if (is_guarding or combat_state.is_parry_window) and not is_stunned:
 		# Xác định hướng từ Player tới nguồn tấn công
 		var incoming_dir := facing_direction
 		if attack_source != null and "global_position" in attack_source:
@@ -786,44 +1005,91 @@ func receive_hit(damage: int, attack_source: Node) -> Dictionary:
 		var max_allowed_rad: float = deg_to_rad(guard_arc_degrees * 0.5)
 		
 		if angle_diff_rad <= max_allowed_rad:
-			# Đòn đánh nằm trong cung đỡ phía trước!
-			if current_stamina >= guard_stamina_cost_per_hit:
-				# Đỡ thành công
-				current_stamina -= guard_stamina_cost_per_hit
-				stamina_changed.emit(current_stamina, max_stamina)
-				stamina_delay_timer = stamina_recovery_delay
-				
-				final_damage = int(round(float(damage) * (1.0 - guard_damage_reduction)))
+			var can_parry: bool = bool(attack_source.get("is_parryable")) if attack_source != null and "is_parryable" in attack_source else true
+			if combat_state.is_parry_window and can_parry:
+				# ĐỠ KHÉO (PARRY) THÀNH CÔNG!
+				parried_successfully = true
 				guarded_successfully = true
+				final_damage = 0
 				
-				BehaviorTracker.add_points(BehaviorTracker.ACTION_GUARD, 2)
-				print("[COMBAT] Đỡ đòn thành công! Giảm sát thương từ %d xuống %d (-%.1f Stamina, +2 GUARD)" % [
-					damage, final_damage, guard_stamina_cost_per_hit
-				])
+				# Kẻ thù bị choáng ngay
+				if attack_source != null and attack_source.has_method("trigger_stagger"):
+					attack_source.trigger_stagger()
 				
-				# Hiệu ứng nảy lùi nhẹ & nháy sáng Xám Sắt
-				modulate = Palette.XAM_SAT
-				flash_timer = 0.12
-			else:
-				# Vỡ thế đỡ (Guard Break): Hết stamina khi đỡ
-				current_stamina = 0.0
-				stamina_changed.emit(current_stamina, max_stamina)
-				stamina_delay_timer = stamina_recovery_delay * 1.5
+				# Cộng điểm GUARD đỡ khéo (+4)
+				var parry_pts: int = int(GameData.get_stat("behavior_points", "guard_parry", 4))
+				BehaviorTracker.add_points(BehaviorTracker.ACTION_GUARD, parry_pts)
 				
-				is_guarding = false
-				is_stunned = true
-				combat_state.current_state = CombatState.State.STUNNED
-				stun_timer = guard_break_stun_duration
-				final_damage = damage # Nhận trọn sát thương
+				# Game Feel
+				CombatFeedback.trigger_hit_stop(get_tree(), 0.12)
+				shake_camera(float(GameData.get_stat("game_feel", "camera_shake_parry_duration", 0.25)), float(GameData.get_stat("game_feel", "camera_shake_parry_intensity", 6.0)))
+				CombatFeedback.spawn_floating_text(get_parent(), "ĐỠ KHÉO!", global_position + Vector2(0, -14), Palette.VANG_CO, true)
 				
-				if visual_node != null and visual_node.has_method("set_guarding"):
-					visual_node.set_guarding(false, facing_direction)
-				
-				print("[COMBAT] VỠ THẾ ĐỠ (Guard Break)! Choáng trong %.2fs và nhận trọn %d sát thương!" % [
-					guard_break_stun_duration, final_damage
-				])
+				modulate = Palette.KEM
+				flash_timer = 0.15
+				print("[COMBAT] ĐỠ KHÉO (PARRY) THÀNH CÔNG! Triệt tiêu toàn bộ sát thương (+4 GUARD) và làm choáng kẻ tấn công!")
+				return {"hit": false, "dodged": false, "guarded": true, "parried": true}
+			elif is_guarding:
+				# Đỡ thường
+				if current_stamina >= guard_stamina_cost_per_hit:
+					current_stamina -= guard_stamina_cost_per_hit
+					stamina_changed.emit(current_stamina, max_stamina)
+					stamina_delay_timer = stamina_recovery_delay
+					
+					final_damage = int(round(float(damage) * (1.0 - guard_damage_reduction)))
+					guarded_successfully = true
+					
+					var guard_pts: int = int(GameData.get_stat("behavior_points", "guard_normal", 2))
+					BehaviorTracker.add_points(BehaviorTracker.ACTION_GUARD, guard_pts)
+					print("[COMBAT] Đỡ đòn thành công! Giảm sát thương từ %d xuống %d (-%.1f Stamina, +%d GUARD)" % [
+						damage, final_damage, guard_stamina_cost_per_hit, guard_pts
+					])
+					
+					# Hiệu ứng nảy lùi nhẹ & nháy sáng Xám Sắt
+					modulate = Palette.XAM_SAT
+					flash_timer = 0.12
+				else:
+					# Vỡ thế đỡ (Guard Break): Hết stamina khi đỡ
+					current_stamina = 0.0
+					stamina_changed.emit(current_stamina, max_stamina)
+					stamina_delay_timer = stamina_recovery_delay * 1.5
+					
+					is_guarding = false
+					is_stunned = true
+					combat_state.current_state = CombatState.State.STUNNED
+					stun_timer = guard_break_stun_duration
+					final_damage = damage # Nhận trọn sát thương
+					
+					if visual_node != null and visual_node.has_method("set_guarding"):
+						visual_node.set_guarding(false, facing_direction)
+					
+					print("[COMBAT] VỠ THẾ ĐỠ (Guard Break)! Choáng trong %.2fs và nhận trọn %d sát thương!" % [
+						guard_break_stun_duration, final_damage
+					])
 		else:
 			print("[COMBAT] Bị đánh từ phía sau / ngoài cung đỡ (góc: %.1f độ)! Không thể đỡ đòn." % rad_to_deg(angle_diff_rad))
+	
+	# Nếu đang gồng đòn nặng mà bị đánh trúng -> ngắt gồng
+	if is_charging_heavy:
+		is_charging_heavy = false
+		if visual_node != null and visual_node.has_method("set_heavy_charging"):
+			visual_node.set_heavy_charging(false, 0.0)
+	
+	# Trừ poise của Player nếu không đỡ thành công
+	if not guarded_successfully:
+		current_poise = maxf(0.0, current_poise - 15.0)
+		poise_delay_timer = poise_recover_delay
+		if current_poise <= 0.0:
+			current_poise = max_poise
+			is_stunned = true
+			stun_timer = player_stagger_duration
+			combat_state.current_state = CombatState.State.STAGGER
+			CombatFeedback.spawn_floating_text(get_parent(), "CHOÁNG!", global_position + Vector2(0, -14), Palette.DO_GACH, true)
+			print("[COMBAT] Player bị vỡ poise! Choáng trong %.2fs!" % player_stagger_duration)
+		
+		# Rung camera và floating text khi Player nhận đòn
+		shake_camera(float(GameData.get_stat("game_feel", "camera_shake_player_hurt_duration", 0.20)), float(GameData.get_stat("game_feel", "camera_shake_player_hurt_intensity", 3.5)))
+		CombatFeedback.spawn_floating_text(get_parent(), str(final_damage), global_position, Palette.DO_GACH)
 	
 	current_hp = maxi(0, current_hp - final_damage)
 	hp_changed.emit(current_hp, max_hp)

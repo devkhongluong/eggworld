@@ -12,8 +12,11 @@ enum State {
 	ATTACK_STARTUP,
 	ATTACK_ACTIVE,
 	ATTACK_RECOVERY,
+	HEAVY_CHARGE,
 	DODGING,
 	GUARDING,
+	PARRY_WINDOW,
+	STAGGER,
 	STUNNED,
 	DEAD
 }
@@ -27,6 +30,12 @@ enum AttackPhase {
 
 var current_state: State = State.IDLE
 var attack_phase: AttackPhase = AttackPhase.NONE
+
+var is_heavy: bool = false
+var charge_timer: float = 0.0
+var charge_ratio: float = 0.0
+var is_parry_window: bool = false
+var parry_frame: int = 0
 
 var combo_step: int = 0
 var attack_frame: int = 0
@@ -43,7 +52,7 @@ var stun_timer: float = 0.0
 func is_attacking() -> bool:
 	return attack_phase != AttackPhase.NONE or current_state == State.ATTACKING or \
 		current_state == State.ATTACK_STARTUP or current_state == State.ATTACK_ACTIVE or \
-		current_state == State.ATTACK_RECOVERY
+		current_state == State.ATTACK_RECOVERY or current_state == State.HEAVY_CHARGE
 
 func can_cancel_to_dodge(cancel_from: int) -> bool:
 	# Chỉ được hủy sang né khi đang ở pha recovery và đã qua khung cancel_from

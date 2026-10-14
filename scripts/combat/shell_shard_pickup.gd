@@ -53,6 +53,4 @@ func _collect(player_node: Node) -> void:
 		var inv = root.root.get_node_or_null("PlayerInventory")
 		if inv != null and inv.has_method("add_shards"):
 			inv.add_shards(shard_amount)
-	# Tích lũy hành vi EXPLORE nhẹ nếu nhặt đồ
-	BehaviorTracker.add_points(BehaviorTracker.ACTION_EXPLORE, 1)
 	queue_free()

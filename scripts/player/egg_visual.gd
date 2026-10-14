@@ -90,13 +90,23 @@ func spawn_shell_burst(amount: int = 6) -> void:
 		})
 	queue_redraw()
 
-func start_attack_visual(dir: Vector2, step: int, weapon_id: String = "staff_wood", custom_duration: float = -1.0) -> void:
+var is_heavy_charging: bool = false
+var heavy_charge_ratio: float = 0.0
+var is_heavy_attack: bool = false
+
+func set_heavy_charging(charging: bool, ratio: float = 0.0) -> void:
+	is_heavy_charging = charging
+	heavy_charge_ratio = ratio
+	queue_redraw()
+
+func start_attack_visual(dir: Vector2, step: int, weapon_id: String = "staff_wood", custom_duration: float = -1.0, is_heavy: bool = false) -> void:
 	attack_slash_dir = dir.normalized()
 	if attack_slash_dir == Vector2.ZERO:
 		attack_slash_dir = Vector2.DOWN
 	facing_dir = attack_slash_dir
 	attack_slash_step = step
 	attack_weapon_type = weapon_id
+	is_heavy_attack = is_heavy
 	
 	if custom_duration > 0.0:
 		attack_slash_total_time = custom_duration
@@ -178,6 +188,13 @@ func _draw() -> void:
 		draw_arc(shield_center, 9.0, g_start, g_end, 10, Palette.NAU_HAM, 3.5)
 		draw_arc(shield_center, 9.0, g_start, g_end, 10, Palette.XAM_SAT, 2.0)
 		draw_circle(shield_center, 2.0, Palette.VANG_CO)
+	
+	# 3.5 Vẽ vòng hào quang tích lực đòn nặng (Heavy Charge Aura)
+	if is_heavy_charging:
+		var charge_rad: float = 7.0 + heavy_charge_ratio * 7.0
+		draw_arc(Vector2(0, -10), charge_rad, 0.0, TAU, 16, Palette.CAM_DAT, 1.5)
+		if heavy_charge_ratio >= 0.7:
+			draw_arc(Vector2(0, -10), charge_rad - 2.0, 0.0, TAU, 16, Palette.VANG_CO, 1.0)
 	
 	# 4. Vẽ diễn hoạt vũ khí & đòn đánh (Hoạt ảnh động)
 	_draw_dynamic_weapon()

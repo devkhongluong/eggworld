@@ -11,16 +11,18 @@ var damage: int = 10
 var lifetime: float = 0.8
 var attacker: Node = null
 var radius: float = 3.0
+var hit_spec: Dictionary = {}
 
 var _traveled_time: float = 0.0
 
-func setup(p_direction: Vector2, p_speed: float, p_damage: int, p_lifetime: float, p_attacker: Node, p_radius: float = 3.0) -> void:
+func setup(p_direction: Vector2, p_speed: float, p_damage: int, p_lifetime: float, p_attacker: Node, p_radius: float = 3.0, p_hit_spec: Dictionary = {}) -> void:
 	direction = p_direction.normalized()
 	speed = p_speed
 	damage = p_damage
 	lifetime = p_lifetime
 	attacker = p_attacker
 	radius = p_radius
+	hit_spec = p_hit_spec
 
 func _ready() -> void:
 	collision_layer = 0
@@ -51,9 +53,12 @@ func _draw() -> void:
 func _on_area_entered(area: Area2D) -> void:
 	var target: Node = area.get_parent()
 	if target != null and target != attacker and target.has_method("receive_hit"):
-		var _res: Dictionary = target.receive_hit(damage, attacker)
+		var _res: Dictionary = target.receive_hit(damage, attacker, hit_spec)
+		var tag: String = str(hit_spec.get("behavior_tag", "MAGIC"))
+		if tag != "":
+			var pts: int = int(GameData.get_stat("behavior_points", "weapon_hit_points", 1))
+			BehaviorTracker.add_points(tag, pts)
 		var show_log: bool = bool(GameData.get_stat("debug", "show_combat_log", true))
 		if show_log:
-			print("[PROJECTILE] Đạn Ná bắn trúng %s! Gây %d sát thương. (+2 MAGIC)" % [target.name, damage])
-		BehaviorTracker.add_points(BehaviorTracker.ACTION_MAGIC, 2)
+			print("[PROJECTILE] Đạn Ná bắn trúng %s! Gây %d sát thương." % [target.name, damage])
 		queue_free()

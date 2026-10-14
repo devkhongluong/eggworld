@@ -128,14 +128,29 @@ func update_level_and_shards() -> void:
 func update_shards(_amount: int) -> void:
 	update_level_and_shards()
 
-func _on_behavior_points_changed(action_name: String, _new_points: int, _total: int) -> void:
-	if action_name == BehaviorTracker.ACTION_DODGE:
-		update_debug_display()
+func _on_behavior_points_changed(_action_name: String, _new_points: int, _total: int) -> void:
+	update_debug_display()
 
 func update_debug_display() -> void:
 	debug_label.visible = show_debug_dodge
-	if show_debug_dodge:
-		debug_label.text = "[DEBUG F3] DODGE: %d" % BehaviorTracker.get_points(BehaviorTracker.ACTION_DODGE)
+	if not show_debug_dodge:
+		return
+	var total: int = BehaviorTracker.get_total_points()
+	var g: int = BehaviorTracker.get_points(BehaviorTracker.ACTION_GUARD)
+	var d: int = BehaviorTracker.get_points(BehaviorTracker.ACTION_DODGE)
+	var m: int = BehaviorTracker.get_points(BehaviorTracker.ACTION_MAGIC)
+	var e: int = BehaviorTracker.get_points(BehaviorTracker.ACTION_EXPLORE)
+	var s: int = BehaviorTracker.get_points(BehaviorTracker.ACTION_SUPPORT)
+	
+	var g_pct: float = (float(g) / float(total) * 100.0) if total > 0 else 0.0
+	var d_pct: float = (float(d) / float(total) * 100.0) if total > 0 else 0.0
+	var m_pct: float = (float(m) / float(total) * 100.0) if total > 0 else 0.0
+	var e_pct: float = (float(e) / float(total) * 100.0) if total > 0 else 0.0
+	var s_pct: float = (float(s) / float(total) * 100.0) if total > 0 else 0.0
+	
+	debug_label.text = "[F3 DEBUG BỘ ĐẾM HÀNH VI]\nGUARD: %d (%.1f%%) | DODGE: %d (%.1f%%)\nMAGIC: %d (%.1f%%) | EXPLORE: %d (%.1f%%)\nSUPPORT: %d (%.1f%%) | Tổng: %d" % [
+		g, g_pct, d, d_pct, m, m_pct, e, e_pct, s, s_pct, total
+	]
 
 func show_death_screen(show_it: bool) -> void:
 	death_overlay.visible = show_it

@@ -80,5 +80,52 @@
 	"damage_mult_per_pt": 0.05,
 	"damage_min_mult": 0.5,
 	"stamina_mult_per_pt": 0.04
+  },
+  "behavior_points": {
+	"weapon_hit_points": 1,
+	"guard_normal": 2,
+	"guard_parry": 4,
+	"dodge_success": 2,
+	"backstab": 2,
+	"explore_secret": 5
+  },
+  "game_feel": {
+	"hit_stop_enabled": true,
+	"hit_stop_light_duration": 0.04,
+	"hit_stop_heavy_duration": 0.08,
+	"hit_stop_critical_duration": 0.14,
+	"enemy_flash_enabled": true,
+	"enemy_flash_duration": 0.12,
+	"knockback_enabled": true,
+	"knockback_light_speed": 75.0,
+	"knockback_heavy_speed": 180.0,
+	"knockback_critical_speed": 230.0,
+	"camera_shake_enabled": true,
+	"camera_shake_player_hurt_duration": 0.20,
+	"camera_shake_player_hurt_intensity": 3.5,
+	"camera_shake_heavy_duration": 0.22,
+	"camera_shake_heavy_intensity": 5.0,
+	"camera_shake_critical_duration": 0.28,
+	"camera_shake_critical_intensity": 7.0,
+	"camera_shake_parry_duration": 0.25,
+	"camera_shake_parry_intensity": 6.0,
+	"floating_numbers_enabled": true,
+	"floating_text_duration": 0.70
+  },
+  "combat_stage_b": {
+	"heavy_hold_threshold": 0.18,
+	"parry_window_frames": 8,
+	"player_max_poise": 40.0,
+	"player_poise_recover_delay": 2.0,
+	"player_poise_recover_rate": 15.0,
+	"player_stagger_duration": 0.8,
+	"enemy_default_poise": 30.0,
+	"enemy_poise_recover_delay": 2.5,
+	"enemy_poise_recover_rate": 10.0,
+	"enemy_stagger_duration": 1.2,
+	"backstab_angle_degrees": 90.0,
+	"backstab_damage_mult": 2.0,
+	"critical_hit_damage_mult": 2.5,
+	"critical_hit_iframe_duration": 0.35
   }
 }

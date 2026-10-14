@@ -50,9 +50,13 @@ const SCALING_COEFF: Dictionary = {
 	"-": 0.0
 }
 
-static func calculate_damage(weapon: Dictionary, attack_spec: Dictionary, stats: Dictionary) -> int:
+static func calculate_damage(weapon: Dictionary, attack_spec: Dictionary, stats: Dictionary, charge_ratio: float = 0.0) -> int:
 	var base_dmg: float = float(weapon.get("base_damage", 10))
-	var mv: float = float(attack_spec.get("damage_mv", 1.0))
+	var mv: float = float(attack_spec.get("damage_mv", 0.0))
+	if mv == 0.0:
+		var mv_min: float = float(attack_spec.get("damage_mv_min", 1.5))
+		var mv_max: float = float(attack_spec.get("damage_mv_max", 2.2))
+		mv = lerpf(mv_min, mv_max, clampf(charge_ratio, 0.0, 1.0))
 	
 	# Tính scaling
 	var scaling: Dictionary = weapon.get("scaling", {})
