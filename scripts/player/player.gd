@@ -255,6 +255,8 @@ func setup_animations() -> void:
 		var frame_count: int = int(cfg.get("frames", 4))
 		var fps: float = float(cfg.get("fps", 12))
 		var loop: bool = bool(cfg.get("loop", true))
+		var f_width: int = int(cfg.get("frame_width", 32))
+		var f_height: int = int(cfg.get("frame_height", 32))
 		
 		sprite_frames.add_animation(anim_name)
 		sprite_frames.set_animation_speed(anim_name, fps)
@@ -268,16 +270,47 @@ func setup_animations() -> void:
 			for i in range(frame_count):
 				var atlas := AtlasTexture.new()
 				atlas.atlas = texture
-				atlas.region = Rect2(i * 32, 0, 32, 32)
+				atlas.region = Rect2(i * f_width, 0, f_width, f_height)
 				sprite_frames.add_frame(anim_name, atlas)
 		else:
-			var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+			var img := Image.create(f_width, f_height, false, Image.FORMAT_RGBA8)
 			var placeholder_tex := ImageTexture.create_from_image(img)
 			for i in range(frame_count):
 				sprite_frames.add_frame(anim_name, placeholder_tex)
 	
 	animated_sprite.sprite_frames = sprite_frames
 	animated_sprite.offset = Vector2(0, -16)
+
+func get_attack_animation_name(weapon_id: String, dir_suffix: String) -> String:
+	var w_type: String = ""
+	if current_weapon_data.has("type"):
+		w_type = current_weapon_data["type"]
+	
+	var candidates: Array[String] = [
+		"attack_" + weapon_id + "_" + dir_suffix,
+		"attack_" + weapon_id + "_side",
+		"attack_" + w_type + "_" + dir_suffix,
+		"attack_" + w_type + "_side",
+		"attack_" + dir_suffix,
+		"attack_side"
+	]
+	
+	for cand in candidates:
+		if animations_config.has(cand):
+			return cand
+	return "attack_side"
+
+func update_sprite_offset_for_animation(anim_name: String, flip_left: bool) -> void:
+	if animated_sprite == null:
+		return
+	var cfg: Dictionary = animations_config.get(anim_name, {})
+	var fw: int = int(cfg.get("frame_width", 32))
+	var fh: int = int(cfg.get("frame_height", 32))
+	if fw > 32 or fh > 32:
+		var off_x: float = -10.0 if flip_left else 10.0
+		animated_sprite.offset = Vector2(off_x, -20.0)
+	else:
+		animated_sprite.offset = Vector2(0.0, -16.0)
 
 func _physics_process(delta: float) -> void:
 	if is_dead:
@@ -309,7 +342,8 @@ func update_animations() -> void:
 		var dir_suffix := get_direction_suffix(facing_direction)
 		var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
 		animated_sprite.flip_h = flip_left
-		var anim_name := "attack_" + dir_suffix
+		var anim_name := get_attack_animation_name(current_weapon_id, dir_suffix)
+		update_sprite_offset_for_animation(anim_name, flip_left)
 		if animated_sprite.animation != anim_name:
 			animated_sprite.play(anim_name)
 		animated_sprite.frame = 1
@@ -322,6 +356,7 @@ func update_animations() -> void:
 	var dir_suffix := get_direction_suffix(facing_direction)
 	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
 	animated_sprite.flip_h = flip_left
+	animated_sprite.offset = Vector2(0.0, -16.0)
 	
 	if is_dodging:
 		var roll_anim := "roll_" + dir_suffix
@@ -541,7 +576,8 @@ func start_heavy_charge() -> void:
 		var dir_suffix := get_direction_suffix(facing_direction)
 		var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
 		animated_sprite.flip_h = flip_left
-		var anim_name := "attack_" + dir_suffix
+		var anim_name := get_attack_animation_name(current_weapon_id, dir_suffix)
+		update_sprite_offset_for_animation(anim_name, flip_left)
 		if animated_sprite.animation != anim_name:
 			animated_sprite.play(anim_name)
 		animated_sprite.frame = 1
@@ -561,7 +597,8 @@ func process_heavy_charge(delta: float) -> void:
 		var dir_suffix := get_direction_suffix(facing_direction)
 		var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
 		animated_sprite.flip_h = flip_left
-		var anim_name := "attack_" + dir_suffix
+		var anim_name := get_attack_animation_name(current_weapon_id, dir_suffix)
+		update_sprite_offset_for_animation(anim_name, flip_left)
 		if animated_sprite.animation != anim_name:
 			animated_sprite.play(anim_name)
 		animated_sprite.frame = 1
@@ -575,6 +612,7 @@ func process_heavy_charge(delta: float) -> void:
 		if visual_node != null and visual_node.has_method("set_heavy_charging"):
 			visual_node.set_heavy_charging(false, 0.0, current_weapon_id, facing_direction)
 		if animated_sprite != null:
+			animated_sprite.offset = Vector2(0, -16)
 			animated_sprite.play()
 		try_dodge(input_vector)
 		return
@@ -605,6 +643,7 @@ func release_heavy_attack() -> void:
 	if heavy_spec.is_empty():
 		combat_state.current_state = CombatState.State.IDLE
 		if animated_sprite != null:
+			animated_sprite.offset = Vector2(0, -16)
 			animated_sprite.play()
 		return
 	
@@ -627,9 +666,10 @@ func release_heavy_attack() -> void:
 	already_hit_enemies.clear()
 	
 	var dir_suffix := get_direction_suffix(facing_direction)
-	var anim_name := "attack_" + dir_suffix
 	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
 	animated_sprite.flip_h = flip_left
+	var anim_name := get_attack_animation_name(current_weapon_id, dir_suffix)
+	update_sprite_offset_for_animation(anim_name, flip_left)
 	
 	if animated_sprite != null and animations_config.has(anim_name):
 		animated_sprite.stop()
@@ -709,9 +749,10 @@ func _start_attack_step(step: int) -> void:
 	combo_stepped.emit(combo_step)
 	
 	var dir_suffix := get_direction_suffix(facing_direction)
-	var anim_name := "attack_" + dir_suffix
 	var flip_left: bool = (facing_direction.x < 0 and abs(facing_direction.x) >= abs(facing_direction.y))
 	animated_sprite.flip_h = flip_left
+	var anim_name := get_attack_animation_name(current_weapon_id, dir_suffix)
+	update_sprite_offset_for_animation(anim_name, flip_left)
 	
 	if animated_sprite != null and animations_config.has(anim_name):
 		animated_sprite.stop()
@@ -888,6 +929,8 @@ func end_attack(reset_step: bool = true) -> void:
 	combat_state.current_state = CombatState.State.IDLE
 	can_attack = true
 	attack_frame_accumulator = 0.0
+	if animated_sprite != null:
+		animated_sprite.offset = Vector2(0, -16)
 	if visual_node != null and visual_node.has_method("stop_attack_visual"):
 		visual_node.stop_attack_visual()
 	if reset_step:

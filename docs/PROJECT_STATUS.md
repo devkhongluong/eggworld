@@ -142,6 +142,20 @@
     - Kịch bản kiểm thử tự động toàn diện: `tools/test_combat_stage_b.gd` (vượt qua 100% cả 6 bộ kiểm thử: behavior tags, poise & stagger break, backstab detection & multiplier, critical hit & stagger reset, parry window & rewards, heavy attack data & formula).
     - *File liên quan:* `data/stats.json`, `data/weapons.json`, `project.godot`, `scripts/combat/combat_state.gd`, `scripts/combat/combat_feedback.gd`, `scripts/combat/hitbox_service.gd`, `scripts/combat/projectile.gd`, `scripts/combat/base_enemy.gd`, `scripts/combat/dummy_enemy.gd`, `scripts/combat/lost_shard.gd`, `scripts/combat/shell_shard_pickup.gd`, `scripts/player/player.gd`, `scripts/player/player_camera.gd`, `scripts/player/egg_visual.gd`, `scripts/ui/hud.gd`, `scenes/levels/test_arena.tscn`, `tools/test_combat_stage_b.gd`.
 
+15. **Tích hợp Sprite Hoạt Ảnh & Icon Vũ Khí Chuyên Biệt (Gậy Gỗ, Dao Găm, Ná):**
+    - Trích xuất từ hình vẽ pixel art tham khảo của người dùng:
+      - 3 Icon vũ khí pixel art chuẩn 32×32: `assets/sprites/weapons/weapon_staff_wood.png`, `weapon_dagger.png`, `weapon_sling.png`.
+      - 3 Dải spritesheet tấn công 6 khung hình tỉ lệ 64×48 px (tổng 384×48 px) diễn hoạt Trứng vung gậy, đâm dao, kéo bắn ná: `player_egg_attack_staff_side.png`, `player_egg_attack_dagger_side.png`, `player_egg_attack_sling_side.png`.
+    - Hỗ trợ kích thước khung linh hoạt trong `animations.json` và `setup_animations()` (`frame_width`, `frame_height`), không bị bó buộc 32×32.
+    - Cơ chế chuyển hoạt ảnh tự động theo vũ khí (`get_attack_animation_name`): `staff_wood` → `attack_staff`, `dagger` → `attack_dagger`, `sling` → `attack_sling`, mặc định → `attack_side`.
+    - Cân chỉnh trọng tâm động (`update_sprite_offset_for_animation`):
+      - Khi thi triển đòn đánh 64×48: offset tự động chuyển thành `Vector2(±10, -20)` theo hướng lật mặt `flip_h`, giữ chân chạm đất tại $y=0$ và tâm trứng trùng khớp với va chạm di chuyển & hurtbox.
+      - Khi kết thúc đòn đánh hoặc chuyển sang idle/run/roll/death: offset trả về chuẩn `Vector2(0, -16)`.
+    - Diễn hoạt gồng lực (Heavy Charge): giữ nguyên khung tụ lực (frame 1) xoay mượt mà theo 8 hướng WASD, nhả đòn kích hoạt trọn vẹn chuỗi diễn hoạt đòn nặng uy lực.
+    - Tối ưu `egg_visual.gd`: ẩn sprite vẽ bù khi vũ khí đã có diễn hoạt sprite riêng, tránh vẽ đè (double draw), đồng thời bảo toàn vệt chém hào quang, tia sáng và đạn đá.
+    - Công cụ trích xuất tự động: `tools/extract_weapon_animations.py`.
+    - *File liên quan:* `assets/sprites/weapons/*`, `assets/sprites/player/player_egg_attack_*.png`, `assets/sprites/player/animations.json`, `scripts/player/player.gd`, `scripts/player/egg_visual.gd`, `tools/extract_weapon_animations.py`.
+
 ---
 
 ## 2. ĐANG LÀM DỞ / CHƯA HOÀN THIỆN
