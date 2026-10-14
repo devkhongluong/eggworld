@@ -18,26 +18,24 @@ func _ready() -> void:
 	test_critical_hit()
 	test_parry()
 	test_heavy_attack_spec()
+	test_hold_to_charge_transition()
 	
 	log_msg("\n>>> TẤT CẢ KIỂM THỬ GIAI ĐOẠN B ĐÃ THÀNH CÔNG VƯỢT TRỘI! <<<")
-	
-	var f := FileAccess.open("res://test_stage_b_report.txt", FileAccess.WRITE)
-	if f != null:
-		f.store_string("\n".join(log_lines))
-		f.close()
 	
 	get_tree().quit(0)
 
 func assert_true(condition: bool, msg: String) -> void:
 	if not condition:
 		log_msg("  [FAIL] " + msg)
-		var f := FileAccess.open("res://test_stage_b_report.txt", FileAccess.WRITE)
-		if f != null:
-			f.store_string("\n".join(log_lines))
-			f.close()
 		get_tree().quit(1)
 	else:
 		log_msg("  [PASS] " + msg)
+
+func assert_eq(a, b, msg: String) -> void:
+	assert_true(a == b, msg + " (%s == %s)" % [str(a), str(b)])
+
+func assert_false(condition: bool, msg: String) -> void:
+	assert_true(not condition, msg)
 
 func test_behavior_tracker_rules() -> void:
 	print("\n--- 1. Kiểm thử Quy tắc Bộ Đếm Hành Vi & Thẻ Behavior Tag ---")
@@ -181,3 +179,37 @@ func test_heavy_attack_spec() -> void:
 		var dmg_min = WeaponDB.calculate_damage(w, h, {"STR": 10, "DEX": 10}, 0.0)
 		var dmg_max = WeaponDB.calculate_damage(w, h, {"STR": 10, "DEX": 10}, 1.0)
 		assert_true(dmg_max >= dmg_min, "Sát thương gồng tối đa >= sát thương gồng tối thiểu (%d >= %d)" % [dmg_max, dmg_min])
+
+func test_hold_to_charge_transition() -> void:
+	print("\n--- 7. Kiểm thử Giữ Nút Attack Chuyển Sang Gồng Đòn Nặng ---")
+	var player_scene = load("res://scenes/player/player.tscn")
+	var player = player_scene.instantiate()
+	add_child(player)
+	player.current_stamina = 80.0
+	player.equip_weapon_to_active_slot("staff_wood")
+	
+	# Bắt đầu đòn đánh nhẹ (step 0)
+	player.try_attack()
+	assert_true(player.is_attacking, "Nhân vật đã vào trạng thái tấn công")
+	assert_eq(player.combat_state.attack_phase, CombatState.AttackPhase.STARTUP, "Pha đầu tiên là STARTUP")
+	
+	# Giả lập giữ nút attack trong 0.20s (vượt quá heavy_hold_threshold 0.18s)
+	Input.action_press("attack")
+	for f in range(12):
+		player.process_attack_logic(1.0 / 60.0)
+	
+	assert_true(player.is_charging_heavy, "Nhân vật đã tự động chuyển sang gồng đòn nặng (is_charging_heavy = true)")
+	assert_eq(player.combat_state.current_state, CombatState.State.HEAVY_CHARGE, "Trạng thái combat là HEAVY_CHARGE")
+	
+	# Giả lập gồng thêm 0.3s
+	player.process_heavy_charge(0.3)
+	assert_true(player.heavy_charge_ratio > 0.0, "Tỉ lệ gồng tăng lên sau thời gian giữ")
+	
+	# Nhả nút attack -> phóng đòn nặng
+	Input.action_release("attack")
+	player.process_heavy_charge(0.01)
+	assert_false(player.is_charging_heavy, "Thoát trạng thái gồng sau khi nhả nút")
+	assert_true(player.is_attacking, "Đang tung đòn tấn công sau khi nhả gồng")
+	assert_true(player.is_heavy_attack, "Đòn đánh tung ra là đòn nặng (is_heavy_attack = true)")
+	
+	player.queue_free()

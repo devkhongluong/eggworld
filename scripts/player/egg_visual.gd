@@ -94,9 +94,13 @@ var is_heavy_charging: bool = false
 var heavy_charge_ratio: float = 0.0
 var is_heavy_attack: bool = false
 
-func set_heavy_charging(charging: bool, ratio: float = 0.0) -> void:
+func set_heavy_charging(charging: bool, ratio: float = 0.0, weapon_id: String = "", dir: Vector2 = Vector2.ZERO) -> void:
 	is_heavy_charging = charging
 	heavy_charge_ratio = ratio
+	if weapon_id != "":
+		equipped_weapon_id = weapon_id
+	if dir != Vector2.ZERO:
+		facing_dir = dir
 	queue_redraw()
 
 func start_attack_visual(dir: Vector2, step: int, weapon_id: String = "staff_wood", custom_duration: float = -1.0, is_heavy: bool = false) -> void:
@@ -128,6 +132,9 @@ func stop_attack_visual() -> void:
 
 func _process(delta: float) -> void:
 	var needs_redraw: bool = false
+	
+	if is_heavy_charging:
+		needs_redraw = true
 	
 	if attack_slash_timer > 0.0:
 		attack_slash_timer -= delta
@@ -191,10 +198,18 @@ func _draw() -> void:
 	
 	# 3.5 Vẽ vòng hào quang tích lực đòn nặng (Heavy Charge Aura)
 	if is_heavy_charging:
-		var charge_rad: float = 7.0 + heavy_charge_ratio * 7.0
-		draw_arc(Vector2(0, -10), charge_rad, 0.0, TAU, 16, Palette.CAM_DAT, 1.5)
+		var pulse: float = sin(Time.get_ticks_msec() * 0.02) * 1.5
+		var charge_rad: float = 8.0 + heavy_charge_ratio * 9.0 + pulse
+		draw_arc(Vector2(0, -10), charge_rad, 0.0, TAU, 16, Palette.DO_GACH, 1.8)
+		draw_arc(Vector2(0, -10), maxf(3.0, charge_rad - 2.5), 0.0, TAU, 16, Palette.VANG_CO, 1.2)
 		if heavy_charge_ratio >= 0.7:
-			draw_arc(Vector2(0, -10), charge_rad - 2.0, 0.0, TAU, 16, Palette.VANG_CO, 1.0)
+			draw_arc(Vector2(0, -10), maxf(2.0, charge_rad - 4.5), 0.0, TAU, 16, Palette.KEM, 1.5)
+			var t := Time.get_ticks_msec() * 0.008
+			for i in range(4):
+				var a := t + float(i) * (TAU / 4.0)
+				var p1 := Vector2(0, -10) + Vector2(cos(a), sin(a)) * (charge_rad + 2.5)
+				var p2 := Vector2(0, -10) + Vector2(cos(a), sin(a)) * (charge_rad - 2.0)
+				draw_line(p1, p2, Palette.KEM, 1.0)
 	
 	# 4. Vẽ diễn hoạt vũ khí & đòn đánh (Hoạt ảnh động)
 	_draw_dynamic_weapon()
@@ -222,12 +237,17 @@ func _draw_dynamic_weapon() -> void:
 				var end_ang: float = base_angle - PI * 0.52 if reverse_swing else base_angle + PI * 0.52
 				var cur_ang: float = lerp_angle(start_ang, end_ang, progress)
 				
-				# Vệt chém hình vòng cung vàng rực bám theo sau mũi gậy (giảm xuống 2/3)
-				var arc_rad: float = 15.3 if attack_slash_step == 2 else 12.7
+				# Vệt chém hình vòng cung vàng rực bám theo sau mũi gậy (đòn nặng to gấp 1.5x)
+				var arc_rad: float = 19.0 if is_heavy_attack else (15.3 if attack_slash_step == 2 else 12.7)
 				var a1 := minf(start_ang, cur_ang)
 				var a2 := maxf(start_ang, cur_ang)
-				draw_arc(pivot, arc_rad, a1, a2, 14, Palette.KEM, 2.0)
-				draw_arc(pivot, arc_rad - 1.5, a1, a2, 14, Palette.VANG_CO, 1.5)
+				if is_heavy_attack:
+					draw_arc(pivot, arc_rad, a1, a2, 16, Palette.DO_GACH, 3.0)
+					draw_arc(pivot, arc_rad - 2.0, a1, a2, 16, Palette.KEM, 2.0)
+					draw_arc(pivot, arc_rad - 4.0, a1, a2, 16, Palette.VANG_CO, 1.5)
+				else:
+					draw_arc(pivot, arc_rad, a1, a2, 14, Palette.KEM, 2.0)
+					draw_arc(pivot, arc_rad - 1.5, a1, a2, 14, Palette.VANG_CO, 1.5)
 				
 				# Vẽ sprite gậy gỗ xoay theo góc chém (scale 2/3)
 				var staff_tex: Texture2D = weapon_textures.get("staff_wood", null)
@@ -289,6 +309,51 @@ func _draw_dynamic_weapon() -> void:
 			"unarmed", _:
 				var p_dist: float = lerpf(1.3, 9.3, sin(progress * PI))
 				draw_circle(pivot + aim * p_dist, 2.7, Palette.KEM)
+	elif is_heavy_charging:
+		# --- TRẠNG THÁI GỒNG LỰC: VŨ KHÍ GIƯƠNG CAO TỤ NĂNG LƯỢNG RỰC RỠ ---
+		var shake: float = sin(Time.get_ticks_msec() * 0.045) * (0.8 + heavy_charge_ratio * 1.5)
+		match equipped_weapon_id:
+			"staff_wood", "staff":
+				# Giơ cao gậy chéo về sau, đầu gậy rung lắc tụ năng lượng
+				var ready_ang: float = base_angle - PI * 0.65 * flip_sign + deg_to_rad(shake * 4.0)
+				var staff_tex: Texture2D = weapon_textures.get("staff_wood", null)
+				if staff_tex != null:
+					_draw_weapon_sprite(staff_tex, pivot, ready_ang + PI * 0.5, Vector2(16.0, 24.0), Vector2(0.67, 0.67))
+				else:
+					var staff_dir := Vector2(cos(ready_ang), sin(ready_ang))
+					draw_line(pivot + staff_dir * 2.0, pivot + staff_dir * 16.0, Palette.NAU_DA, 2.0)
+				# Tụ cầu năng lượng ở đầu gậy
+				var tip_pos := pivot + Vector2(cos(ready_ang), sin(ready_ang)) * 17.0
+				draw_circle(tip_pos, 2.5 + heavy_charge_ratio * 2.5, Palette.DO_GACH)
+				draw_circle(tip_pos, 1.5 + heavy_charge_ratio * 1.5, Palette.KEM)
+			"dagger":
+				# Thu dao găm về sau hông, mũi dao chĩa tới trước rung rung
+				var dagger_pos: Vector2 = pivot - aim * (3.0 + heavy_charge_ratio * 3.0) + Vector2(aim.y, -aim.x) * 4.0 * flip_sign
+				var dagger_tex: Texture2D = weapon_textures.get("dagger", null)
+				if dagger_tex != null:
+					_draw_weapon_sprite(dagger_tex, dagger_pos, base_angle + PI * 0.5, Vector2(16.0, 23.0), Vector2(0.67, 0.67))
+				else:
+					draw_line(dagger_pos, dagger_pos + aim * 8.0, Palette.XAM_SAT, 2.0)
+				# Tia sáng nhọn ở mũi dao
+				draw_circle(dagger_pos + aim * 8.0, 1.8 + heavy_charge_ratio * 1.5, Palette.KEM)
+			"sling":
+				# Kéo căng ná tối đa ra sau
+				var sling_pos := pivot + aim * 5.3
+				var pull_dist: float = 4.0 + heavy_charge_ratio * 5.0
+				var pull_pos := pivot - aim * pull_dist + Vector2(0, shake * 0.5)
+				var sling_tex: Texture2D = weapon_textures.get("sling", null)
+				if sling_tex != null:
+					_draw_weapon_sprite(sling_tex, sling_pos, aim.angle() + PI * 0.5, Vector2(16.0, 21.0), Vector2(0.67, 0.67))
+				var fork_l := sling_pos + Vector2(-aim.y, aim.x) * 2.7 + aim * 2.7
+				var fork_r := sling_pos + Vector2(aim.y, -aim.x) * 2.7 + aim * 2.7
+				draw_line(fork_l, pull_pos, Palette.GIAY_DA, 1.2)
+				draw_line(fork_r, pull_pos, Palette.GIAY_DA, 1.2)
+				draw_circle(pull_pos, 2.0 + heavy_charge_ratio * 1.2, Palette.XAM_SAT)
+				draw_circle(pull_pos, 1.0 + heavy_charge_ratio * 1.0, Palette.VANG_CO)
+			"unarmed", "fist", _:
+				var fist_pos: Vector2 = pivot - aim * (3.0 + heavy_charge_ratio * 3.0) + Vector2(aim.y, -aim.x) * 3.0 * flip_sign
+				draw_circle(fist_pos, 2.5 + heavy_charge_ratio * 1.5, Palette.DO_GACH)
+				draw_circle(fist_pos, 1.5, Palette.KEM)
 	else:
 		# --- TRẠNG THÁI NGHỈ: VŨ KHÍ NẰM GỌN BÊN HÔNG / TAY ---
 		var hand_pos: Vector2 = Vector2(5.0 * flip_sign, -8.0)

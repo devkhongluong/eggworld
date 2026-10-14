@@ -32,6 +32,15 @@ static func shake_camera(camera: Camera2D, duration: float, intensity: float) ->
 			tween.tween_property(camera, "offset", rand_off, duration / 30.0)
 		tween.tween_property(camera, "offset", orig_offset, 0.05)
 
+static func trigger_camera_shake(node: Node, duration: float, intensity: float) -> void:
+	if node == null:
+		return
+	var vp := node.get_viewport()
+	if vp != null:
+		var cam := vp.get_camera_2d()
+		if cam != null:
+			shake_camera(cam, duration, intensity)
+
 static func spawn_floating_text(parent: Node, text: String, world_pos: Vector2, color: Color = Color.WHITE, is_big: bool = false) -> void:
 	if not bool(GameData.get_stat("game_feel", "floating_numbers_enabled", true)):
 		return

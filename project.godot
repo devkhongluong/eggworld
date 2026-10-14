@@ -135,8 +135,6 @@ cycle_item={
 ]
 }
 
-
-
 [physics]
 
 3d/physics_engine="Jolt Physics"
