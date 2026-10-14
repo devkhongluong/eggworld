@@ -8,13 +8,17 @@
 - project.godot
 - scenes\enemies\common_enemy.tscn
 - scenes\enemies\dummy_enemy.tscn
+- scenes\items\lost_shard.tscn
 - scenes\levels\test_arena.gd
 - scenes\levels\test_arena.tscn
 - scenes\player\player.tscn
 - scenes\ui\hud.tscn
+- scenes\ui\level_up_screen.tscn
+- scenes\world\straw_bed.tscn
 - scripts\autoload\behavior_tracker.gd
 - scripts\autoload\game_data.gd
 - scripts\autoload\palette.gd
+- scripts\autoload\player_inventory.gd
 - scripts\autoload\save_manager.gd
 - scripts\combat\base_enemy.gd
 - scripts\combat\combat_state.gd
@@ -22,15 +26,21 @@
 - scripts\combat\dummy_enemy.gd
 - scripts\combat\enemy_visual.gd
 - scripts\combat\hitbox_service.gd
+- scripts\combat\lost_shard.gd
 - scripts\combat\projectile.gd
 - scripts\combat\shell_shard_pickup.gd
+- scripts\combat\stats_calculator.gd
 - scripts\combat\weapon_db.gd
 - scripts\player\egg_visual.gd
 - scripts\player\player.gd
 - scripts\ui\hud.gd
+- scripts\ui\level_up_screen.gd
+- scripts\world\straw_bed.gd
 - tools\generate_run_roll_sprites.gd
 - tools\generate_run_roll_v2.gd
 - tools\test_combat_stage_a.gd
+- tools\test_leveling_system.gd
+- tools\test_leveling_system.tscn
 
 ---
 
@@ -129,6 +139,24 @@
   "debug": {
 	"show_dodge_debug": false,
 	"show_combat_log": true
+  },
+  "leveling": {
+	"cost_base": 40,
+	"cost_growth": 1.18
+  },
+  "scaling_coeff": {
+	"S": 0.08,
+	"A": 0.06,
+	"B": 0.045,
+	"C": 0.03,
+	"D": 0.02,
+	"E": 0.01,
+	"-": 0.0
+  },
+  "requirement_penalty": {
+	"damage_mult_per_pt": 0.05,
+	"damage_min_mult": 0.5,
+	"stamina_mult_per_pt": 0.04
   }
 }
 ```
@@ -391,6 +419,7 @@ config/icon="res://icon.svg"
 Palette="*res://scripts/autoload/palette.gd"
 GameData="*res://scripts/autoload/game_data.gd"
 BehaviorTracker="*res://scripts/autoload/behavior_tracker.gd"
+PlayerInventory="*res://scripts/autoload/player_inventory.gd"
 SaveManager="*res://scripts/autoload/save_manager.gd"
 
 [display]
@@ -596,6 +625,26 @@ shape = SubResource("RectangleShape2D_body")
 
 ---
 
+## scenes\items\lost_shard.tscn
+```ini
+[gd_scene format=3 uid="uid://lostshard001"]
+
+[ext_resource type="Script" path="res://scripts/combat/lost_shard.gd" id="1_lost"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_pickup"]
+radius = 12.0
+
+[node name="LostShard" type="Area2D"]
+collision_layer = 0
+collision_mask = 3
+script = ExtResource("1_lost")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_pickup")
+```
+
+---
+
 ## scenes\levels\test_arena.gd
 ```gdscript
 extends Node2D
@@ -609,6 +658,20 @@ extends Node2D
 
 @onready var player: CharacterBody2D = $Player
 @onready var hud: CanvasLayer = $HUD
+@onready var straw_bed: Node2D = $StrawBed
+
+var enemy_spawn_configs: Array[Dictionary] = [
+	{
+		"scene": preload("res://scenes/enemies/dummy_enemy.tscn"),
+		"position": Vector2(260, 135),
+		"name": "DummyEnemy"
+	},
+	{
+		"scene": preload("res://scenes/enemies/common_enemy.tscn"),
+		"position": Vector2(340, 135),
+		"name": "CommonEnemy"
+	}
+]
 
 func _ready() -> void:
 	if player != null and hud != null:
@@ -623,7 +686,42 @@ func _ready() -> void:
 		var w_name: String = str(player.current_weapon_data.get("name", player.current_weapon_id))
 		hud.update_weapon(player.active_slot_idx, player.current_weapon_id, w_name)
 	
-	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD), Lăn né (Space), Tấn công (J/Chuột trái), Đỡ (L/Chuột phải), Đổi vũ khí 3 ô (Q), Chọn nhanh (1: Gậy, 2: Dao, 3: Ná, 4: Tay không).")
+	if straw_bed != null and straw_bed.has_signal("activated"):
+		straw_bed.activated.connect(_on_straw_bed_activated)
+	
+	# Cung cấp 200 Mảnh Vỏ Vụn ban đầu để người chơi thử nghiệm tính năng tăng cấp ngay lập tức
+	if PlayerInventory.shell_shards < 200:
+		PlayerInventory.add_shards(200)
+	
+	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD), Lăn né (Space), Tấn công (J/Chuột trái), Đỡ (L/Chuột phải), Đổi vũ khí 3 ô (Q), Ổ Rơm lưu & lên cấp (E), F4 (+100 Mảnh Vỏ).")
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_F4:
+			PlayerInventory.add_shards(100)
+			print("[TEST] Phím F4: Đã thêm +100 Mảnh Vỏ Vụn! Tổng: %d" % PlayerInventory.shell_shards)
+
+func _on_straw_bed_activated(_bed: Node2D) -> void:
+	respawn_enemies()
+
+func respawn_enemies() -> void:
+	# Xóa toàn bộ kẻ thù hiện có và hạt EXP chưa nhặt
+	for child in get_children():
+		if child is BaseEnemy or child.name.begins_with("DummyEnemy") or child.name.begins_with("CommonEnemy") or child.is_in_group("enemies"):
+			child.queue_free()
+		elif child is ShellShardPickup:
+			child.queue_free()
+	
+	# Hồi sinh lại kẻ thù theo danh sách cấu hình
+	for cfg in enemy_spawn_configs:
+		var scene: PackedScene = cfg["scene"]
+		var enemy = scene.instantiate()
+		enemy.name = cfg["name"]
+		enemy.position = cfg["position"]
+		add_child(enemy)
+	
+	print("[ARENA] Đã hồi sinh toàn bộ kẻ thù trong đấu trường!")
+
 ```
 
 ---
@@ -637,6 +735,7 @@ func _ready() -> void:
 [ext_resource type="PackedScene" path="res://scenes/enemies/dummy_enemy.tscn" id="3_enemy"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/common_enemy.tscn" id="3_common_enemy"]
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="4_hud"]
+[ext_resource type="PackedScene" path="res://scenes/world/straw_bed.tscn" id="5_straw_bed"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_horiz"]
 size = Vector2(480, 16)
@@ -693,6 +792,9 @@ color = Color(0.168627, 0.121569, 0.101961, 1)
 [node name="RightCollision" type="CollisionShape2D" parent="Walls"]
 position = Vector2(472, 135)
 shape = SubResource("RectangleShape2D_vert")
+
+[node name="StrawBed" parent="." instance=ExtResource("5_straw_bed")]
+position = Vector2(80, 135)
 
 [node name="DummyEnemy" parent="." instance=ExtResource("3_enemy")]
 position = Vector2(260, 135)
@@ -776,8 +878,8 @@ script = ExtResource("1_hud")
 [node name="MarginContainer" type="MarginContainer" parent="."]
 offset_left = 6.0
 offset_top = 6.0
-offset_right = 120.0
-offset_bottom = 50.0
+offset_right = 140.0
+offset_bottom = 60.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
@@ -815,15 +917,30 @@ offset_right = 52.0
 offset_bottom = 4.0
 color = Color(0.419608, 0.498039, 0.227451, 1)
 
-[node name="WeaponLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="WeaponHBox" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 8
+theme_override_constants/separation = 3
+
+[node name="WeaponIcon" type="TextureRect" parent="MarginContainer/VBoxContainer/WeaponHBox"]
+custom_minimum_size = Vector2(12, 12)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="WeaponLabel" type="Label" parent="MarginContainer/VBoxContainer/WeaponHBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
 text = "[Q] Gậy Gỗ"
+
+[node name="ShardLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+text = "Cấp 1 | Mảnh Vỏ: 0"
 
 [node name="DebugDodgeLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 visible = false
 layout_mode = 2
-theme_override_font_sizes/font_size = 8
+theme_override_font_sizes/font_size = 7
 text = "[DEBUG F3] DODGE: 0"
 
 [node name="DeathOverlay" type="Control" parent="."]
@@ -862,7 +979,194 @@ horizontal_alignment = 1
 [node name="SubLabel" type="Label" parent="DeathOverlay/CenterContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 8
-text = "Đang hồi sinh..."
+text = "Nhấn [R] hoặc chờ hồi sinh"
+horizontal_alignment = 1
+```
+
+---
+
+## scenes\ui\level_up_screen.tscn
+```ini
+[gd_scene format=3 uid="uid://levelupui001"]
+
+[ext_resource type="Script" path="res://scripts/ui/level_up_screen.gd" id="1_lvlup"]
+
+[node name="LevelUpScreen" type="CanvasLayer"]
+process_mode = 3
+layer = 10
+script = ExtResource("1_lvlup")
+
+[node name="RootControl" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="PanelBg" type="ColorRect" parent="RootControl"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -152.0
+offset_top = -86.0
+offset_right = 152.0
+offset_bottom = 86.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.0784314, 0.0666667, 0.0588235, 0.95)
+
+[node name="Margin" type="MarginContainer" parent="RootControl"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -146.0
+offset_top = -82.0
+offset_right = 146.0
+offset_bottom = 82.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="RootControl/Margin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="HeaderLabel" type="Label" parent="RootControl/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "CẤP: 1 | CHI PHÍ TIẾP: 40"
+horizontal_alignment = 1
+
+[node name="ShardsLabel" type="Label" parent="RootControl/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+text = "MẢNH VỎ VỤN: 0"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="RootControl/Margin/VBox"]
+layout_mode = 2
+
+[node name="MainHBox" type="HBoxContainer" parent="RootControl/Margin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="StatsVBox" type="VBoxContainer" parent="RootControl/Margin/VBox/MainHBox"]
+custom_minimum_size = Vector2(136, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="VSeparator" type="VSeparator" parent="RootControl/Margin/VBox/MainHBox"]
+layout_mode = 2
+
+[node name="PreviewVBox" type="VBoxContainer" parent="RootControl/Margin/VBox/MainHBox"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="PreviewHeader" type="Label" parent="RootControl/Margin/VBox/MainHBox/PreviewVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "CHỈ SỐ PHÁT SINH:"
+
+[node name="HPLabel" type="Label" parent="RootControl/Margin/VBox/MainHBox/PreviewVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+text = "HP: 100"
+
+[node name="StaminaLabel" type="Label" parent="RootControl/Margin/VBox/MainHBox/PreviewVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+text = "Thể lực: 80.0"
+
+[node name="CapacityLabel" type="Label" parent="RootControl/Margin/VBox/MainHBox/PreviewVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+text = "Sức tải: 55.0"
+
+[node name="DamageLabel" type="Label" parent="RootControl/Margin/VBox/MainHBox/PreviewVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+text = "Sát thương: 12"
+
+[node name="Spacer" type="Control" parent="RootControl/Margin/VBox/MainHBox/PreviewVBox"]
+custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
+
+[node name="ButtonsHBox" type="HBoxContainer" parent="RootControl/Margin/VBox/MainHBox/PreviewVBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="BtnConfirm" type="Button" parent="RootControl/Margin/VBox/MainHBox/PreviewVBox/ButtonsHBox"]
+custom_minimum_size = Vector2(56, 14)
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+text = "Xác nhận"
+
+[node name="BtnCancel" type="Button" parent="RootControl/Margin/VBox/MainHBox/PreviewVBox/ButtonsHBox"]
+custom_minimum_size = Vector2(50, 14)
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+text = "Hủy bỏ"
+
+[node name="HSeparator2" type="HSeparator" parent="RootControl/Margin/VBox"]
+layout_mode = 2
+
+[node name="FeedbackLabel" type="Label" parent="RootControl/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+text = "Nhấn '+' hoặc phím [D] để cộng điểm, [Enter] để xác nhận."
+horizontal_alignment = 1
+
+[node name="GuideLabel" type="Label" parent="RootControl/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 6
+text = "[Lên/Xuống] Chọn   [Trái/Phải] +/-   [Enter] Xác nhận   [Esc] Hủy"
+horizontal_alignment = 1
+```
+
+---
+
+## scenes\world\straw_bed.tscn
+```ini
+[gd_scene format=3 uid="uid://strawbed001"]
+
+[ext_resource type="Script" path="res://scripts/world/straw_bed.gd" id="1_bed"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_interact"]
+radius = 24.0
+
+[node name="StrawBed" type="Node2D"]
+script = ExtResource("1_bed")
+
+[node name="InteractionArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionArea"]
+shape = SubResource("CircleShape2D_interact")
+
+[node name="PromptLabel" type="Label" parent="."]
+visible = false
+offset_left = -60.0
+offset_top = -26.0
+offset_right = 60.0
+offset_bottom = -14.0
+theme_override_font_sizes/font_size = 8
+text = "[E] Nghỉ ngơi & Lên cấp"
 horizontal_alignment = 1
 ```
 
@@ -995,6 +1299,11 @@ func get_stat(category: String, key: String, default_value: Variant = null) -> V
 		return stats[category][key]
 	return default_value
 
+func get_category(category: String, default_value: Dictionary = {}) -> Dictionary:
+	if stats.has(category) and stats[category] is Dictionary:
+		return stats[category]
+	return default_value
+
 func get_weapon(weapon_id: String) -> Dictionary:
 	if weapons.has(weapon_id) and weapons[weapon_id] is Dictionary:
 		return weapons[weapon_id]
@@ -1032,6 +1341,161 @@ const TIM_MUC: Color = Color("#5A3A5E")       # 16. Mục Rữa, phép hắc ám
 
 ---
 
+## scripts\autoload\player_inventory.gd
+```gdscript
+extends Node
+
+# PlayerInventory: Autoload quản lý tiền tệ Mảnh Vỏ Vụn (EXP) và chỉ số nhân vật
+# Đáp ứng COMBAT_SPEC mục 9: Lên cấp tự cộng điểm, tính chi phí và lưu trữ dữ liệu.
+
+signal shards_changed(new_amount: int)
+signal stats_changed()
+
+var shell_shards: int = 0
+var base_stats: Dictionary = {
+	"VIT": 10,
+	"STR": 10,
+	"DEX": 10,
+	"INT": 10,
+	"FAI": 10,
+	"LUK": 10
+}
+var added_points: Dictionary = {
+	"VIT": 0,
+	"STR": 0,
+	"DEX": 0,
+	"INT": 0,
+	"FAI": 0,
+	"LUK": 0
+}
+var total_added_points: int = 0
+var level: int = 1
+
+func _ready() -> void:
+	_init_stats()
+
+func _init_stats() -> void:
+	var stats_data = GameData.get_category("base_stats", {})
+	if not stats_data.is_empty():
+		for s in stats_data:
+			base_stats[s] = int(stats_data[s])
+	
+	for s in ["VIT", "STR", "DEX", "INT", "FAI", "LUK"]:
+		if not base_stats.has(s):
+			base_stats[s] = int(GameData.get_stat("base_stats", s, 10))
+		if not added_points.has(s):
+			added_points[s] = 0
+	
+	_recalculate_level()
+
+func _recalculate_level() -> void:
+	total_added_points = 0
+	for s in added_points:
+		total_added_points += int(added_points[s])
+	level = StatsCalc.calc_level(total_added_points)
+
+func add_shards(amount: int) -> void:
+	if amount <= 0:
+		return
+	shell_shards += amount
+	print("[INVENTORY] Nhận được %d Mảnh Vỏ Vụn (Hiện có: %d)" % [amount, shell_shards])
+	shards_changed.emit(shell_shards)
+
+func spend_shards(amount: int) -> bool:
+	if amount < 0 or shell_shards < amount:
+		return false
+	shell_shards -= amount
+	shards_changed.emit(shell_shards)
+	return true
+
+func spend_all_shards() -> int:
+	var dropped: int = shell_shards
+	shell_shards = 0
+	shards_changed.emit(shell_shards)
+	return dropped
+
+func get_effective_stats() -> Dictionary:
+	var effective: Dictionary = {}
+	for s in base_stats:
+		effective[s] = int(base_stats[s]) + int(added_points.get(s, 0))
+	return effective
+
+func can_level_up() -> bool:
+	return shell_shards >= get_level_cost()
+
+func get_level_cost() -> int:
+	return StatsCalc.calc_level_cost(level)
+
+func get_cost_for_next_level(level_offset: int) -> int:
+	return StatsCalc.calc_level_cost(level + level_offset)
+
+func apply_stat_point(stat_name: String) -> bool:
+	if not base_stats.has(stat_name):
+		return false
+	var cost: int = get_level_cost()
+	if not spend_shards(cost):
+		return false
+	
+	added_points[stat_name] = int(added_points.get(stat_name, 0)) + 1
+	_recalculate_level()
+	print("[INVENTORY] Lên cấp %d! Điểm cộng vào %s (Tổng %s: %d)" % [
+		level, stat_name, stat_name, int(base_stats[stat_name]) + int(added_points[stat_name])
+	])
+	stats_changed.emit()
+	return true
+
+func apply_multiple_stats(pending_adds: Dictionary) -> bool:
+	var total_new_pts: int = 0
+	for s in pending_adds:
+		total_new_pts += maxi(0, int(pending_adds[s]))
+	
+	if total_new_pts <= 0:
+		return true
+	
+	var total_cost: int = 0
+	for i in range(total_new_pts):
+		total_cost += StatsCalc.calc_level_cost(level + i)
+	
+	if shell_shards < total_cost:
+		print("[INVENTORY] Không đủ Mảnh Vỏ Vụn để nâng cấp! Cần %d, có %d" % [total_cost, shell_shards])
+		return false
+	
+	shell_shards -= total_cost
+	for s in pending_adds:
+		var pts: int = maxi(0, int(pending_adds[s]))
+		if pts > 0:
+			added_points[s] = int(added_points.get(s, 0)) + pts
+	
+	_recalculate_level()
+	print("[INVENTORY] Đã nâng thành công %d điểm! Cấp hiện tại: %d, Mảnh Vỏ còn lại: %d" % [
+		total_new_pts, level, shell_shards
+	])
+	shards_changed.emit(shell_shards)
+	stats_changed.emit()
+	return true
+
+func export_data() -> Dictionary:
+	return {
+		"shell_shards": shell_shards,
+		"added_points": added_points.duplicate(),
+		"total_added_points": total_added_points,
+		"level": level
+	}
+
+func import_data(data: Dictionary) -> void:
+	if data.has("shell_shards"):
+		shell_shards = int(data["shell_shards"])
+	if data.has("added_points") and data["added_points"] is Dictionary:
+		for s in data["added_points"]:
+			added_points[s] = int(data["added_points"][s])
+	_recalculate_level()
+	shards_changed.emit(shell_shards)
+	stats_changed.emit()
+	print("[INVENTORY] Đã tải dữ liệu Inventory: Cấp %d, %d Mảnh Vỏ." % [level, shell_shards])
+```
+
+---
+
 ## scripts\autoload\save_manager.gd
 ```gdscript
 extends Node
@@ -1045,10 +1509,18 @@ func has_save() -> bool:
 	return FileAccess.file_exists(SAVE_PATH)
 
 func save_game(extra_data: Dictionary = {}) -> bool:
+	var inv_data: Dictionary = {}
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var inv = root.root.get_node_or_null("PlayerInventory")
+		if inv != null and inv.has_method("export_data"):
+			inv_data = inv.export_data()
+	
 	var save_dict: Dictionary = {
 		"version": 1,
 		"timestamp": Time.get_unix_time_from_system(),
 		"behavior_counters": BehaviorTracker.export_data(),
+		"player_inventory": inv_data,
 		"extra": extra_data
 	}
 	
@@ -1090,6 +1562,13 @@ func load_game() -> Dictionary:
 	
 	if data.has("behavior_counters") and data["behavior_counters"] is Dictionary:
 		BehaviorTracker.import_data(data["behavior_counters"])
+	
+	if data.has("player_inventory") and data["player_inventory"] is Dictionary:
+		var root = Engine.get_main_loop()
+		if root != null and root.root != null:
+			var inv = root.root.get_node_or_null("PlayerInventory")
+			if inv != null and inv.has_method("import_data"):
+				inv.import_data(data["player_inventory"])
 	
 	print("SaveManager: Đã nạp dữ liệu save thành công.")
 	return data
@@ -1635,9 +2114,25 @@ func receive_hit(amount: int, _attack_source: Node) -> Dictionary:
 	modulate = Palette.KEM
 	hurt_flash_timer = 0.15
 	if current_hp <= 0:
-		print("[ENEMY] Kẻ thù bị tiêu diệt! Tự động hồi phục sau 1.5 giây.")
+		print("[ENEMY] Kẻ thù bị tiêu diệt! Rơi 30 Mảnh Vỏ Vụn & tự động hồi phục.")
+		spawn_exp_drop()
 		current_hp = max_hp
 	return {"hit": true, "damage": amount}
+
+func spawn_exp_drop() -> void:
+	var pickup := Area2D.new()
+	pickup.set_script(load("res://scripts/combat/shell_shard_pickup.gd"))
+	pickup.set("shard_amount", 30)
+	pickup.global_position = global_position + Vector2(randf_range(-6.0, 6.0), randf_range(-6.0, 6.0))
+	
+	var col := CollisionShape2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = 8.0
+	col.shape = circle
+	pickup.add_child(col)
+	
+	get_parent().call_deferred("add_child", pickup)
+
 ```
 
 ---
@@ -1833,6 +2328,108 @@ static func process_single_target(area: Area2D, attacker: Node, damage: int, alr
 
 ---
 
+## scripts\combat\lost_shard.gd
+```gdscript
+extends Area2D
+class_name LostShard
+
+# LostShard: Đống Mảnh Vỏ Vụn bị rơi khi Player chết (Lost Runes mechanic)
+# - Chỉ tồn tại DUY NHẤT 1 đống trên bản đồ tại một thời điểm
+# - Nếu chết lần thứ hai trước khi nhặt lại, đống cũ sẽ biến mất vĩnh viễn
+# - Kích thước lớn hơn, sáng hơn và nổi bật hơn Mảnh Vỏ Vụn thông thường
+
+static var current_pile: LostShard = null
+
+@export var shard_amount: int = 0
+var is_lost_pile: bool = true
+var time_passed: float = 0.0
+
+static func spawn_at(parent: Node, pos: Vector2, amount: int) -> LostShard:
+	if amount <= 0:
+		return null
+	
+	if current_pile != null and is_instance_valid(current_pile):
+		print("[LOST_SHARD] Player chết lần nữa! Đống Mảnh Vỏ Vụn trước đó (%d hạt) đã tan biến vĩnh viễn!" % current_pile.shard_amount)
+		current_pile.queue_free()
+		current_pile = null
+	
+	var scene: PackedScene = load("res://scenes/items/lost_shard.tscn")
+	var instance: LostShard = scene.instantiate()
+	instance.shard_amount = amount
+	instance.global_position = pos
+	current_pile = instance
+	parent.call_deferred("add_child", instance)
+	print("[LOST_SHARD] Đã rơi đống Mảnh Vỏ Vụn (%d hạt) tại vị trí %s" % [amount, pos])
+	return instance
+
+func _ready() -> void:
+	collision_layer = 0
+	collision_mask = 3 # Player body (Layer 1) và Hurtbox (Layer 2)
+	area_entered.connect(_on_area_entered)
+	body_entered.connect(_on_body_entered)
+
+func _process(delta: float) -> void:
+	time_passed += delta * 4.0
+	queue_redraw()
+
+func _draw() -> void:
+	var bobbing: float = sin(time_passed) * 3.0
+	var pulse: float = 1.0 + sin(time_passed * 1.5) * 0.15
+	var center := Vector2(0, bobbing)
+	
+	# Vòng hào quang sáng phía sau
+	draw_circle(center, 9.0 * pulse, Color(Palette.VANG_CO.r, Palette.VANG_CO.g, Palette.VANG_CO.b, 0.25))
+	
+	# Đa giác tinh thể lớn (hình thoi 12x12 px)
+	var pts := PackedVector2Array([
+		center + Vector2(0, -6 * pulse),
+		center + Vector2(6 * pulse, 0),
+		center + Vector2(0, 6 * pulse),
+		center + Vector2(-6 * pulse, 0)
+	])
+	draw_colored_polygon(pts, Palette.VANG_CO)
+	
+	# Tâm sáng Kem
+	var inner_pts := PackedVector2Array([
+		center + Vector2(0, -3),
+		center + Vector2(3, 0),
+		center + Vector2(0, 3),
+		center + Vector2(-3, 0)
+	])
+	draw_colored_polygon(inner_pts, Palette.KEM)
+	
+	# Viền Nâu Hầm
+	draw_polyline(pts, Palette.NAU_HAM, 1.2)
+
+func _on_area_entered(area: Area2D) -> void:
+	if area.name == "Hurtbox" or (area.get_parent() != null and area.get_parent() is Player):
+		_collect()
+
+func _on_body_entered(body: Node2D) -> void:
+	if body is Player:
+		_collect()
+
+func _collect() -> void:
+	print("[LOST_SHARD] Player đã nhặt lại toàn bộ %d Mảnh Vỏ Vụn đánh rơi!" % shard_amount)
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var inv = root.root.get_node_or_null("PlayerInventory")
+		if inv != null and inv.has_method("add_shards"):
+			inv.add_shards(shard_amount)
+	
+	if current_pile == self:
+		current_pile = null
+	
+	# Cộng nhẹ điểm EXPLORE
+	var bt = root.root.get_node_or_null("BehaviorTracker")
+	if bt != null:
+		bt.add_points(bt.ACTION_EXPLORE, 3)
+	
+	queue_free()
+```
+
+---
+
 ## scripts\combat\projectile.gd
 ```gdscript
 extends Area2D
@@ -1950,9 +2547,108 @@ func _on_body_entered(body: Node2D) -> void:
 
 func _collect(player_node: Node) -> void:
 	print("[PICKUP] Player đã nhặt được %d Mảnh Vỏ Vụn (EXP)!" % shard_amount)
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var inv = root.root.get_node_or_null("PlayerInventory")
+		if inv != null and inv.has_method("add_shards"):
+			inv.add_shards(shard_amount)
 	# Tích lũy hành vi EXPLORE nhẹ nếu nhặt đồ
 	BehaviorTracker.add_points(BehaviorTracker.ACTION_EXPLORE, 1)
 	queue_free()
+```
+
+---
+
+## scripts\combat\stats_calculator.gd
+```gdscript
+extends RefCounted
+class_name StatsCalc
+
+# StatsCalc: Dịch vụ tính toán các chỉ số phái sinh và công thức cân bằng
+# Tuân thủ chặt chẽ COMBAT_SPEC mục 9 và đọc thông số từ data/stats.json qua GameData.
+
+const DEFAULT_SCALING_COEFF: Dictionary = {
+	"S": 0.08,
+	"A": 0.06,
+	"B": 0.045,
+	"C": 0.03,
+	"D": 0.02,
+	"E": 0.01,
+	"-": 0.0
+}
+
+static func _get_stat_val(category: String, key: String, default_val: Variant) -> Variant:
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var gd = root.root.get_node_or_null("GameData")
+		if gd != null and gd.has_method("get_stat"):
+			return gd.get_stat(category, key, default_val)
+	return default_val
+
+static func calc_max_hp(base_stats: Dictionary) -> int:
+	var vit: int = int(base_stats.get("VIT", 10))
+	var hp_base: int = int(_get_stat_val("formulas", "hp_base", 60))
+	var hp_per_vit: int = int(_get_stat_val("formulas", "hp_per_vit", 4))
+	return hp_base + vit * hp_per_vit
+
+static func calc_max_stamina(base_stats: Dictionary) -> float:
+	var vit: int = int(base_stats.get("VIT", 10))
+	var sta_base: float = float(_get_stat_val("formulas", "stamina_base", 60.0))
+	var sta_per_vit: float = float(_get_stat_val("formulas", "stamina_per_vit", 2.0))
+	return sta_base + float(vit) * sta_per_vit
+
+static func calc_equip_capacity(base_stats: Dictionary) -> float:
+	var vit: int = int(base_stats.get("VIT", 10))
+	var ec_base: float = float(_get_stat_val("formulas", "equip_capacity_base", 40.0))
+	var ec_per_vit: float = float(_get_stat_val("formulas", "equip_capacity_per_vit", 1.5))
+	return ec_base + float(vit) * ec_per_vit
+
+static func calc_max_mp(base_stats: Dictionary) -> int:
+	var int_stat: int = int(base_stats.get("INT", 10))
+	var mp_base: int = int(_get_stat_val("formulas", "mp_base", 20))
+	var mp_per_int: int = int(_get_stat_val("formulas", "mp_per_int", 3))
+	return mp_base + int_stat * mp_per_int
+
+static func calc_weapon_damage(weapon_data: Dictionary, attack_spec: Dictionary, base_stats: Dictionary) -> int:
+	var base_dmg: float = float(weapon_data.get("base_damage", 10))
+	var mv: float = float(attack_spec.get("damage_mv", 1.0))
+	
+	# Tính scaling
+	var scaling: Dictionary = weapon_data.get("scaling", {})
+	var scaling_sum: float = 0.0
+	for stat_name in scaling:
+		var grade: String = str(scaling[stat_name])
+		var coeff: float = float(_get_stat_val("scaling_coeff", grade, DEFAULT_SCALING_COEFF.get(grade, 0.0)))
+		var stat_val: int = int(base_stats.get(stat_name, 10))
+		var stat_diff: int = maxi(0, stat_val - 10)
+		scaling_sum += coeff * float(stat_diff)
+	
+	var dmg: float = base_dmg * mv * (1.0 + scaling_sum)
+	
+	# Kiểm tra thiếu chỉ số yêu cầu (Requirements penalty)
+	var reqs: Dictionary = weapon_data.get("requirements", {})
+	var missing_pts: int = 0
+	for stat_name in reqs:
+		var req_val: int = int(reqs[stat_name])
+		var stat_val: int = int(base_stats.get(stat_name, 10))
+		if stat_val < req_val:
+			missing_pts += (req_val - stat_val)
+	
+	if missing_pts > 0:
+		var dmg_mult_per_pt: float = float(_get_stat_val("requirement_penalty", "damage_mult_per_pt", 0.05))
+		var dmg_min_mult: float = float(_get_stat_val("requirement_penalty", "damage_min_mult", 0.5))
+		var penalty_mult: float = maxf(dmg_min_mult, 1.0 - dmg_mult_per_pt * float(missing_pts))
+		dmg *= penalty_mult
+	
+	return maxi(1, int(round(dmg)))
+
+static func calc_level_cost(current_level: int) -> int:
+	var cost_base: float = float(_get_stat_val("leveling", "cost_base", 40.0))
+	var cost_growth: float = float(_get_stat_val("leveling", "cost_growth", 1.18))
+	return maxi(1, int(round(cost_base * pow(cost_growth, max(0, current_level - 1)))))
+
+static func calc_level(total_added_points: int) -> int:
+	return 1 + total_added_points
 ```
 
 ---
@@ -2094,9 +2790,23 @@ var guard_dir: Vector2 = Vector2.DOWN
 var is_dead_visual: bool = false
 var equipped_weapon_id: String = "staff_wood"
 var facing_dir: Vector2 = Vector2.DOWN
+var weapon_textures: Dictionary = {}
 
 func _ready() -> void:
 	set_process(true)
+	_load_weapon_textures()
+
+func _load_weapon_textures() -> void:
+	var staff_tex = load("res://assets/sprites/weapons/weapon_staff_wood.png")
+	if staff_tex != null:
+		weapon_textures["staff_wood"] = staff_tex
+		weapon_textures["staff"] = staff_tex
+	var dagger_tex = load("res://assets/sprites/weapons/weapon_dagger.png")
+	if dagger_tex != null:
+		weapon_textures["dagger"] = dagger_tex
+	var sling_tex = load("res://assets/sprites/weapons/weapon_sling.png")
+	if sling_tex != null:
+		weapon_textures["sling"] = sling_tex
 
 func set_guarding(guarding: bool, dir: Vector2) -> void:
 	if is_guarding != guarding or guard_dir != dir:
@@ -2251,95 +2961,114 @@ func _draw_dynamic_weapon() -> void:
 		
 		match attack_weapon_type:
 			"staff_wood", "staff":
-				# Gậy gỗ vung xoay vòng cung
+				# Gậy gỗ vung xoay vòng cung (tỉ lệ 2/3)
 				var reverse_swing: bool = (attack_slash_step % 2 == 1)
 				var start_ang: float = base_angle + PI * 0.52 if reverse_swing else base_angle - PI * 0.52
 				var end_ang: float = base_angle - PI * 0.52 if reverse_swing else base_angle + PI * 0.52
 				var cur_ang: float = lerp_angle(start_ang, end_ang, progress)
 				
-				var staff_dir := Vector2(cos(cur_ang), sin(cur_ang))
-				var staff_base := pivot + staff_dir * 3.0
-				var staff_tip := pivot + staff_dir * 24.0
-				
-				# Vệt chém hình vòng cung vàng rực bám theo sau mũi gậy
-				var arc_rad: float = 23.0 if attack_slash_step == 2 else 19.0
+				# Vệt chém hình vòng cung vàng rực bám theo sau mũi gậy (giảm xuống 2/3)
+				var arc_rad: float = 15.3 if attack_slash_step == 2 else 12.7
 				var a1 := minf(start_ang, cur_ang)
 				var a2 := maxf(start_ang, cur_ang)
-				draw_arc(pivot, arc_rad, a1, a2, 14, Palette.KEM, 3.0)
-				draw_arc(pivot, arc_rad - 2.0, a1, a2, 14, Palette.VANG_CO, 2.0)
+				draw_arc(pivot, arc_rad, a1, a2, 14, Palette.KEM, 2.0)
+				draw_arc(pivot, arc_rad - 1.5, a1, a2, 14, Palette.VANG_CO, 1.5)
 				
-				# Thân gậy vung
-				draw_line(staff_base, staff_tip, Palette.NAU_DA, 3.0)
-				draw_circle(staff_tip, 2.5, Palette.KEM)
-				draw_circle(staff_base, 1.5, Palette.NAU_HAM)
+				# Vẽ sprite gậy gỗ xoay theo góc chém (scale 2/3)
+				var staff_tex: Texture2D = weapon_textures.get("staff_wood", null)
+				if staff_tex != null:
+					_draw_weapon_sprite(staff_tex, pivot, cur_ang + PI * 0.5, Vector2(16.0, 24.0), Vector2(0.67, 0.67))
+				else:
+					var staff_dir := Vector2(cos(cur_ang), sin(cur_ang))
+					draw_line(pivot + staff_dir * 2.0, pivot + staff_dir * 16.0, Palette.NAU_DA, 2.0)
+					draw_circle(pivot + staff_dir * 16.0, 1.8, Palette.KEM)
 			
 			"dagger":
-				# Dao găm đâm thẳng vọt tới trước cực nhanh
-				var thrust_dist: float = 4.0
+				# Dao găm đâm thẳng vọt tới trước cực nhanh (tỉ lệ 2/3)
+				var base_thrust: float = 2.7
+				var max_thrust: float = 13.5
+				var thrust_dist: float = base_thrust
 				if progress < 0.20:
-					thrust_dist = lerpf(4.0, 0.0, progress / 0.20)
+					thrust_dist = lerpf(base_thrust, 0.0, progress / 0.20)
 				elif progress < 0.60:
-					thrust_dist = lerpf(0.0, 22.0, (progress - 0.20) / 0.40)
+					thrust_dist = lerpf(0.0, max_thrust, (progress - 0.20) / 0.40)
 				else:
-					thrust_dist = lerpf(22.0, 4.0, (progress - 0.60) / 0.40)
+					thrust_dist = lerpf(max_thrust, base_thrust, (progress - 0.60) / 0.40)
 				
-				var hilt := pivot + aim * thrust_dist
-				var tip := pivot + aim * (thrust_dist + 14.0)
+				var dagger_pos := pivot + aim * thrust_dist
+				var tip := dagger_pos + aim * 9.5
 				
 				# Vệt đâm nhọn ánh sáng lướt theo dao
-				draw_line(pivot + aim * 2.0, tip + aim * 5.0, Palette.KEM, 2.5)
-				draw_line(pivot + aim * 2.0 + Vector2(-aim.y, aim.x) * 2.5, tip, Palette.XAM_SAT, 1.5)
-				draw_line(pivot + aim * 2.0 + Vector2(aim.y, -aim.x) * 2.5, tip, Palette.XAM_SAT, 1.5)
+				draw_line(pivot + aim * 1.5, tip + aim * 2.5, Palette.KEM, 1.8)
+				draw_line(pivot + aim * 1.5 + Vector2(-aim.y, aim.x) * 1.5, tip, Palette.XAM_SAT, 1.0)
+				draw_line(pivot + aim * 1.5 + Vector2(aim.y, -aim.x) * 1.5, tip, Palette.XAM_SAT, 1.0)
 				
-				# Lưỡi dao
-				draw_line(hilt, tip, Palette.KEM, 2.5)
-				draw_line(hilt, tip, Palette.XAM_SAT, 1.5)
-				# Chuôi dao
-				draw_circle(hilt, 2.0, Palette.NAU_HAM)
-				draw_line(hilt + Vector2(-aim.y, aim.x) * 3.0, hilt + Vector2(aim.y, -aim.x) * 3.0, Palette.VANG_CO, 2.0)
+				# Vẽ sprite dao găm (scale 2/3)
+				var dagger_tex: Texture2D = weapon_textures.get("dagger", null)
+				if dagger_tex != null:
+					_draw_weapon_sprite(dagger_tex, dagger_pos, aim.angle() + PI * 0.5, Vector2(16.0, 23.0), Vector2(0.67, 0.67))
+				else:
+					draw_line(dagger_pos, tip, Palette.KEM, 1.8)
+					draw_circle(dagger_pos, 1.5, Palette.NAU_HAM)
 			
 			"sling":
-				# Ná giương chạc và bung dây thun
-				var fork_pos := pivot + aim * 9.0
-				var fork_l := fork_pos + Vector2(-aim.y, aim.x) * 4.5 + aim * 3.0
-				var fork_r := fork_pos + Vector2(aim.y, -aim.x) * 4.5 + aim * 3.0
-				var pull_pos := pivot - aim * 3.0 if progress < 0.45 else fork_pos + aim * 2.0
+				# Ná giương chạc và bung dây thun (tỉ lệ 2/3)
+				var sling_pos := pivot + aim * 5.3
+				var pull_pos := pivot - aim * 2.7 if progress < 0.45 else sling_pos + aim * 3.3
 				
-				# Cán ná gỗ
-				draw_line(pivot, fork_pos, Palette.CAT, 2.5)
-				draw_line(fork_pos, fork_l, Palette.CAT, 2.0)
-				draw_line(fork_pos, fork_r, Palette.CAT, 2.0)
-				# Dây thun
-				draw_line(fork_l, pull_pos, Palette.GIAY_DA, 1.5)
-				draw_line(fork_r, pull_pos, Palette.GIAY_DA, 1.5)
+				# Vẽ sprite ná bắn đá (scale 2/3)
+				var sling_tex: Texture2D = weapon_textures.get("sling", null)
+				if sling_tex != null:
+					_draw_weapon_sprite(sling_tex, sling_pos, aim.angle() + PI * 0.5, Vector2(16.0, 21.0), Vector2(0.67, 0.67))
+				
+				# Dây thun và viên đạn đá
+				var fork_l := sling_pos + Vector2(-aim.y, aim.x) * 2.7 + aim * 2.7
+				var fork_r := sling_pos + Vector2(aim.y, -aim.x) * 2.7 + aim * 2.7
+				draw_line(fork_l, pull_pos, Palette.GIAY_DA, 1.2)
+				draw_line(fork_r, pull_pos, Palette.GIAY_DA, 1.2)
 				if progress < 0.45:
-					draw_circle(pull_pos, 2.0, Palette.XAM_SAT)
+					draw_circle(pull_pos, 1.7, Palette.XAM_SAT)
+				else:
+					draw_circle(pull_pos + aim * 4.0, 1.4, Palette.CAT)
 			
 			"unarmed", _:
-				var p_dist: float = lerpf(2.0, 14.0, sin(progress * PI))
-				draw_circle(pivot + aim * p_dist, 4.0, Palette.KEM)
+				var p_dist: float = lerpf(1.3, 9.3, sin(progress * PI))
+				draw_circle(pivot + aim * p_dist, 2.7, Palette.KEM)
 	else:
 		# --- TRẠNG THÁI NGHỈ: VŨ KHÍ NẰM GỌN BÊN HÔNG / TAY ---
-		var hand_pos: Vector2 = Vector2(7.0 * flip_sign, -8.0)
+		var hand_pos: Vector2 = Vector2(5.0 * flip_sign, -8.0)
 		if abs(facing_dir.y) > abs(facing_dir.x):
-			hand_pos = Vector2(7.0, -8.0 if facing_dir.y > 0 else -10.0)
+			hand_pos = Vector2(5.0 * flip_sign, -8.0 if facing_dir.y > 0 else -10.0)
 		
 		match equipped_weapon_id:
 			"staff_wood", "staff":
-				draw_line(hand_pos + Vector2(0, 5), hand_pos + Vector2(3 * flip_sign, -13), Palette.NAU_DA, 2.5)
-				draw_circle(hand_pos + Vector2(3 * flip_sign, -13), 1.5, Palette.KEM)
-				draw_circle(hand_pos + Vector2(0, 5), 1.5, Palette.NAU_HAM)
+				var staff_tex: Texture2D = weapon_textures.get("staff_wood", null)
+				if staff_tex != null:
+					_draw_weapon_sprite(staff_tex, hand_pos + Vector2(0, 1), 0.30 * flip_sign, Vector2(16.0, 24.0), Vector2(0.57, 0.57))
+				else:
+					draw_line(hand_pos + Vector2(0, 3), hand_pos + Vector2(2 * flip_sign, -9), Palette.NAU_DA, 1.8)
 			"dagger":
-				var d_aim := aim * 8.0
-				draw_line(hand_pos, hand_pos + d_aim, Palette.XAM_SAT, 2.0)
-				draw_line(hand_pos, hand_pos + d_aim * 0.7, Palette.KEM, 1.0)
-				draw_circle(hand_pos, 2.0, Palette.NAU_HAM)
+				var dagger_tex: Texture2D = weapon_textures.get("dagger", null)
+				if dagger_tex != null:
+					_draw_weapon_sprite(dagger_tex, hand_pos + Vector2(0, 1), 0.65 * flip_sign, Vector2(16.0, 23.0), Vector2(0.57, 0.57))
+				else:
+					var d_aim := aim * 5.3
+					draw_line(hand_pos, hand_pos + d_aim, Palette.XAM_SAT, 1.5)
 			"sling":
-				draw_line(hand_pos, hand_pos + Vector2(0, -5), Palette.CAT, 2.0)
-				draw_line(hand_pos + Vector2(0, -5), hand_pos + Vector2(3 * flip_sign, -8), Palette.CAT, 1.5)
-				draw_line(hand_pos + Vector2(0, -5), hand_pos + Vector2(-3 * flip_sign, -8), Palette.CAT, 1.5)
+				var sling_tex: Texture2D = weapon_textures.get("sling", null)
+				if sling_tex != null:
+					_draw_weapon_sprite(sling_tex, hand_pos, 0.15 * flip_sign, Vector2(16.0, 21.0), Vector2(0.57, 0.57))
+				else:
+					draw_line(hand_pos, hand_pos + Vector2(0, -3.3), Palette.CAT, 1.5)
 			"fist", _:
 				pass
+
+func _draw_weapon_sprite(tex: Texture2D, pos: Vector2, rot: float, pivot: Vector2, p_scale: Vector2 = Vector2(0.67, 0.67)) -> void:
+	if tex == null:
+		return
+	draw_set_transform(pos, rot, p_scale)
+	draw_texture(tex, -pivot)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 ```
 
 ---
@@ -2363,6 +3092,7 @@ signal player_died()
 signal player_respawned()
 signal combo_stepped(current_step: int)
 signal weapon_swapped(active_slot: int, weapon_id: String, weapon_name: String)
+signal shards_dropped(position: Vector2, amount: int)
 
 @onready var visual_node: Node2D = $EggVisual
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -2465,27 +3195,63 @@ func _ready() -> void:
 	if visual_node != null and visual_node.has_method("set_equipped_weapon"):
 		visual_node.set_equipped_weapon(current_weapon_id, facing_direction)
 	
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var inv = root.root.get_node_or_null("PlayerInventory")
+		if inv != null and inv.has_signal("stats_changed"):
+			inv.stats_changed.connect(apply_leveled_stats)
+	
 	update_animations()
+
+func apply_leveled_stats() -> void:
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var inv = root.root.get_node_or_null("PlayerInventory")
+		if inv != null and inv.has_method("get_effective_stats"):
+			player_stats = inv.get_effective_stats()
+	
+	var old_max_hp: int = max_hp
+	var old_max_stamina: float = max_stamina
+	max_hp = StatsCalc.calc_max_hp(player_stats)
+	max_stamina = StatsCalc.calc_max_stamina(player_stats)
+	
+	if max_hp > old_max_hp:
+		current_hp = mini(max_hp, current_hp + (max_hp - old_max_hp))
+	else:
+		current_hp = mini(current_hp, max_hp)
+	
+	if max_stamina > old_max_stamina:
+		current_stamina = minf(max_stamina, current_stamina + (max_stamina - old_max_stamina))
+	else:
+		current_stamina = minf(current_stamina, max_stamina)
+	
+	hp_changed.emit(current_hp, max_hp)
+	stamina_changed.emit(current_stamina, max_stamina)
+	print("[PLAYER] Đã áp dụng chỉ số mới: HP tối đa %d, Thể lực tối đa %.1f" % [max_hp, max_stamina])
 
 func load_stats_from_data() -> void:
 	debug_combat_log = bool(GameData.get_stat("debug", "show_combat_log", true))
-	var vit: int = int(GameData.get_stat("base_stats", "VIT", 10))
-	var hp_base: int = int(GameData.get_stat("formulas", "hp_base", 60))
-	var hp_per_vit: int = int(GameData.get_stat("formulas", "hp_per_vit", 4))
-	var sta_base: float = float(GameData.get_stat("formulas", "stamina_base", 60.0))
-	var sta_per_vit: float = float(GameData.get_stat("formulas", "stamina_per_vit", 2.0))
 	
-	max_hp = hp_base + vit * hp_per_vit
-	max_stamina = sta_base + float(vit) * sta_per_vit
+	var effective_stats: Dictionary = {}
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var inv = root.root.get_node_or_null("PlayerInventory")
+		if inv != null and inv.has_method("get_effective_stats"):
+			effective_stats = inv.get_effective_stats()
 	
-	player_stats = {
-		"STR": int(GameData.get_stat("base_stats", "STR", 10)),
-		"DEX": int(GameData.get_stat("base_stats", "DEX", 10)),
-		"INT": int(GameData.get_stat("base_stats", "INT", 10)),
-		"FAI": int(GameData.get_stat("base_stats", "FAI", 10)),
-		"VIT": vit,
-		"LUK": int(GameData.get_stat("base_stats", "LUK", 10))
-	}
+	if effective_stats.is_empty():
+		effective_stats = {
+			"STR": int(GameData.get_stat("base_stats", "STR", 10)),
+			"DEX": int(GameData.get_stat("base_stats", "DEX", 10)),
+			"INT": int(GameData.get_stat("base_stats", "INT", 10)),
+			"FAI": int(GameData.get_stat("base_stats", "FAI", 10)),
+			"VIT": int(GameData.get_stat("base_stats", "VIT", 10)),
+			"LUK": int(GameData.get_stat("base_stats", "LUK", 10))
+		}
+	
+	player_stats = effective_stats
+	max_hp = StatsCalc.calc_max_hp(player_stats)
+	max_stamina = StatsCalc.calc_max_stamina(player_stats)
 	current_weapon_data = WeaponDB.get_weapon(current_weapon_id)
 	
 	move_speed = float(GameData.get_stat("player", "move_speed", 95.0))
@@ -3183,6 +3949,22 @@ func die() -> void:
 		visual_node.set_dead(true)
 	print("[PLAYER] VỎ ĐÃ VỠ... Bắt đầu chuẩn bị hồi sinh.")
 	
+	# Rơi đống Mảnh Vỏ Vụn tại chỗ chết nếu Player có Mảnh Vỏ
+	var root = Engine.get_main_loop()
+	var current_shards: int = 0
+	var inv_node = null
+	if root != null and root.root != null:
+		inv_node = root.root.get_node_or_null("PlayerInventory")
+		if inv_node != null and "shell_shards" in inv_node:
+			current_shards = int(inv_node.shell_shards)
+	
+	if current_shards > 0:
+		LostShard.spawn_at(get_parent(), global_position, current_shards)
+		if inv_node != null and inv_node.has_method("spend_all_shards"):
+			inv_node.spend_all_shards()
+		shards_dropped.emit(global_position, current_shards)
+		print("[PLAYER] Đã đánh rơi %d Mảnh Vỏ Vụn tại %s!" % [current_shards, global_position])
+	
 	# Phát death animation
 	var dir_suffix := get_direction_suffix(facing_direction)
 	var death_anim := "death_" + dir_suffix
@@ -3234,7 +4016,7 @@ func respawn() -> void:
 ```gdscript
 extends CanvasLayer
 
-# HUD hiển thị máu, thể lực và thông báo tạm thời.
+# HUD hiển thị máu, thể lực, vũ khí, mảnh vỏ và thông báo tạm thời.
 # Toàn bộ màu sắc lấy trực tiếp từ Palette (GDD Mục 3).
 
 @onready var hp_bar_fill: ColorRect = $MarginContainer/VBoxContainer/HPBar/Fill
@@ -3242,7 +4024,9 @@ extends CanvasLayer
 @onready var stamina_bar_fill: ColorRect = $MarginContainer/VBoxContainer/StaminaBar/Fill
 @onready var stamina_bar_bg: ColorRect = $MarginContainer/VBoxContainer/StaminaBar/Background
 @onready var debug_label: Label = $MarginContainer/VBoxContainer/DebugDodgeLabel
-@onready var weapon_label: Label = $MarginContainer/VBoxContainer/WeaponLabel
+@onready var weapon_label: Label = $MarginContainer/VBoxContainer/WeaponHBox/WeaponLabel
+@onready var weapon_icon: TextureRect = $MarginContainer/VBoxContainer/WeaponHBox/WeaponIcon
+@onready var shard_label: Label = $MarginContainer/VBoxContainer/ShardLabel
 @onready var death_overlay: Control = $DeathOverlay
 
 var max_hp: int = 100
@@ -3250,12 +4034,14 @@ var current_hp: int = 100
 var max_stamina: float = 100.0
 var current_stamina: float = 100.0
 
-var hp_bar_max_width: float = 64.0
-var stamina_bar_max_width: float = 52.0
+var hp_bar_base_width: float = 64.0
+var stamina_bar_base_width: float = 52.0
 
 var show_debug_dodge: bool = false
+var weapon_icons: Dictionary = {}
 
 func _ready() -> void:
+	_load_weapon_icons()
 	apply_palette()
 	# Nạp cờ debug từ stats.json
 	show_debug_dodge = bool(GameData.get_stat("debug", "show_dodge_debug", false))
@@ -3263,6 +4049,29 @@ func _ready() -> void:
 	death_overlay.visible = false
 	
 	BehaviorTracker.points_changed.connect(_on_behavior_points_changed)
+	
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var inv = root.root.get_node_or_null("PlayerInventory")
+		if inv != null:
+			if inv.has_signal("shards_changed"):
+				inv.shards_changed.connect(func(_amount): update_level_and_shards())
+			if inv.has_signal("stats_changed"):
+				inv.stats_changed.connect(update_level_and_shards)
+	
+	update_level_and_shards()
+
+func _load_weapon_icons() -> void:
+	var staff_tex = load("res://assets/sprites/weapons/weapon_staff_wood.png")
+	if staff_tex != null:
+		weapon_icons["staff_wood"] = staff_tex
+		weapon_icons["staff"] = staff_tex
+	var dagger_tex = load("res://assets/sprites/weapons/weapon_dagger.png")
+	if dagger_tex != null:
+		weapon_icons["dagger"] = dagger_tex
+	var sling_tex = load("res://assets/sprites/weapons/weapon_sling.png")
+	if sling_tex != null:
+		weapon_icons["sling"] = sling_tex
 
 func apply_palette() -> void:
 	# Màu sắc chuẩn GDD Mục 3
@@ -3275,6 +4084,8 @@ func apply_palette() -> void:
 	debug_label.add_theme_color_override("font_color", Palette.KEM)
 	if weapon_label != null:
 		weapon_label.add_theme_color_override("font_color", Palette.KEM)
+	if shard_label != null:
+		shard_label.add_theme_color_override("font_color", Palette.VANG_CO)
 	
 	var death_label: Label = $DeathOverlay/CenterContainer/VBoxContainer/DeathLabel
 	death_label.add_theme_color_override("font_color", Palette.DO_GACH)
@@ -3293,18 +4104,45 @@ func _unhandled_key_input(event: InputEvent) -> void:
 func update_hp(new_hp: int, new_max_hp: int) -> void:
 	current_hp = new_hp
 	max_hp = new_max_hp
+	# Thanh máu kéo dài theo lượng max_hp (Tăng sinh động khi nâng VIT)
+	var max_w: float = hp_bar_base_width + maxf(0.0, float(max_hp - 100) * 0.8)
+	hp_bar_bg.size.x = max_w
 	var ratio: float = clampf(float(current_hp) / float(maxi(1, max_hp)), 0.0, 1.0)
-	hp_bar_fill.size.x = hp_bar_max_width * ratio
+	hp_bar_fill.size.x = max_w * ratio
 
 func update_stamina(new_stamina: float, new_max_stamina: float) -> void:
 	current_stamina = new_stamina
 	max_stamina = new_max_stamina
+	# Thanh thể lực kéo dài theo max_stamina
+	var max_w: float = stamina_bar_base_width + maxf(0.0, float(max_stamina - 100.0) * 0.6)
+	stamina_bar_bg.size.x = max_w
 	var ratio: float = clampf(current_stamina / maxf(1.0, max_stamina), 0.0, 1.0)
-	stamina_bar_fill.size.x = stamina_bar_max_width * ratio
+	stamina_bar_fill.size.x = max_w * ratio
 
-func update_weapon(slot_idx: int, _weapon_id: String, weapon_name: String) -> void:
+func update_weapon(slot_idx: int, weapon_id: String, weapon_name: String) -> void:
 	if weapon_label != null:
 		weapon_label.text = "[Q] Vũ khí (%d/3): %s" % [slot_idx + 1, weapon_name]
+	if weapon_icon != null:
+		var tex: Texture2D = weapon_icons.get(weapon_id, null)
+		weapon_icon.texture = tex
+		weapon_icon.visible = (tex != null)
+
+func update_level_and_shards() -> void:
+	var lvl: int = 1
+	var shards: int = 0
+	var root = Engine.get_main_loop()
+	if root != null and root.root != null:
+		var inv = root.root.get_node_or_null("PlayerInventory")
+		if inv != null:
+			if "level" in inv:
+				lvl = int(inv.level)
+			if "shell_shards" in inv:
+				shards = int(inv.shell_shards)
+	if shard_label != null:
+		shard_label.text = "Cấp %d | Mảnh Vỏ: %d" % [lvl, shards]
+
+func update_shards(_amount: int) -> void:
+	update_level_and_shards()
 
 func _on_behavior_points_changed(action_name: String, _new_points: int, _total: int) -> void:
 	if action_name == BehaviorTracker.ACTION_DODGE:
@@ -3317,6 +4155,502 @@ func update_debug_display() -> void:
 
 func show_death_screen(show_it: bool) -> void:
 	death_overlay.visible = show_it
+```
+
+---
+
+## scripts\ui\level_up_screen.gd
+```gdscript
+extends CanvasLayer
+class_name LevelUpScreen
+
+# LevelUpScreen: Giao diện cộng điểm chỉ số tại Ổ Rơm
+# Tuân thủ chặt chẽ COMBAT_SPEC mục 9:
+# - Xem trước thay đổi chỉ số (HP, Stamina, Sức tải, Sát thương vũ khí)
+# - Tính chi phí tăng dần: cost(level) = round(cost_base * cost_growth ^ (level-1))
+# - Hỗ trợ cả chuột, bàn phím và tay cầm điều hướng
+
+const STAT_NAMES: Array[String] = ["VIT", "STR", "DEX", "INT", "FAI", "LUK"]
+const STAT_DESCRIPTIONS: Dictionary = {
+	"VIT": "Tăng Máu tối đa, Thể lực & Sức tải",
+	"STR": "Tăng sát thương vũ khí cận chiến nặng",
+	"DEX": "Tăng sát thương vũ khí khéo léo",
+	"INT": "Tăng MP & sát thương phép thuật",
+	"FAI": "Tăng sát thương & hiệu ứng Thánh",
+	"LUK": "Tăng tỉ lệ rơi đồ & tỉ lệ chí mạng"
+}
+
+@onready var panel_bg: ColorRect = $RootControl/PanelBg
+@onready var header_label: Label = $RootControl/Margin/VBox/HeaderLabel
+@onready var shards_label: Label = $RootControl/Margin/VBox/ShardsLabel
+@onready var stats_container: VBoxContainer = $RootControl/Margin/VBox/MainHBox/StatsVBox
+@onready var preview_vbox: VBoxContainer = $RootControl/Margin/VBox/MainHBox/PreviewVBox
+@onready var btn_confirm: Button = $RootControl/Margin/VBox/MainHBox/PreviewVBox/ButtonsHBox/BtnConfirm
+@onready var btn_cancel: Button = $RootControl/Margin/VBox/MainHBox/PreviewVBox/ButtonsHBox/BtnCancel
+@onready var feedback_label: Label = $RootControl/Margin/VBox/FeedbackLabel
+@onready var guide_label: Label = $RootControl/Margin/VBox/GuideLabel
+
+var player_ref: Player = null
+var pending_adds: Dictionary = {
+	"VIT": 0, "STR": 0, "DEX": 0, "INT": 0, "FAI": 0, "LUK": 0
+}
+var selected_index: int = 0 # 0..5: các chỉ số, 6: Confirm, 7: Cancel
+var stat_row_nodes: Array[Dictionary] = []
+
+func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	apply_palette()
+	
+	if btn_confirm != null:
+		btn_confirm.pressed.connect(_on_confirm_pressed)
+		btn_confirm.mouse_entered.connect(func(): selected_index = 6; _highlight_selection())
+	if btn_cancel != null:
+		btn_cancel.pressed.connect(_on_cancel_pressed)
+		btn_cancel.mouse_entered.connect(func(): selected_index = 7; _highlight_selection())
+	
+	_build_stat_rows()
+	_update_display()
+	_highlight_selection()
+
+func apply_palette() -> void:
+	if panel_bg != null:
+		panel_bg.color = Color(Palette.DEN_THAN.r, Palette.DEN_THAN.g, Palette.DEN_THAN.b, 0.94)
+	if header_label != null:
+		header_label.add_theme_color_override("font_color", Palette.VANG_CO)
+	if shards_label != null:
+		shards_label.add_theme_color_override("font_color", Palette.KEM)
+	if feedback_label != null:
+		feedback_label.add_theme_color_override("font_color", Palette.KEM)
+	if guide_label != null:
+		guide_label.add_theme_color_override("font_color", Palette.XAM_SAT)
+	if btn_confirm != null:
+		btn_confirm.add_theme_color_override("font_color", Palette.KEM)
+	if btn_cancel != null:
+		btn_cancel.add_theme_color_override("font_color", Palette.KEM)
+
+func open(p_player: Player) -> void:
+	player_ref = p_player
+	for s in STAT_NAMES:
+		pending_adds[s] = 0
+	selected_index = 0
+	get_tree().paused = true
+	_set_feedback("Nhấn '+' hoặc phím [D] để cộng điểm, [Enter] để xác nhận.", Palette.KEM)
+	_update_display()
+	_highlight_selection()
+
+func close_screen() -> void:
+	get_tree().paused = false
+	queue_free()
+
+func _set_feedback(msg: String, color: Color) -> void:
+	if feedback_label != null:
+		feedback_label.text = msg
+		feedback_label.add_theme_color_override("font_color", color)
+
+func _build_stat_rows() -> void:
+	if stats_container == null:
+		return
+	
+	for child in stats_container.get_children():
+		child.queue_free()
+	stat_row_nodes.clear()
+	
+	for i in range(STAT_NAMES.size()):
+		var s := STAT_NAMES[i]
+		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 4)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		
+		# Nhãn tên chỉ số (VIT, STR, ...)
+		var name_lbl := Label.new()
+		name_lbl.custom_minimum_size = Vector2(28, 12)
+		name_lbl.text = s
+		name_lbl.add_theme_font_size_override("font_size", 8)
+		name_lbl.add_theme_color_override("font_color", Palette.KEM)
+		row.add_child(name_lbl)
+		
+		# Nhãn giá trị
+		var val_lbl := Label.new()
+		val_lbl.custom_minimum_size = Vector2(40, 12)
+		val_lbl.text = "10"
+		val_lbl.add_theme_font_size_override("font_size", 8)
+		val_lbl.add_theme_color_override("font_color", Palette.KEM)
+		row.add_child(val_lbl)
+		
+		# Nút trừ (-)
+		var btn_sub := Button.new()
+		btn_sub.custom_minimum_size = Vector2(16, 12)
+		btn_sub.text = "-"
+		btn_sub.add_theme_font_size_override("font_size", 8)
+		btn_sub.focus_mode = Control.FOCUS_NONE
+		btn_sub.pressed.connect(func(): _modify_stat(s, -1))
+		var s_idx := i
+		btn_sub.mouse_entered.connect(func(): selected_index = s_idx; _highlight_selection())
+		row.add_child(btn_sub)
+		
+		# Nút cộng (+)
+		var btn_add := Button.new()
+		btn_add.custom_minimum_size = Vector2(16, 12)
+		btn_add.text = "+"
+		btn_add.add_theme_font_size_override("font_size", 8)
+		btn_add.focus_mode = Control.FOCUS_NONE
+		btn_add.pressed.connect(func(): _modify_stat(s, +1))
+		btn_add.mouse_entered.connect(func(): selected_index = s_idx; _highlight_selection())
+		row.add_child(btn_add)
+		
+		stats_container.add_child(row)
+		stat_row_nodes.append({
+			"stat": s,
+			"row": row,
+			"name_lbl": name_lbl,
+			"val_lbl": val_lbl,
+			"btn_sub": btn_sub,
+			"btn_add": btn_add
+		})
+
+func _input(event: InputEvent) -> void:
+	if not visible:
+		return
+	
+	if event.is_action_pressed("pause") or (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE):
+		_on_cancel_pressed()
+		get_viewport().set_input_as_handled()
+		return
+	
+	# Điều hướng Lên / Xuống
+	if event.is_action_pressed("move_up") or (event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_UP or event.keycode == KEY_W)):
+		_nav_vertical(-1)
+		get_viewport().set_input_as_handled()
+		return
+	elif event.is_action_pressed("move_down") or (event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_DOWN or event.keycode == KEY_S)):
+		_nav_vertical(1)
+		get_viewport().set_input_as_handled()
+		return
+	
+	# Điều hướng Trái / Phải hoặc +/-
+	if selected_index < STAT_NAMES.size():
+		var cur_stat := STAT_NAMES[selected_index]
+		if event.is_action_pressed("move_left") or (event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_LEFT or event.keycode == KEY_A or event.keycode == KEY_MINUS)):
+			_modify_stat(cur_stat, -1)
+			get_viewport().set_input_as_handled()
+			return
+		elif event.is_action_pressed("move_right") or (event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_RIGHT or event.keycode == KEY_D or event.keycode == KEY_EQUAL or event.keycode == KEY_PLUS)):
+			_modify_stat(cur_stat, +1)
+			get_viewport().set_input_as_handled()
+			return
+	else:
+		# Ở hàng nút Confirm / Cancel
+		if event.is_action_pressed("move_left") or (event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_LEFT or event.keycode == KEY_A)):
+			selected_index = 6
+			_highlight_selection()
+			get_viewport().set_input_as_handled()
+			return
+		elif event.is_action_pressed("move_right") or (event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_RIGHT or event.keycode == KEY_D)):
+			selected_index = 7
+			_highlight_selection()
+			get_viewport().set_input_as_handled()
+			return
+	
+	# Phím Enter / Space / E (Interact)
+	if event.is_action_pressed("interact") or (event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER or event.keycode == KEY_SPACE)):
+		if selected_index == 6:
+			_on_confirm_pressed()
+		elif selected_index == 7:
+			_on_cancel_pressed()
+		elif selected_index < STAT_NAMES.size():
+			_modify_stat(STAT_NAMES[selected_index], +1)
+		get_viewport().set_input_as_handled()
+		return
+
+func _nav_vertical(dir: int) -> void:
+	selected_index = clampi(selected_index + dir, 0, 7)
+	_highlight_selection()
+
+func _highlight_selection() -> void:
+	for i in range(stat_row_nodes.size()):
+		var info: Dictionary = stat_row_nodes[i]
+		var is_sel: bool = (i == selected_index)
+		var name_lbl: Label = info["name_lbl"]
+		if is_sel:
+			name_lbl.add_theme_color_override("font_color", Palette.VANG_CO)
+			name_lbl.text = "> " + info["stat"]
+		else:
+			name_lbl.add_theme_color_override("font_color", Palette.KEM)
+			name_lbl.text = "  " + info["stat"]
+	
+	if btn_confirm != null:
+		if selected_index == 6:
+			btn_confirm.add_theme_color_override("font_color", Palette.VANG_CO)
+		else:
+			btn_confirm.add_theme_color_override("font_color", Palette.KEM)
+	
+	if btn_cancel != null:
+		if selected_index == 7:
+			btn_cancel.add_theme_color_override("font_color", Palette.VANG_CO)
+		else:
+			btn_cancel.add_theme_color_override("font_color", Palette.KEM)
+
+func _get_total_pending_points() -> int:
+	var total: int = 0
+	for s in pending_adds:
+		total += pending_adds[s]
+	return total
+
+func _get_total_pending_cost() -> int:
+	var total_pts: int = _get_total_pending_points()
+	var cur_lvl: int = PlayerInventory.level
+	var cost: int = 0
+	for i in range(total_pts):
+		cost += StatsCalc.calc_level_cost(cur_lvl + i)
+	return cost
+
+func _get_next_point_cost() -> int:
+	var total_pts: int = _get_total_pending_points()
+	return StatsCalc.calc_level_cost(PlayerInventory.level + total_pts)
+
+func _modify_stat(stat_name: String, delta: int) -> void:
+	if delta > 0:
+		var next_cost: int = _get_next_point_cost()
+		var rem_shards: int = PlayerInventory.shell_shards - _get_total_pending_cost()
+		if rem_shards >= next_cost:
+			pending_adds[stat_name] = pending_adds.get(stat_name, 0) + 1
+			var total_pending := _get_total_pending_points()
+			_set_feedback("✓ Đã cộng 1 điểm vào %s! (Chờ: %d điểm). Nhấn [Xác nhận] để lưu." % [stat_name, total_pending], Palette.VANG_CO)
+		else:
+			_set_feedback("⚠️ Thiếu Mảnh Vỏ! Cần %d, còn %d. Nhấn F4 nhận thêm!" % [next_cost, rem_shards], Palette.DO_GACH)
+			print("[UI] Không đủ Mảnh Vỏ Vụn để cộng thêm điểm! (Cần %d, còn %d)" % [next_cost, rem_shards])
+	elif delta < 0:
+		if pending_adds.get(stat_name, 0) > 0:
+			pending_adds[stat_name] -= 1
+			_set_feedback("Đã bớt 1 điểm chờ của %s." % stat_name, Palette.KEM)
+		else:
+			_set_feedback("Chỉ số %s chưa có điểm cộng tạm thời nào." % stat_name, Palette.XAM_SAT)
+	
+	_update_display()
+
+func _update_display() -> void:
+	var cur_lvl: int = PlayerInventory.level
+	var total_pending_pts: int = _get_total_pending_points()
+	var new_lvl: int = cur_lvl + total_pending_pts
+	var total_cost: int = _get_total_pending_cost()
+	var next_cost: int = _get_next_point_cost()
+	var rem_shards: int = PlayerInventory.shell_shards - total_cost
+	
+	if header_label != null:
+		if total_pending_pts > 0:
+			header_label.text = "CẤP: %d -> %d | CHI PHÍ TIẾP: %d" % [cur_lvl, new_lvl, next_cost]
+		else:
+			header_label.text = "CẤP: %d | CHI PHÍ TIẾP: %d" % [cur_lvl, next_cost]
+	
+	if shards_label != null:
+		if total_cost > 0:
+			shards_label.text = "MẢNH VỎ VỤN: %d (-%d) | CÒN LẠI: %d" % [PlayerInventory.shell_shards, total_cost, rem_shards]
+		else:
+			shards_label.text = "MẢNH VỎ VỤN: %d" % [PlayerInventory.shell_shards]
+	
+	var effective_stats: Dictionary = PlayerInventory.get_effective_stats()
+	var preview_stats: Dictionary = {}
+	for s in STAT_NAMES:
+		preview_stats[s] = int(effective_stats.get(s, 10)) + int(pending_adds.get(s, 0))
+	
+	# Cập nhật danh sách hàng chỉ số
+	for info in stat_row_nodes:
+		var s: String = info["stat"]
+		var cur_val: int = int(effective_stats.get(s, 10))
+		var add: int = int(pending_adds.get(s, 0))
+		var val_lbl: Label = info["val_lbl"]
+		if add > 0:
+			val_lbl.text = "%d (+%d)" % [cur_val, add]
+			val_lbl.add_theme_color_override("font_color", Palette.VANG_CO)
+		else:
+			val_lbl.text = "%d" % cur_val
+			val_lbl.add_theme_color_override("font_color", Palette.KEM)
+		
+		var btn_sub: Button = info["btn_sub"]
+		btn_sub.disabled = (add <= 0)
+		var btn_add: Button = info["btn_add"]
+		# Giữ nút bấm được để khi bấm thiếu shards sẽ báo lỗi trên feedback_label rõ ràng
+		if rem_shards < next_cost:
+			btn_add.modulate = Color(0.7, 0.7, 0.7, 0.85)
+		else:
+			btn_add.modulate = Color.WHITE
+	
+	# Cập nhật phần xem trước bên phải
+	_update_preview_section(effective_stats, preview_stats)
+
+func _update_preview_section(cur_stats: Dictionary, new_stats: Dictionary) -> void:
+	if preview_vbox == null:
+		return
+	
+	var cur_hp := StatsCalc.calc_max_hp(cur_stats)
+	var new_hp := StatsCalc.calc_max_hp(new_stats)
+	
+	var cur_sta := StatsCalc.calc_max_stamina(cur_stats)
+	var new_sta := StatsCalc.calc_max_stamina(new_stats)
+	
+	var cur_ec := StatsCalc.calc_equip_capacity(cur_stats)
+	var new_ec := StatsCalc.calc_equip_capacity(new_stats)
+	
+	# Tính sát thương vũ khí hiện tại
+	var w_data: Dictionary = {}
+	if player_ref != null and not player_ref.current_weapon_data.is_empty():
+		w_data = player_ref.current_weapon_data
+	else:
+		w_data = WeaponDB.get_weapon("staff_wood")
+	
+	var light_chain: Array = w_data.get("light_chain", [])
+	var first_spec: Dictionary = light_chain[0] if not light_chain.is_empty() else {"damage_mv": 1.0}
+	
+	var cur_dmg := StatsCalc.calc_weapon_damage(w_data, first_spec, cur_stats)
+	var new_dmg := StatsCalc.calc_weapon_damage(w_data, first_spec, new_stats)
+	
+	var hp_lbl: Label = preview_vbox.get_node_or_null("HPLabel")
+	if hp_lbl != null:
+		hp_lbl.text = "HP: %d %s" % [cur_hp, ("-> %d" % new_hp) if new_hp != cur_hp else ""]
+		hp_lbl.add_theme_color_override("font_color", Palette.DO_GACH if new_hp > cur_hp else Palette.KEM)
+	
+	var sta_lbl: Label = preview_vbox.get_node_or_null("StaminaLabel")
+	if sta_lbl != null:
+		sta_lbl.text = "Thể lực: %.0f %s" % [cur_sta, ("-> %.0f" % new_sta) if new_sta != cur_sta else ""]
+		sta_lbl.add_theme_color_override("font_color", Palette.XANH_LA_UA if new_sta > cur_sta else Palette.KEM)
+	
+	var ec_lbl: Label = preview_vbox.get_node_or_null("CapacityLabel")
+	if ec_lbl != null:
+		ec_lbl.text = "Sức tải: %.1f %s" % [cur_ec, ("-> %.1f" % new_ec) if new_ec != cur_ec else ""]
+		ec_lbl.add_theme_color_override("font_color", Palette.VANG_CO if new_ec > cur_ec else Palette.KEM)
+	
+	var dmg_lbl: Label = preview_vbox.get_node_or_null("DamageLabel")
+	if dmg_lbl != null:
+		dmg_lbl.text = "Sát thương: %d %s" % [cur_dmg, ("-> %d" % new_dmg) if new_dmg != cur_dmg else ""]
+		dmg_lbl.add_theme_color_override("font_color", Palette.CAT if new_dmg > cur_dmg else Palette.KEM)
+
+func _on_confirm_pressed() -> void:
+	var total_pts: int = _get_total_pending_points()
+	if total_pts > 0:
+		if PlayerInventory.apply_multiple_stats(pending_adds):
+			if player_ref != null and is_instance_valid(player_ref) and player_ref.has_method("apply_leveled_stats"):
+				player_ref.apply_leveled_stats()
+			SaveManager.save_game()
+			print("[UI] Đã xác nhận tăng cấp thành công! Cấp mới: %d" % PlayerInventory.level)
+	close_screen()
+
+func _on_cancel_pressed() -> void:
+	close_screen()
+```
+
+---
+
+## scripts\world\straw_bed.gd
+```gdscript
+extends Node2D
+class_name StrawBed
+
+# StrawBed: Ổ Rơm - Điểm lưu và nghỉ ngơi của Trứng
+# - Tương tác bằng phím E (interact)
+# - Đặt điểm hồi sinh (spawn_position)
+# - Hồi phục tối đa HP & Stamina
+# - Phát tín hiệu activated để màn chơi hồi sinh quái
+# - Lưu game qua SaveManager
+# - Mở giao diện lên cấp LevelUpScreen
+
+signal activated(bed_node: Node2D)
+
+const LevelUpScreenScene = preload("res://scenes/ui/level_up_screen.tscn")
+
+@onready var interaction_area: Area2D = $InteractionArea
+@onready var prompt_label: Label = $PromptLabel
+
+var player_in_range: bool = false
+var player_ref: Player = null
+var active_level_up_ui: CanvasLayer = null
+
+func _ready() -> void:
+	if interaction_area != null:
+		interaction_area.body_entered.connect(_on_body_entered)
+		interaction_area.body_exited.connect(_on_body_exited)
+	
+	if prompt_label != null:
+		prompt_label.visible = false
+		prompt_label.add_theme_color_override("font_color", Palette.KEM)
+		prompt_label.text = "[E] Nghỉ ngơi & Lên cấp"
+
+func _draw() -> void:
+	# Vẽ Ổ Rơm ấm cúng bằng Palette 16 màu
+	# Đế ổ rơm bầu dục ngoài (Nâu Hầm)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.75))
+	draw_circle(Vector2(0, 0), 16.0, Palette.NAU_HAM)
+	# Vòng rơm đan ngoài (Cát / Rơm)
+	draw_circle(Vector2(0, 0), 14.0, Palette.CAT)
+	# Lớp rơm vàng óng (Vàng Cổ)
+	draw_circle(Vector2(0, 0), 12.0, Palette.VANG_CO)
+	# Lòng ổ mềm mại (Kem / Nâu Da)
+	draw_circle(Vector2(0, 1), 8.0, Palette.NAU_DA)
+	draw_circle(Vector2(0, 2), 6.0, Palette.KEM)
+	
+	# Các sợi rơm tỏa ra xung quanh
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 1.0))
+	for i in range(8):
+		var angle: float = float(i) * PI / 4.0 + 0.2
+		var start_pt := Vector2(cos(angle) * 10.0, sin(angle) * 7.0)
+		var end_pt := Vector2(cos(angle) * 16.0, sin(angle) * 11.0)
+		draw_line(start_pt, end_pt, Palette.VANG_CO, 1.2)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not player_in_range or player_ref == null:
+		return
+	
+	if event.is_action_pressed("interact"):
+		# Không tương tác nếu UI lên cấp đang mở
+		if active_level_up_ui != null and is_instance_valid(active_level_up_ui):
+			return
+		activate_bed()
+		get_viewport().set_input_as_handled()
+
+func activate_bed() -> void:
+	if player_ref != null and is_instance_valid(player_ref):
+		player_ref.spawn_position = global_position
+		player_ref.current_hp = player_ref.max_hp
+		player_ref.current_stamina = player_ref.max_stamina
+		player_ref.hp_changed.emit(player_ref.current_hp, player_ref.max_hp)
+		player_ref.stamina_changed.emit(player_ref.current_stamina, player_ref.max_stamina)
+		if player_ref.visual_node != null and player_ref.visual_node.has_method("set_hp_ratio"):
+			player_ref.visual_node.set_hp_ratio(1.0)
+	
+	print("[STRAW_BED] Đã kích hoạt Ổ Rơm tại %s! HP/Stamina hồi phục đầy đủ." % global_position)
+	
+	# 3. Kích hoạt signal để arena hồi sinh quái
+	activated.emit(self)
+	
+	# 4. Lưu game
+	SaveManager.save_game()
+	
+	# 5. Mở màn hình lên cấp
+	open_level_up_screen()
+
+func open_level_up_screen() -> void:
+	if active_level_up_ui != null and is_instance_valid(active_level_up_ui):
+		return
+	
+	var ui = LevelUpScreenScene.instantiate()
+	active_level_up_ui = ui
+	get_tree().root.add_child(ui)
+	if ui.has_method("open"):
+		ui.open(player_ref)
+
+func _on_body_entered(body: Node2D) -> void:
+	if body is Player:
+		player_in_range = true
+		player_ref = body
+		if prompt_label != null:
+			prompt_label.visible = true
+
+func _on_body_exited(body: Node2D) -> void:
+	if body == player_ref:
+		player_in_range = false
+		player_ref = null
+		if prompt_label != null:
+			prompt_label.visible = false
 ```
 
 ---
@@ -4317,6 +5651,196 @@ func _init() -> void:
 	
 	print("--- TAT CA CAC TEST UNIT CUA STAGE A DA VUOT QUA THANH CONG! ---")
 	quit(0)
+```
+
+---
+
+## tools\test_leveling_system.gd
+```gdscript
+extends Node
+
+# Test verification script for Leveling System (COMBAT_SPEC Section 9)
+
+func _ready() -> void:
+	print("--- BAT DAU TEST HE THONG LEN CAP (LEVELING SYSTEM) ---")
+	
+	# 1. Test StatsCalc Formulas
+	var base_stats := { "VIT": 10, "STR": 10, "DEX": 10, "INT": 10, "FAI": 10, "LUK": 10 }
+	var hp := StatsCalc.calc_max_hp(base_stats)
+	var sta := StatsCalc.calc_max_stamina(base_stats)
+	var ec := StatsCalc.calc_equip_capacity(base_stats)
+	var mp := StatsCalc.calc_max_mp(base_stats)
+	
+	assert(hp == 100, "HP tai VIT 10 phai la 100 (60 + 10*4), nhan duoc: %d" % hp)
+	assert(is_equal_approx(sta, 80.0), "Stamina tai VIT 10 phai la 80.0, nhan duoc: %f" % sta)
+	assert(is_equal_approx(ec, 55.0), "Equip capacity tai VIT 10 phai la 55.0, nhan duoc: %f" % ec)
+	assert(mp == 50, "MP tai INT 10 phai la 50, nhan duoc: %d" % mp)
+	print("[PASS] 1. Cong thuc HP, Stamina, Sức tải, MP tinh chinh xac.")
+	
+	# Test StatsCalc with leveled stats (VIT 15)
+	var leveled_stats := { "VIT": 15, "STR": 12, "DEX": 10, "INT": 12, "FAI": 10, "LUK": 10 }
+	assert(StatsCalc.calc_max_hp(leveled_stats) == 120, "HP tai VIT 15 phai la 120 (60 + 15*4)!")
+	assert(is_equal_approx(StatsCalc.calc_max_stamina(leveled_stats), 90.0), "Stamina tai VIT 15 phai la 90.0!")
+	assert(is_equal_approx(StatsCalc.calc_equip_capacity(leveled_stats), 62.5), "Equip cap tai VIT 15 phai la 62.5!")
+	assert(StatsCalc.calc_max_mp(leveled_stats) == 56, "MP tai INT 12 phai la 56!")
+	print("[PASS] 2. Cong thuc StatsCalc cho chi so sau khi nang cap tinh chinh xac.")
+	
+	# 2. Test Level Cost Formulas
+	# cost(level) = round(40 * 1.18^(level-1))
+	var c1 := StatsCalc.calc_level_cost(1)
+	var c2 := StatsCalc.calc_level_cost(2)
+	var c3 := StatsCalc.calc_level_cost(3)
+	assert(c1 == 40, "Chi phi level 1 phai la 40, nhan duoc: %d" % c1)
+	assert(c2 == 47, "Chi phi level 2 phai la 47 (round(40*1.18)), nhan duoc: %d" % c2)
+	assert(c3 == 56, "Chi phi level 3 phai la 56 (round(40*1.18^2)), nhan duoc: %d" % c3)
+	print("[PASS] 3. Chi phi len cap theo cap do tinh chinh xac (c1=%d, c2=%d, c3=%d)." % [c1, c2, c3])
+	
+	# 3. Test Weapon Damage with StatsCalc
+	var w_data := WeaponDB.get_weapon("staff_wood")
+	var spec: Dictionary = w_data["light_chain"][0]
+	var dmg_base := StatsCalc.calc_weapon_damage(w_data, spec, base_stats)
+	assert(dmg_base == 12, "Sat thuong Gay Go don 1 tai STR 10 phai la 12, nhan duoc: %d" % dmg_base)
+	
+	var high_str_stats := { "VIT": 10, "STR": 20, "DEX": 10, "INT": 10, "FAI": 10, "LUK": 10 }
+	var dmg_high := StatsCalc.calc_weapon_damage(w_data, spec, high_str_stats)
+	# scaling C = 0.03. diff = 10 -> 1 + 0.03*10 = 1.30. 12 * 1.30 = 15.6 -> 16.
+	assert(dmg_high > dmg_base, "Sat thuong phai tang khi nang STR!")
+	print("[PASS] 4. StatsCalc.calc_weapon_damage scaling theo STR chinh xac (10 STR: %d -> 20 STR: %d)." % [dmg_base, dmg_high])
+	
+	# 4. Test PlayerInventory Autoload Logic
+	var inv_script = load("res://scripts/autoload/player_inventory.gd")
+	var inv = inv_script.new()
+	add_child(inv)
+	
+	assert(inv.level == 1, "Level khoi dau phai la 1!")
+	assert(inv.shell_shards == 0, "Mảnh vỏ khoi dau phai la 0!")
+	
+	inv.add_shards(100)
+	assert(inv.shell_shards == 100, "Sau khi them 100 shards, tong phai la 100!")
+	assert(inv.can_level_up(), "Voi 100 shards va cost 40, can_level_up phai la true!")
+	
+	# Nang 1 cap don le
+	var success: bool = inv.apply_stat_point("VIT")
+	assert(success, "apply_stat_point phai thanh cong!")
+	assert(inv.level == 2, "Sau khi nang 1 diem, level phai la 2!")
+	assert(inv.shell_shards == 60, "100 - 40 = 60 shards!")
+	assert(inv.added_points["VIT"] == 1, "VIT added_points phai la 1!")
+	assert(inv.get_effective_stats()["VIT"] == 11, "Effective VIT phai la 11!")
+	print("[PASS] 5. PlayerInventory: Cong 1 diem VIT, tru shards va tinh level dung.")
+	
+	# Nang nhieu diem dong thoi (apply_multiple_stats)
+	# Level 2 cost = 47. We have 60 shards. Adding 1 STR costs 47 -> leaves 13 shards.
+	var multi_success: bool = inv.apply_multiple_stats({"STR": 1})
+	assert(multi_success, "Nang tiep 1 diem STR phai thanh cong!")
+	assert(inv.level == 3, "Sau do level phai la 3!")
+	assert(inv.shell_shards == 13, "60 - 47 = 13 shards, nhan duoc: %d" % inv.shell_shards)
+	
+	# Thu nang tiep khi khong du shards (Level 3 cost = 56, only have 13)
+	var fail_attempt: bool = inv.apply_multiple_stats({"DEX": 1})
+	assert(not fail_attempt, "Khong du shards thi apply_multiple_stats phai fail!")
+	assert(inv.level == 3, "Level phai giu nguyen 3!")
+	print("[PASS] 6. PlayerInventory: apply_multiple_stats kiem tra du shards va ap dung chinh xac.")
+	
+	# 5. Test Export / Import (Save/Load)
+	var exported: Dictionary = inv.export_data()
+	assert(exported["level"] == 3, "Exported level phai la 3!")
+	assert(exported["shell_shards"] == 13, "Exported shards phai la 13!")
+	
+	var inv2 = inv_script.new()
+	add_child(inv2)
+	inv2.import_data(exported)
+	assert(inv2.level == 3, "Imported level phai la 3!")
+	assert(inv2.shell_shards == 13, "Imported shards phai la 13!")
+	assert(inv2.added_points["VIT"] == 1, "Imported VIT bonus phai la 1!")
+	assert(inv2.added_points["STR"] == 1, "Imported STR bonus phai la 1!")
+	print("[PASS] 7. PlayerInventory export_data & import_data bao toan day du du lieu.")
+	
+	# 6. Test LostShard single-pile mechanic
+	var lost_node1 = LostShard.new()
+	lost_node1.shard_amount = 50
+	LostShard.current_pile = lost_node1
+	add_child(lost_node1)
+	
+	# Mo phong Player chet lan 2 -> spawn_at phai xoa pile cu
+	var pile2 = LostShard.spawn_at(self, Vector2(100, 100), 30)
+	assert(pile2 != null, "Pile moi phai duoc tao!")
+	assert(not is_instance_valid(lost_node1) or lost_node1.is_queued_for_deletion(), "Pile cu phai bi xoa khi chet lan 2!")
+	assert(LostShard.current_pile == pile2, "current_pile phai tro vao pile moi!")
+	pile2.queue_free()
+	print("[PASS] 8. LostShard: Co che duy nhat 1 dong shards va huy dong cu khi chet lan 2 hoat dung.")
+	
+	# 7. Test StrawBed & LevelUpScreen scene loading & UI lifecycle
+	var straw_bed_scene = load("res://scenes/world/straw_bed.tscn")
+	assert(straw_bed_scene != null, "scenes/world/straw_bed.tscn phai ton tai va hop le!")
+	var straw_bed = straw_bed_scene.instantiate()
+	assert(straw_bed is StrawBed, "straw_bed phai la instance cua class StrawBed!")
+	add_child(straw_bed)
+	straw_bed.queue_free()
+	
+	var level_up_scene = load("res://scenes/ui/level_up_screen.tscn")
+	assert(level_up_scene != null, "scenes/ui/level_up_screen.tscn phai ton tai va hop le!")
+	var level_up_ui = level_up_scene.instantiate()
+	assert(level_up_ui is LevelUpScreen, "level_up_ui phai la instance cua class LevelUpScreen!")
+	add_child(level_up_ui) # Trigger _ready() and _build_stat_rows()
+	level_up_ui.open(null)
+	assert(level_up_ui.stat_row_nodes.size() == 6, "Phai tao du 6 hang chi so!")
+	
+	# Test 10: Test nút bấm thao tác trên giao diện LevelUpScreen (+/- va Confirm)
+	PlayerInventory.shell_shards = 100
+	var vit_row = level_up_ui.stat_row_nodes[0]
+	var btn_add: Button = vit_row["btn_add"]
+	btn_add.emit_signal("pressed")
+	assert(level_up_ui.pending_adds["VIT"] == 1, "Bam '+' phai tang diem cho pending_adds[VIT]!")
+	assert(level_up_ui.feedback_label.text.contains("VIT"), "Feedback label phai thong bao diem duoc cong!")
+	
+	# Test nut Confirm
+	level_up_ui._on_confirm_pressed()
+	assert(PlayerInventory.level >= 2, "Sau khi confirm, PlayerInventory.level phai tang len >= 2!")
+	assert(PlayerInventory.added_points["VIT"] >= 1, "added_points[VIT] phai tang!")
+	print("[PASS] 10. Thao tac nut bam (+/- va Confirm) tren giao dien LevelUpScreen hoat dong chinh xac!")
+	
+	# Test 11: Kiem tra nap sprite vu khi tren EggVisual va HUD
+	var egg_vis_script = load("res://scripts/player/egg_visual.gd")
+	var egg_vis = egg_vis_script.new()
+	add_child(egg_vis)
+	assert(egg_vis.weapon_textures.has("staff_wood"), "EggVisual phai nap weapon_staff_wood.png!")
+	assert(egg_vis.weapon_textures.has("dagger"), "EggVisual phai nap weapon_dagger.png!")
+	assert(egg_vis.weapon_textures.has("sling"), "EggVisual phai nap weapon_sling.png!")
+	egg_vis.queue_free()
+	print("[PASS] 11. EggVisual nap thanh cong ca 3 sprite vu khi chuan pixel art.")
+	
+	# Test 12: Kiem tra HUD cap nhat cap do, vu khi va do dai thanh mau
+	var hud_scene = load("res://scenes/ui/hud.tscn")
+	var hud_node = hud_scene.instantiate()
+	add_child(hud_node)
+	hud_node.update_weapon(0, "staff_wood", "Gậy Gỗ")
+	assert(hud_node.weapon_icon.texture != null, "HUD WeaponIcon phai hien thi sprite vu khi!")
+	hud_node.update_hp(120, 120)
+	assert(hud_node.hp_bar_bg.size.x > 64.0, "Thanh mau phai tu dong keo dai khi max_hp tang!")
+	hud_node.update_level_and_shards()
+	assert(hud_node.shard_label.text.begins_with("Cấp"), "HUD phai hien thi Cap do ro rang!")
+	hud_node.queue_free()
+	print("[PASS] 12. HUD hien thi day du Cap do, icon vu khi va co che keo dai thanh mau khi tang VIT.")
+	
+	# Don dep
+	inv.queue_free()
+	inv2.queue_free()
+	
+	print("--- TAT CA CAC TEST CUA LEVELING SYSTEM DA VUOT QUA THANH CONG! ---")
+	get_tree().quit(0)
+
+```
+
+---
+
+## tools\test_leveling_system.tscn
+```ini
+[gd_scene format=3 uid="uid://bibebeyamofpk"]
+
+[ext_resource type="Script" path="res://tools/test_leveling_system.gd" id="1_test"]
+
+[node name="TestLevelingSystem" type="Node"]
+script = ExtResource("1_test")
 ```
 
 ---
