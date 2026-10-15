@@ -5,6 +5,7 @@ extends Node
 
 var stats: Dictionary = {}
 var weapons: Dictionary = {}
+var vfx_charge: Dictionary = {}
 
 func _ready() -> void:
 	load_all_data()
@@ -21,6 +22,12 @@ func load_all_data() -> void:
 		push_error("GameData: Không thể nạp dữ liệu từ weapons.json!")
 	else:
 		print("GameData: Nạp thành công weapons.json (%d loại vũ khí)." % weapons.size())
+	
+	vfx_charge = load_json_file("res://data/vfx_charge.json")
+	if vfx_charge.is_empty():
+		push_warning("GameData: Chưa nạp được vfx_charge.json!")
+	else:
+		print("GameData: Nạp thành công vfx_charge.json.")
 
 func load_json_file(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):

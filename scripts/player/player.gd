@@ -16,6 +16,7 @@ signal player_respawned()
 signal combo_stepped(current_step: int)
 signal weapon_swapped(active_slot: int, weapon_id: String, weapon_name: String)
 signal shards_dropped(position: Vector2, amount: int)
+signal charge_stage_reached(weapon_id: String, stage: int)
 
 @onready var visual_node: Node2D = $EggVisual
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -23,6 +24,8 @@ signal shards_dropped(position: Vector2, amount: int)
 @onready var attack_hitbox: Area2D = $AttackHitbox
 @onready var attack_hitbox_shape: CollisionShape2D = $AttackHitbox/CollisionShape2D
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
+@onready var charge_vfx = $ChargeVfx if has_node("ChargeVfx") else null
+var last_heavy_charge_stage: int = 1
 
 # Chỉ số từ stats.json
 var max_hp: int = 100
@@ -140,7 +143,20 @@ func _ready() -> void:
 		if inv != null and inv.has_signal("stats_changed"):
 			inv.stats_changed.connect(apply_leveled_stats)
 	
+	if charge_vfx == null:
+		if has_node("ChargeVfx"):
+			charge_vfx = $ChargeVfx
+		else:
+			charge_vfx = ChargeVfx.new()
+			charge_vfx.name = "ChargeVfx"
+			add_child(charge_vfx)
+	if charge_vfx != null and not charge_vfx.stage_reached.is_connected(_on_charge_stage_reached):
+		charge_vfx.stage_reached.connect(_on_charge_stage_reached)
+	
 	update_animations()
+
+func _on_charge_stage_reached(w_id: String, stage: int) -> void:
+	charge_stage_reached.emit(w_id, stage)
 
 func apply_leveled_stats() -> void:
 	var root = Engine.get_main_loop()
@@ -348,6 +364,8 @@ func update_animations() -> void:
 			animated_sprite.play(anim_name)
 		animated_sprite.frame = 1
 		animated_sprite.pause()
+		if charge_vfx != null:
+			animated_sprite.offset += charge_vfx.get_egg_shake_offset()
 		return
 	
 	if is_attacking:
@@ -569,6 +587,9 @@ func start_heavy_charge() -> void:
 	heavy_charge_ratio = 0.0
 	combat_state.current_state = CombatState.State.HEAVY_CHARGE
 	
+	if charge_vfx != null:
+		charge_vfx.start_charge(current_weapon_id, facing_direction)
+	
 	if visual_node != null and visual_node.has_method("set_heavy_charging"):
 		visual_node.set_heavy_charging(true, 0.0, current_weapon_id, facing_direction)
 	
@@ -608,12 +629,7 @@ func process_heavy_charge(delta: float) -> void:
 	
 	# Hủy gồng bằng lăn né (dodge cancel)
 	if Input.is_action_just_pressed("dodge"):
-		is_charging_heavy = false
-		if visual_node != null and visual_node.has_method("set_heavy_charging"):
-			visual_node.set_heavy_charging(false, 0.0, current_weapon_id, facing_direction)
-		if animated_sprite != null:
-			animated_sprite.offset = Vector2(0, -16)
-			animated_sprite.play()
+		cancel_heavy_charge()
 		try_dodge(input_vector)
 		return
 	
@@ -622,14 +638,40 @@ func process_heavy_charge(delta: float) -> void:
 	var c_min: float = float(heavy_spec.get("charge_min", 0.25))
 	var c_max: float = float(heavy_spec.get("charge_max", 0.8))
 	
+	var total_ratio: float = clampf(heavy_charge_timer / maxf(0.01, c_max), 0.0, 1.0)
 	heavy_charge_ratio = clampf((heavy_charge_timer - c_min) / maxf(0.01, c_max - c_min), 0.0, 1.0)
+	
+	if charge_vfx != null:
+		charge_vfx.update_charge(total_ratio, facing_direction, animated_sprite.frame)
+	
 	if visual_node != null and visual_node.has_method("set_heavy_charging"):
 		visual_node.set_heavy_charging(true, heavy_charge_ratio, current_weapon_id, facing_direction)
 	
 	# Nhả phím hoặc đạt ngưỡng tối đa thì ra đòn
 	var button_down: bool = Input.is_action_pressed("attack") or Input.is_physical_key_pressed(KEY_U) or Input.is_action_pressed("heavy_attack")
 	if not button_down or heavy_charge_timer >= c_max:
+		var min_reached: bool = (heavy_charge_timer >= c_min)
+		if charge_vfx != null:
+			min_reached = charge_vfx.is_min_charge_reached(current_weapon_id, total_ratio) or (heavy_charge_timer >= c_min)
+		if not min_reached:
+			if debug_combat_log:
+				print("[PLAYER] Buông đòn sớm trước ngưỡng min charge (%.2fs < %.2fs) -> Hủy tích lực!" % [heavy_charge_timer, c_min])
+			cancel_heavy_charge()
+			return
 		release_heavy_attack()
+
+func cancel_heavy_charge() -> void:
+	if not is_charging_heavy:
+		return
+	is_charging_heavy = false
+	combat_state.current_state = CombatState.State.IDLE
+	if charge_vfx != null:
+		charge_vfx.cancel_charge(global_position, get_parent())
+	if visual_node != null and visual_node.has_method("set_heavy_charging"):
+		visual_node.set_heavy_charging(false, 0.0, current_weapon_id, facing_direction)
+	if animated_sprite != null:
+		animated_sprite.offset = Vector2(0, -16)
+		animated_sprite.play()
 
 func release_heavy_attack() -> void:
 	if not is_charging_heavy:
@@ -638,6 +680,13 @@ func release_heavy_attack() -> void:
 	is_charging_heavy = false
 	if visual_node != null and visual_node.has_method("set_heavy_charging"):
 		visual_node.set_heavy_charging(false, 0.0, current_weapon_id, facing_direction)
+	
+	var rel_info: Dictionary = {}
+	if charge_vfx != null:
+		rel_info = charge_vfx.release_charge(global_position, get_parent())
+	last_heavy_charge_stage = int(rel_info.get("stage", 1))
+	if last_heavy_charge_stage < 1:
+		last_heavy_charge_stage = 1
 	
 	var heavy_spec: Dictionary = current_weapon_data.get("heavy", {})
 	if heavy_spec.is_empty():
@@ -880,6 +929,7 @@ func _enter_active_phase(spec: Dictionary) -> void:
 	
 	var hit_spec: Dictionary = {
 		"is_heavy": is_heavy_attack,
+		"charge_stage": last_heavy_charge_stage if is_heavy_attack else 0,
 		"poise_dmg": float(spec.get("poise_dmg", 10.0 if not is_heavy_attack else 35.0)),
 		"behavior_tag": str(current_weapon_data.get("behavior_tag", ""))
 	}
@@ -1172,9 +1222,7 @@ func receive_hit(damage: int, attack_source: Node) -> Dictionary:
 	
 	# Nếu đang gồng đòn nặng mà bị đánh trúng -> ngắt gồng
 	if is_charging_heavy:
-		is_charging_heavy = false
-		if visual_node != null and visual_node.has_method("set_heavy_charging"):
-			visual_node.set_heavy_charging(false, 0.0)
+		cancel_heavy_charge()
 	
 	# Trừ poise của Player nếu không đỡ thành công
 	if not guarded_successfully:
@@ -1218,6 +1266,8 @@ func receive_hit(damage: int, attack_source: Node) -> Dictionary:
 	return {"hit": true, "dodged": false, "guarded": guarded_successfully}
 
 func die() -> void:
+	if is_charging_heavy:
+		cancel_heavy_charge()
 	is_dead = true
 	combat_state.current_state = CombatState.State.DEAD
 	is_hurt = false

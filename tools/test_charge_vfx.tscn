@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://cchargevfx001"]
+
+[ext_resource type="Script" path="res://tools/test_charge_vfx.gd" id="1_test"]
+
+[node name="TestChargeVfx" type="Node"]
+script = ExtResource("1_test")

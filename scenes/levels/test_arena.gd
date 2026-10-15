@@ -44,13 +44,13 @@ func _ready() -> void:
 	if PlayerInventory.shell_shards < 200:
 		PlayerInventory.add_shards(200)
 	
-	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD), Lăn né (Space), Tấn công (J/Chuột trái), Đỡ (L/Chuột phải), Đổi vũ khí 3 ô (Q), Ổ Rơm lưu & lên cấp (E), F4 (+100 Mảnh Vỏ).")
+	print("[ARENA] Test arena đã sẵn sàng! Di chuyển (WASD), Lăn né (Space), Tấn công (J/Chuột trái), Đỡ (L/Chuột phải), Đổi vũ khí 3 ô (Q), Ổ Rơm lưu & lên cấp (E), F4 (Căn chỉnh Anchor VFX), F5 (+100 Mảnh Vỏ).")
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_F4:
+		if event.keycode == KEY_F5:
 			PlayerInventory.add_shards(100)
-			print("[TEST] Phím F4: Đã thêm +100 Mảnh Vỏ Vụn! Tổng: %d" % PlayerInventory.shell_shards)
+			print("[TEST] Phím F5: Đã thêm +100 Mảnh Vỏ Vụn! Tổng: %d" % PlayerInventory.shell_shards)
 
 func _on_straw_bed_activated(_bed: Node2D) -> void:
 	respawn_enemies()

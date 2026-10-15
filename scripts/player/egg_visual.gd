@@ -196,8 +196,8 @@ func _draw() -> void:
 		draw_arc(shield_center, 9.0, g_start, g_end, 10, Palette.XAM_SAT, 2.0)
 		draw_circle(shield_center, 2.0, Palette.VANG_CO)
 	
-	# 3.5 Vẽ vòng hào quang tích lực đòn nặng (Heavy Charge Aura)
-	if is_heavy_charging:
+	# 3.5 Vòng hào quang tích lực cũ (Chỉ bật làm phương án dự phòng khi vfx_reduced bật)
+	if is_heavy_charging and _should_draw_fallback_aura():
 		var pulse: float = sin(Time.get_ticks_msec() * 0.02) * 1.5
 		var charge_rad: float = 8.0 + heavy_charge_ratio * 9.0 + pulse
 		draw_arc(Vector2(0, -10), charge_rad, 0.0, TAU, 16, Palette.DO_GACH, 1.8)
@@ -213,6 +213,11 @@ func _draw() -> void:
 	
 	# 4. Vẽ diễn hoạt vũ khí & đòn đánh (Hoạt ảnh động)
 	_draw_dynamic_weapon()
+
+func _should_draw_fallback_aura() -> bool:
+	if GameData.vfx_charge.has("settings"):
+		return bool(GameData.vfx_charge["settings"].get("vfx_reduced", false))
+	return false
 
 func _draw_dynamic_weapon() -> void:
 	if is_guarding or is_dead_visual:
@@ -287,8 +292,8 @@ func _draw_dynamic_weapon() -> void:
 			"unarmed", _:
 				var p_dist: float = lerpf(1.3, 9.3, sin(progress * PI))
 				draw_circle(pivot + aim * p_dist, 2.7, Palette.KEM)
-	elif is_heavy_charging:
-		# --- TRẠNG THÁI GỒNG LỰC: VŨ KHÍ GIƯƠNG CAO TỤ NĂNG LƯỢNG RỰC RỠ ---
+	elif is_heavy_charging and _should_draw_fallback_aura():
+		# --- TRẠNG THÁI GỒNG LỰC: DỰ PHÒNG KHI GIẢM HIỆU ỨNG ---
 		var shake: float = sin(Time.get_ticks_msec() * 0.045) * (0.8 + heavy_charge_ratio * 1.5)
 		match equipped_weapon_id:
 			"staff_wood", "staff":
