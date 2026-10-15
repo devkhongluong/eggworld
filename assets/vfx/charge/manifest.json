@@ -1,0 +1,292 @@
+{
+  "charge_staff_s1.png": {
+    "frames": 4,
+    "frame_width": 32,
+    "frame_height": 32,
+    "frame_size": [
+      32,
+      32
+    ],
+    "fps": 12,
+    "anchor": [
+      16,
+      16
+    ],
+    "actual_size": [
+      4128,
+      1024
+    ]
+  },
+  "charge_staff_s2.png": {
+    "frames": 4,
+    "frame_width": 32,
+    "frame_height": 32,
+    "frame_size": [
+      32,
+      32
+    ],
+    "fps": 12,
+    "anchor": [
+      16,
+      16
+    ],
+    "actual_size": [
+      4128,
+      1024
+    ]
+  },
+  "charge_staff_s3.png": {
+    "frames": 4,
+    "frame_width": 32,
+    "frame_height": 32,
+    "frame_size": [
+      32,
+      32
+    ],
+    "fps": 12,
+    "anchor": [
+      16,
+      16
+    ],
+    "actual_size": [
+      4128,
+      1024
+    ]
+  },
+  "release_staff_dust.png": {
+    "frames": 4,
+    "frame_width": 48,
+    "frame_height": 48,
+    "frame_size": [
+      48,
+      48
+    ],
+    "fps": 12,
+    "anchor": [
+      24,
+      24
+    ],
+    "actual_size": [
+      4128,
+      1024
+    ]
+  },
+  "glint_dagger.png": {
+    "frames": 3,
+    "frame_width": 8,
+    "frame_height": 8,
+    "frame_size": [
+      8,
+      8
+    ],
+    "fps": 12,
+    "anchor": [
+      4,
+      4
+    ],
+    "actual_size": [
+      4128,
+      1024
+    ]
+  },
+  "release_dagger_speed.png": {
+    "frames": 3,
+    "frame_width": 32,
+    "frame_height": 16,
+    "frame_size": [
+      32,
+      16
+    ],
+    "fps": 12,
+    "anchor": [
+      16,
+      8
+    ],
+    "actual_size": [
+      4128,
+      1024
+    ]
+  },
+  "stone_sling_s1.png": {
+    "frames": 2,
+    "frame_width": 8,
+    "frame_height": 8,
+    "frame_size": [
+      8,
+      8
+    ],
+    "fps": 12,
+    "anchor": [
+      4,
+      4
+    ],
+    "actual_size": [
+      3584,
+      1184
+    ]
+  },
+  "stone_sling_s2.png": {
+    "frames": 2,
+    "frame_width": 10,
+    "frame_height": 10,
+    "frame_size": [
+      10,
+      10
+    ],
+    "fps": 12,
+    "anchor": [
+      5,
+      5
+    ],
+    "actual_size": [
+      3584,
+      1184
+    ]
+  },
+  "stone_sling_s3.png": {
+    "frames": 2,
+    "frame_width": 12,
+    "frame_height": 12,
+    "frame_size": [
+      12,
+      12
+    ],
+    "fps": 12,
+    "anchor": [
+      6,
+      6
+    ],
+    "actual_size": [
+      4128,
+      1024
+    ]
+  },
+  "release_sling_trail_s1.png": {
+    "frames": 3,
+    "frame_width": 16,
+    "frame_height": 6,
+    "frame_size": [
+      16,
+      6
+    ],
+    "fps": 12,
+    "anchor": [
+      8,
+      3
+    ],
+    "actual_size": [
+      4128,
+      1024
+    ]
+  },
+  "release_sling_trail_s1s2s3.png": {
+    "frames": 3,
+    "frame_width": 32,
+    "frame_height": 6,
+    "frame_size": [
+      32,
+      6
+    ],
+    "fps": 12,
+    "anchor": [
+      16,
+      3
+    ],
+    "actual_size": [
+      4128,
+      1024
+    ],
+    "note": "Tên file thực tế trên đĩa tương ứng với release_sling_trail_s3"
+  },
+  "release_sling_trail_s2.png": {
+    "frames": 3,
+    "frame_width": 24,
+    "frame_height": 6,
+    "frame_size": [
+      24,
+      6
+    ],
+    "fps": 12,
+    "anchor": [
+      12,
+      3
+    ],
+    "actual_size": [
+      4128,
+      1024
+    ]
+  },
+  "release_sling_trail_s3.png": {
+    "frames": 3,
+    "frame_width": 32,
+    "frame_height": 6,
+    "frame_size": [
+      32,
+      6
+    ],
+    "fps": 12,
+    "anchor": [
+      16,
+      3
+    ],
+    "actual_size": [
+      4128,
+      1024
+    ]
+  },
+  "flash_stage.png": {
+    "frames": 4,
+    "frame_width": 24,
+    "frame_height": 24,
+    "frame_size": [
+      24,
+      24
+    ],
+    "fps": 12,
+    "anchor": [
+      12,
+      12
+    ],
+    "actual_size": [
+      4128,
+      1024
+    ]
+  },
+  "puff_cancel.png": {
+    "frames": 4,
+    "frame_width": 16,
+    "frame_height": 16,
+    "frame_size": [
+      16,
+      16
+    ],
+    "fps": 12,
+    "anchor": [
+      8,
+      8
+    ],
+    "actual_size": [
+      4128,
+      1024
+    ]
+  },
+  "puff_cancel .png": {
+    "frames": 4,
+    "frame_width": 16,
+    "frame_height": 16,
+    "frame_size": [
+      16,
+      16
+    ],
+    "fps": 12,
+    "anchor": [
+      8,
+      8
+    ],
+    "actual_size": [
+      4128,
+      1024
+    ],
+    "note": "Tên file thực tế trên đĩa tương ứng với puff_cancel"
+  }
+}
